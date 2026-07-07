@@ -24,14 +24,10 @@ class Capability:
             raise ValueError("Capability name cannot be empty")
 
         if "." in self.namespace:
-            raise ValueError(
-                "Capability namespace cannot contain '.'"
-            )
+            raise ValueError("Capability namespace cannot contain '.'")
 
         if "." in self.name:
-            raise ValueError(
-                "Capability name cannot contain '.'"
-            )
+            raise ValueError("Capability name cannot contain '.'")
 
     @property
     def identifier(self) -> str:
@@ -44,10 +40,7 @@ class Capability:
         parts = identifier.split(".")
 
         if len(parts) != 2:
-            raise ValueError(
-                "Capability identifier must use "
-                "'namespace.name' format"
-            )
+            raise ValueError("Capability identifier must use 'namespace.name' format")
 
         namespace, name = parts
 
@@ -72,7 +65,4 @@ class CapabilityRegistration:
     @property
     def identifier(self) -> str:
         """Return the registration identifier."""
-        return (
-            f"{self.capability.identifier}"
-            f"@{self.provider}"
-        )
+        return f"{self.capability.identifier}@{self.provider}"

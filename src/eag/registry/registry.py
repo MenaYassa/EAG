@@ -32,14 +32,9 @@ class CapabilityRegistry:
         registration: CapabilityRegistration,
     ) -> None:
         """Register a capability implementation."""
-        registrations = self._registrations[
-            registration.capability
-        ]
+        registrations = self._registrations[registration.capability]
 
-        if any(
-            existing.provider == registration.provider
-            for existing in registrations
-        ):
+        if any(existing.provider == registration.provider for existing in registrations):
             raise CapabilityAlreadyRegisteredError(
                 "Capability "
                 f"'{registration.capability.identifier}' "
@@ -52,6 +47,7 @@ class CapabilityRegistry:
         # Publish event after successful registration
         if self._event_bus is not None:
             from eag.events import CapabilityRegistered
+
             self._event_bus.publish(
                 CapabilityRegistered(
                     capability=registration.capability.identifier,
@@ -71,15 +67,10 @@ class CapabilityRegistry:
             return
 
         # Check whether the provider existed
-        removed = any(
-            registration.provider == provider
-            for registration in registrations
-        )
+        removed = any(registration.provider == provider for registration in registrations)
 
         remaining = [
-            registration
-            for registration in registrations
-            if registration.provider != provider
+            registration for registration in registrations if registration.provider != provider
         ]
 
         if remaining:
@@ -90,6 +81,7 @@ class CapabilityRegistry:
         # Publish event if a provider was actually removed
         if removed and self._event_bus is not None:
             from eag.events import CapabilityUnregistered
+
             self._event_bus.publish(
                 CapabilityUnregistered(
                     capability=capability.identifier,
@@ -106,8 +98,7 @@ class CapabilityRegistry:
 
         if not registrations:
             raise CapabilityNotFoundError(
-                "No provider registered for capability "
-                f"'{capability.identifier}'"
+                f"No provider registered for capability '{capability.identifier}'"
             )
 
         return registrations[0]
@@ -117,30 +108,22 @@ class CapabilityRegistry:
         capability: Capability,
     ) -> tuple[CapabilityRegistration, ...]:
         """Resolve all providers for a capability."""
-        return tuple(
-            self._registrations.get(capability, ())
-        )
+        return tuple(self._registrations.get(capability, ()))
 
     def has(self, capability: Capability) -> bool:
         """Return whether a capability is registered."""
-        return bool(
-            self._registrations.get(capability)
-        )
+        return bool(self._registrations.get(capability))
 
     def capabilities(self) -> tuple[Capability, ...]:
         """Return all registered capabilities."""
-        return tuple(
-            sorted(self._registrations)
-        )
+        return tuple(sorted(self._registrations))
 
     def provider_count(
         self,
         capability: Capability,
     ) -> int:
         """Return provider count for a capability."""
-        return len(
-            self._registrations.get(capability, ())
-        )
+        return len(self._registrations.get(capability, ()))
 
     def clear(self) -> None:
         """Remove all capability registrations."""

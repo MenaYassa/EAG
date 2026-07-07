@@ -10,6 +10,4 @@ class Event:
     """Base class for all EAG domain events."""
 
     event_id: UUID = field(default_factory=uuid4)
-    occurred_at: datetime = field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))

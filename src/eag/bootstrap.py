@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from eag.config import load_settings
+from eag.core import RuntimeContext
 from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.logging import get_logger
@@ -35,11 +36,16 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         event_bus=event_bus,
     )
 
-    # Create and boot the kernel.
-    kernel = Kernel(
+    # Create runtime context.
+    runtime_context = RuntimeContext(
         settings=resolved_settings,
         event_bus=event_bus,
         capability_registry=capability_registry,
+    )
+
+    # Create and boot the kernel.
+    kernel = Kernel(
+        context=runtime_context,
     )
     kernel.boot()
 

@@ -3,6 +3,7 @@
 from structlog.typing import FilteringBoundLogger
 
 from eag.config import Settings
+from eag.core import RuntimeContext
 from eag.events import EventBus
 from eag.kernel.state import KernelState
 from eag.logging import get_logger
@@ -14,21 +15,32 @@ class Kernel:
 
     def __init__(
         self,
-        settings: Settings,
-        event_bus: EventBus,
-        capability_registry: CapabilityRegistry,
+        context: RuntimeContext,
         logger: FilteringBoundLogger | None = None,
     ) -> None:
-        self._settings = settings
-        self._event_bus = event_bus
-        self._capability_registry = capability_registry
+        self._context = context
         self._state = KernelState.CREATED
         self._logger = logger or get_logger(component="kernel")
 
     @property
+    def context(self) -> RuntimeContext:
+        """Return the EAG runtime context."""
+        return self._context
+
+    @property
     def settings(self) -> Settings:
-        """Return the kernel configuration."""
-        return self._settings
+        """Return the kernel settings."""
+        return self._context.settings
+
+    @property
+    def event_bus(self) -> EventBus:
+        """Return the event bus."""
+        return self._context.event_bus
+
+    @property
+    def capability_registry(self) -> CapabilityRegistry:
+        """Return the capability registry."""
+        return self._context.capability_registry
 
     @property
     def state(self) -> KernelState:
@@ -40,11 +52,6 @@ class Kernel:
         """Return whether the kernel is ready to accept work."""
         return self._state is KernelState.READY
 
-    @property
-    def capability_registry(self) -> CapabilityRegistry:
-        """Return the capability registry."""
-        return self._capability_registry
-
     def boot(self) -> None:
         """Boot the EAG kernel."""
         if self._state is KernelState.READY:
@@ -54,9 +61,7 @@ class Kernel:
             KernelState.CREATED,
             KernelState.STOPPED,
         }:
-            raise RuntimeError(
-                f"Cannot boot kernel from state: {self._state.value}"
-            )
+            raise RuntimeError(f"Cannot boot kernel from state: {self._state.value}")
 
         self._logger.info(
             "kernel_boot_started",
@@ -89,9 +94,7 @@ class Kernel:
             return
 
         if self._state is not KernelState.READY:
-            raise RuntimeError(
-                f"Cannot shut down kernel from state: {self._state.value}"
-            )
+            raise RuntimeError(f"Cannot shut down kernel from state: {self._state.value}")
 
         self._logger.info(
             "kernel_shutdown_started",

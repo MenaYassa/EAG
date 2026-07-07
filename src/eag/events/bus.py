@@ -59,9 +59,7 @@ class EventBus:
 
     def publish(self, event: Event) -> None:
         """Publish an event to its registered subscribers."""
-        handlers = tuple(
-            self._subscribers.get(type(event), ())
-        )
+        handlers = tuple(self._subscribers.get(type(event), ()))
 
         for handler in handlers:
             handler(event)

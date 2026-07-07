@@ -108,9 +108,7 @@ def test_duplicate_provider_is_rejected() -> None:
 
     registry.register(registration)
 
-    with pytest.raises(
-        CapabilityAlreadyRegisteredError
-    ):
+    with pytest.raises(CapabilityAlreadyRegisteredError):
         registry.register(registration)
 
 
@@ -210,6 +208,8 @@ def test_registry_publishes_unregistration_event() -> None:
 
     assert len(received) == 1
     assert received[0].capability == "git.status"
+
+
 def test_unregister_unknown_provider_emits_no_event() -> None:
     event_bus = EventBus()
     registry = CapabilityRegistry(

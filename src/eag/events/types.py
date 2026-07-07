@@ -1,59 +1,55 @@
-"""Built-in EAG domain event types."""
+"""Event types for EAG."""
 
 from dataclasses import dataclass
 
 from eag.events.event import Event
-from eag.kernel.state import KernelState
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelBootStarted(Event):
     """Published when kernel boot begins."""
 
-    previous_state: KernelState
+    previous_state: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelBootCompleted(Event):
     """Published when kernel boot completes successfully."""
 
-    state: KernelState
+    state: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelBootFailed(Event):
     """Published when kernel boot fails."""
 
-    state: KernelState
-    error_type: str
-    error_message: str
+    state: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelShutdownStarted(Event):
     """Published when kernel shutdown begins."""
 
-    previous_state: KernelState
+    previous_state: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelShutdownCompleted(Event):
     """Published when kernel shutdown completes successfully."""
 
-    state: KernelState
+    state: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KernelShutdownFailed(Event):
     """Published when kernel shutdown fails."""
 
-    state: KernelState
-    error_type: str
-    error_message: str
+    state: str
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityRegistered(Event):
-    """Published when a capability provider is registered."""
+    """Published when a capability is registered."""
 
     capability: str
     provider: str
@@ -61,7 +57,7 @@ class CapabilityRegistered(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityUnregistered(Event):
-    """Published when a capability provider is removed."""
+    """Published when a capability is unregistered."""
 
     capability: str
     provider: str
