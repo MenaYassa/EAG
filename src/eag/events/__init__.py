@@ -11,6 +11,13 @@ from eag.events.types import (
     KernelShutdownCompleted,
     KernelShutdownFailed,
     KernelShutdownStarted,
+    PluginLoadCompleted,
+    PluginLoadFailed,
+    PluginLoadStarted,
+    PluginRegistered,
+    PluginUnloadCompleted,
+    PluginUnloadFailed,
+    PluginUnloadStarted,
 )
 
 __all__ = [
@@ -24,4 +31,11 @@ __all__ = [
     "KernelShutdownStarted",
     "CapabilityRegistered",
     "CapabilityUnregistered",
+    "PluginLoadCompleted",
+    "PluginLoadFailed",
+    "PluginLoadStarted",
+    "PluginRegistered",
+    "PluginUnloadCompleted",
+    "PluginUnloadFailed",
+    "PluginUnloadStarted",
 ]

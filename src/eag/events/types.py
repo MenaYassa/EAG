@@ -61,3 +61,57 @@ class CapabilityUnregistered(Event):
 
     capability: str
     provider: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginRegistered(Event):
+    """Published when a plugin is registered."""
+
+    plugin_name: str
+    plugin_version: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginLoadStarted(Event):
+    """Published when plugin loading begins."""
+
+    plugin_name: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginLoadCompleted(Event):
+    """Published when plugin loading completes."""
+
+    plugin_name: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginLoadFailed(Event):
+    """Published when plugin loading fails."""
+
+    plugin_name: str
+    error_type: str
+    error_message: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginUnloadStarted(Event):
+    """Published when plugin unloading begins."""
+
+    plugin_name: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginUnloadCompleted(Event):
+    """Published when plugin unloading completes."""
+
+    plugin_name: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PluginUnloadFailed(Event):
+    """Published when plugin unloading fails."""
+
+    plugin_name: str
+    error_type: str
+    error_message: str

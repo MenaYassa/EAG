@@ -1,11 +1,30 @@
 """Shared pytest fixtures for EAG tests."""
 
+import io
+
 import pytest
+import structlog
 
 from eag.config import Settings
 from eag.core import RuntimeContext
 from eag.events import EventBus
+from eag.plugins import PluginManager
 from eag.registry import CapabilityRegistry
+
+
+@pytest.fixture(autouse=True)
+def configure_structlog_for_tests() -> None:
+    """Configure structlog to use a StringIO logger for all tests."""
+    output = io.StringIO()
+    structlog.configure(
+        processors=[
+            structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.PrintLoggerFactory(output),
+    )
+    yield
+    # Reset to default after each test to avoid cross‑test pollution
+    structlog.reset_defaults()
 
 
 @pytest.fixture
@@ -45,4 +64,14 @@ def runtime_context(
         settings=settings,
         event_bus=event_bus,
         capability_registry=capability_registry,
+    )
+
+
+@pytest.fixture
+def plugin_manager(
+    runtime_context: RuntimeContext,
+) -> PluginManager:
+    """Create an isolated plugin manager."""
+    return PluginManager(
+        context=runtime_context,
     )

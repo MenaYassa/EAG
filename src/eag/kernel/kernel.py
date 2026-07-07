@@ -4,9 +4,16 @@ from structlog.typing import FilteringBoundLogger
 
 from eag.config import Settings
 from eag.core import RuntimeContext
-from eag.events import EventBus
+from eag.events import (
+    EventBus,
+    KernelBootCompleted,
+    KernelBootStarted,
+    KernelShutdownCompleted,
+    KernelShutdownStarted,
+)
 from eag.kernel.state import KernelState
 from eag.logging import get_logger
+from eag.plugins import PluginManager
 from eag.registry import CapabilityRegistry
 
 
@@ -16,9 +23,11 @@ class Kernel:
     def __init__(
         self,
         context: RuntimeContext,
+        plugin_manager: PluginManager,
         logger: FilteringBoundLogger | None = None,
     ) -> None:
         self._context = context
+        self._plugin_manager = plugin_manager
         self._state = KernelState.CREATED
         self._logger = logger or get_logger(component="kernel")
 
@@ -26,6 +35,11 @@ class Kernel:
     def context(self) -> RuntimeContext:
         """Return the EAG runtime context."""
         return self._context
+
+    @property
+    def plugin_manager(self) -> PluginManager:
+        """Return the kernel plugin manager."""
+        return self._plugin_manager
 
     @property
     def settings(self) -> Settings:
@@ -68,11 +82,28 @@ class Kernel:
             previous_state=self._state.value,
         )
 
+        # Publish boot started event
+        self.event_bus.publish(
+            KernelBootStarted(
+                previous_state=self._state.value,
+            )
+        )
+
         self._state = KernelState.BOOTING
 
         try:
-            # Subsystem initialization will be added incrementally.
+            # Load all plugins
+            self._plugin_manager.load_all()
+
+            # Mark kernel as ready
             self._state = KernelState.READY
+
+            # Publish boot completed event
+            self.event_bus.publish(
+                KernelBootCompleted(
+                    state=self._state.value,
+                )
+            )
 
             self._logger.info(
                 "kernel_boot_completed",
@@ -101,11 +132,28 @@ class Kernel:
             previous_state=self._state.value,
         )
 
+        # Publish shutdown started event
+        self.event_bus.publish(
+            KernelShutdownStarted(
+                previous_state=self._state.value,
+            )
+        )
+
         self._state = KernelState.SHUTTING_DOWN
 
         try:
-            # Subsystem shutdown will be added in reverse boot order.
+            # Unload all plugins (reverse boot order)
+            self._plugin_manager.unload_all()
+
+            # Mark kernel as stopped
             self._state = KernelState.STOPPED
+
+            # Publish shutdown completed event
+            self.event_bus.publish(
+                KernelShutdownCompleted(
+                    state=self._state.value,
+                )
+            )
 
             self._logger.info(
                 "kernel_shutdown_completed",

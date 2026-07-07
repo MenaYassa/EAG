@@ -7,6 +7,7 @@ from eag.core import RuntimeContext
 from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.logging import get_logger
+from eag.plugins import PluginManager
 from eag.registry import CapabilityRegistry
 
 
@@ -30,11 +31,9 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         workspace=str(resolved_settings.kernel.workspace),
     )
 
-    # Create event bus and capability registry.
+    # Create infrastructure.
     event_bus = EventBus()
-    capability_registry = CapabilityRegistry(
-        event_bus=event_bus,
-    )
+    capability_registry = CapabilityRegistry(event_bus=event_bus)
 
     # Create runtime context.
     runtime_context = RuntimeContext(
@@ -43,9 +42,13 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         capability_registry=capability_registry,
     )
 
+    # Create plugin manager with the full context.
+    plugin_manager = PluginManager(context=runtime_context)
+
     # Create and boot the kernel.
     kernel = Kernel(
         context=runtime_context,
+        plugin_manager=plugin_manager,
     )
     kernel.boot()
 
