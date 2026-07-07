@@ -38,6 +38,8 @@ def main(
 
     kernel = bootstrap()
 
+    typer.echo(f"Environment: {kernel.settings.kernel.environment}")
+    typer.echo(f"Workspace: {kernel.settings.kernel.workspace}")
     typer.echo(f"Kernel state: {kernel.state.value}")
     typer.echo("EAG is ready.")
 

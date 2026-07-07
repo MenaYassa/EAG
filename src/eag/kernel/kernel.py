@@ -1,13 +1,20 @@
 """EAG kernel lifecycle management."""
 
+from eag.config import Settings
 from eag.kernel.state import KernelState
 
 
 class Kernel:
     """Coordinate the lifecycle of the EAG platform."""
 
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
         self._state = KernelState.CREATED
+
+    @property
+    def settings(self) -> Settings:
+        """Return the kernel configuration."""
+        return self._settings
 
     @property
     def state(self) -> KernelState:

@@ -2,18 +2,29 @@
 
 import pytest
 
+from eag.config import Settings
 from eag.kernel import Kernel, KernelState
 
 
-def test_kernel_initial_state() -> None:
-    kernel = Kernel()
+@pytest.fixture
+def settings() -> Settings:
+    """Create test settings."""
+    return Settings(
+        kernel={
+            "environment": "testing",
+        }
+    )
+
+
+def test_kernel_initial_state(settings: Settings) -> None:
+    kernel = Kernel(settings=settings)
 
     assert kernel.state is KernelState.CREATED
     assert kernel.is_ready is False
 
 
-def test_kernel_boot() -> None:
-    kernel = Kernel()
+def test_kernel_boot(settings: Settings) -> None:
+    kernel = Kernel(settings=settings)
 
     kernel.boot()
 
@@ -21,8 +32,10 @@ def test_kernel_boot() -> None:
     assert kernel.is_ready is True
 
 
-def test_kernel_boot_is_idempotent_when_ready() -> None:
-    kernel = Kernel()
+def test_kernel_boot_is_idempotent_when_ready(
+    settings: Settings,
+) -> None:
+    kernel = Kernel(settings=settings)
 
     kernel.boot()
     kernel.boot()
@@ -30,8 +43,8 @@ def test_kernel_boot_is_idempotent_when_ready() -> None:
     assert kernel.state is KernelState.READY
 
 
-def test_kernel_shutdown() -> None:
-    kernel = Kernel()
+def test_kernel_shutdown(settings: Settings) -> None:
+    kernel = Kernel(settings=settings)
 
     kernel.boot()
     kernel.shutdown()
@@ -40,8 +53,10 @@ def test_kernel_shutdown() -> None:
     assert kernel.is_ready is False
 
 
-def test_kernel_can_restart_after_shutdown() -> None:
-    kernel = Kernel()
+def test_kernel_can_restart_after_shutdown(
+    settings: Settings,
+) -> None:
+    kernel = Kernel(settings=settings)
 
     kernel.boot()
     kernel.shutdown()
@@ -50,8 +65,10 @@ def test_kernel_can_restart_after_shutdown() -> None:
     assert kernel.state is KernelState.READY
 
 
-def test_kernel_cannot_shutdown_before_boot() -> None:
-    kernel = Kernel()
+def test_kernel_cannot_shutdown_before_boot(
+    settings: Settings,
+) -> None:
+    kernel = Kernel(settings=settings)
 
     with pytest.raises(RuntimeError):
         kernel.shutdown()
