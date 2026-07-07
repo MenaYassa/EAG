@@ -1,15 +1,23 @@
 """EAG kernel lifecycle management."""
 
+from structlog.typing import FilteringBoundLogger
+
 from eag.config import Settings
 from eag.kernel.state import KernelState
+from eag.logging import get_logger
 
 
 class Kernel:
     """Coordinate the lifecycle of the EAG platform."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        logger: FilteringBoundLogger | None = None,
+    ) -> None:
         self._settings = settings
         self._state = KernelState.CREATED
+        self._logger = logger or get_logger(component="kernel")
 
     @property
     def settings(self) -> Settings:
@@ -39,13 +47,29 @@ class Kernel:
                 f"Cannot boot kernel from state: {self._state.value}"
             )
 
+        self._logger.info(
+            "kernel_boot_started",
+            previous_state=self._state.value,
+        )
+
         self._state = KernelState.BOOTING
 
         try:
             # Subsystem initialization will be added incrementally.
             self._state = KernelState.READY
+
+            self._logger.info(
+                "kernel_boot_completed",
+                state=self._state.value,
+            )
         except Exception:
             self._state = KernelState.FAILED
+
+            self._logger.exception(
+                "kernel_boot_failed",
+                state=self._state.value,
+            )
+
             raise
 
     def shutdown(self) -> None:
@@ -58,11 +82,27 @@ class Kernel:
                 f"Cannot shut down kernel from state: {self._state.value}"
             )
 
+        self._logger.info(
+            "kernel_shutdown_started",
+            previous_state=self._state.value,
+        )
+
         self._state = KernelState.SHUTTING_DOWN
 
         try:
             # Subsystem shutdown will be added in reverse boot order.
             self._state = KernelState.STOPPED
+
+            self._logger.info(
+                "kernel_shutdown_completed",
+                state=self._state.value,
+            )
         except Exception:
             self._state = KernelState.FAILED
+
+            self._logger.exception(
+                "kernel_shutdown_failed",
+                state=self._state.value,
+            )
+
             raise
