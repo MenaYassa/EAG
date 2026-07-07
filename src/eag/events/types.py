@@ -50,3 +50,18 @@ class KernelShutdownFailed(Event):
     state: KernelState
     error_type: str
     error_message: str
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CapabilityRegistered(Event):
+    """Published when a capability provider is registered."""
+
+    capability: str
+    provider: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CapabilityUnregistered(Event):
+    """Published when a capability provider is removed."""
+
+    capability: str
+    provider: str

@@ -6,6 +6,7 @@ from eag.config import Settings
 from eag.events import EventBus
 from eag.kernel.state import KernelState
 from eag.logging import get_logger
+from eag.registry import CapabilityRegistry
 
 
 class Kernel:
@@ -15,10 +16,12 @@ class Kernel:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
         logger: FilteringBoundLogger | None = None,
     ) -> None:
         self._settings = settings
         self._event_bus = event_bus
+        self._capability_registry = capability_registry
         self._state = KernelState.CREATED
         self._logger = logger or get_logger(component="kernel")
 
@@ -36,6 +39,11 @@ class Kernel:
     def is_ready(self) -> bool:
         """Return whether the kernel is ready to accept work."""
         return self._state is KernelState.READY
+
+    @property
+    def capability_registry(self) -> CapabilityRegistry:
+        """Return the capability registry."""
+        return self._capability_registry
 
     def boot(self) -> None:
         """Boot the EAG kernel."""

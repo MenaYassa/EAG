@@ -6,6 +6,7 @@ from eag.config import load_settings
 from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.logging import get_logger
+from eag.registry import CapabilityRegistry
 
 
 def bootstrap(config_path: Path | None = None) -> Kernel:
@@ -28,11 +29,17 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         workspace=str(resolved_settings.kernel.workspace),
     )
 
-    # Create event bus and kernel.
+    # Create event bus and capability registry.
     event_bus = EventBus()
+    capability_registry = CapabilityRegistry(
+        event_bus=event_bus,
+    )
+
+    # Create and boot the kernel.
     kernel = Kernel(
         settings=resolved_settings,
         event_bus=event_bus,
+        capability_registry=capability_registry,
     )
     kernel.boot()
 

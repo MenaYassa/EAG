@@ -6,6 +6,7 @@ from eag.config import Settings
 from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.kernel.state import KernelState
+from eag.registry import CapabilityRegistry
 
 
 @pytest.fixture
@@ -20,6 +21,14 @@ def event_bus() -> EventBus:
     return EventBus()
 
 
+@pytest.fixture
+def capability_registry(
+    event_bus: EventBus,
+) -> CapabilityRegistry:
+    """Create an isolated capability registry."""
+    return CapabilityRegistry(event_bus=event_bus)
+
+
 class TestKernelLifecycle:
     """Test kernel lifecycle management."""
 
@@ -27,11 +36,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that kernel starts in CREATED state."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         assert kernel.state == KernelState.CREATED
         assert not kernel.is_ready
@@ -40,11 +51,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test successful kernel boot."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         kernel.boot()
         assert kernel.state == KernelState.READY
@@ -54,11 +67,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that booting an already-ready kernel does nothing."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         kernel.boot()
         assert kernel.state == KernelState.READY
@@ -69,11 +84,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test successful kernel shutdown."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         kernel.boot()
         assert kernel.state == KernelState.READY
@@ -84,11 +101,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that shutting down an already-stopped kernel does nothing."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         kernel.boot()
         kernel.shutdown()
@@ -100,11 +119,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that a stopped kernel can be booted again."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         kernel.boot()
         kernel.shutdown()
@@ -116,11 +137,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that shutting down a kernel that hasn't booted fails."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         with pytest.raises(RuntimeError, match="Cannot shut down kernel from state: created"):
             kernel.shutdown()
@@ -129,11 +152,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that booting from invalid state fails."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         # Set internal state directly to test invalid transition
         kernel._state = KernelState.BOOTING
@@ -144,11 +169,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that shutting down from invalid state fails."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         # Set internal state directly to test invalid transition
         kernel._state = KernelState.CREATED
@@ -159,11 +186,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that settings property returns the correct instance."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         assert kernel.settings is settings
 
@@ -171,11 +200,13 @@ class TestKernelLifecycle:
         self,
         settings: Settings,
         event_bus: EventBus,
+        capability_registry: CapabilityRegistry,
     ) -> None:
         """Test that state property returns the current state."""
         kernel = Kernel(
             settings=settings,
             event_bus=event_bus,
+            capability_registry=capability_registry,
         )
         assert kernel.state == KernelState.CREATED
         kernel.boot()
