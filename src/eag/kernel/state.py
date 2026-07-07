@@ -1,9 +1,9 @@
 """Kernel lifecycle states."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class KernelState(str, Enum):
+class KernelState(StrEnum):
     """Possible lifecycle states of the EAG kernel."""
 
     CREATED = "created"
