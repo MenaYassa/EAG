@@ -1,74 +1,184 @@
-"""Tests for the EAG kernel lifecycle."""
+"""Tests for the EAG kernel."""
 
 import pytest
 
 from eag.config import Settings
-from eag.kernel import Kernel, KernelState
+from eag.events import EventBus
+from eag.kernel import Kernel
+from eag.kernel.state import KernelState
 
 
 @pytest.fixture
 def settings() -> Settings:
-    """Create test settings."""
-    return Settings(
-        kernel={
-            "environment": "testing",
-        }
-    )
+    """Create a test settings instance."""
+    return Settings()
 
 
-def test_kernel_initial_state(settings: Settings) -> None:
-    kernel = Kernel(settings=settings)
-
-    assert kernel.state is KernelState.CREATED
-    assert kernel.is_ready is False
-
-
-def test_kernel_boot(settings: Settings) -> None:
-    kernel = Kernel(settings=settings)
-
-    kernel.boot()
-
-    assert kernel.state is KernelState.READY
-    assert kernel.is_ready is True
+@pytest.fixture
+def event_bus() -> EventBus:
+    """Create an isolated event bus."""
+    return EventBus()
 
 
-def test_kernel_boot_is_idempotent_when_ready(
-    settings: Settings,
-) -> None:
-    kernel = Kernel(settings=settings)
+class TestKernelLifecycle:
+    """Test kernel lifecycle management."""
 
-    kernel.boot()
-    kernel.boot()
+    def test_initial_state(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that kernel starts in CREATED state."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        assert kernel.state == KernelState.CREATED
+        assert not kernel.is_ready
 
-    assert kernel.state is KernelState.READY
+    def test_boot_success(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test successful kernel boot."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        kernel.boot()
+        assert kernel.state == KernelState.READY
+        assert kernel.is_ready
 
+    def test_boot_idempotent(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that booting an already-ready kernel does nothing."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        kernel.boot()
+        assert kernel.state == KernelState.READY
+        kernel.boot()  # Should do nothing
+        assert kernel.state == KernelState.READY
 
-def test_kernel_shutdown(settings: Settings) -> None:
-    kernel = Kernel(settings=settings)
-
-    kernel.boot()
-    kernel.shutdown()
-
-    assert kernel.state is KernelState.STOPPED
-    assert kernel.is_ready is False
-
-
-def test_kernel_can_restart_after_shutdown(
-    settings: Settings,
-) -> None:
-    kernel = Kernel(settings=settings)
-
-    kernel.boot()
-    kernel.shutdown()
-    kernel.boot()
-
-    assert kernel.state is KernelState.READY
-
-
-def test_kernel_cannot_shutdown_before_boot(
-    settings: Settings,
-) -> None:
-    kernel = Kernel(settings=settings)
-
-    with pytest.raises(RuntimeError):
+    def test_shutdown_success(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test successful kernel shutdown."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        kernel.boot()
+        assert kernel.state == KernelState.READY
         kernel.shutdown()
+        assert kernel.state == KernelState.STOPPED
+
+    def test_shutdown_idempotent(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that shutting down an already-stopped kernel does nothing."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        kernel.boot()
+        kernel.shutdown()
+        assert kernel.state == KernelState.STOPPED
+        kernel.shutdown()  # Should do nothing
+        assert kernel.state == KernelState.STOPPED
+
+    def test_boot_from_stopped(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that a stopped kernel can be booted again."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        kernel.boot()
+        kernel.shutdown()
+        assert kernel.state == KernelState.STOPPED
+        kernel.boot()
+        assert kernel.state == KernelState.READY
+
+    def test_shutdown_from_created_fails(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that shutting down a kernel that hasn't booted fails."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        with pytest.raises(RuntimeError, match="Cannot shut down kernel from state: created"):
+            kernel.shutdown()
+
+    def test_boot_from_invalid_state(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that booting from invalid state fails."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        # Set internal state directly to test invalid transition
+        kernel._state = KernelState.BOOTING
+        with pytest.raises(RuntimeError, match="Cannot boot kernel from state: booting"):
+            kernel.boot()
+
+    def test_shutdown_from_invalid_state(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that shutting down from invalid state fails."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        # Set internal state directly to test invalid transition
+        kernel._state = KernelState.CREATED
+        with pytest.raises(RuntimeError, match="Cannot shut down kernel from state: created"):
+            kernel.shutdown()
+
+    def test_settings_property(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that settings property returns the correct instance."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        assert kernel.settings is settings
+
+    def test_state_property(
+        self,
+        settings: Settings,
+        event_bus: EventBus,
+    ) -> None:
+        """Test that state property returns the current state."""
+        kernel = Kernel(
+            settings=settings,
+            event_bus=event_bus,
+        )
+        assert kernel.state == KernelState.CREATED
+        kernel.boot()
+        assert kernel.state == KernelState.READY
+        kernel.shutdown()
+        assert kernel.state == KernelState.STOPPED

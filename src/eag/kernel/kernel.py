@@ -3,6 +3,7 @@
 from structlog.typing import FilteringBoundLogger
 
 from eag.config import Settings
+from eag.events import EventBus
 from eag.kernel.state import KernelState
 from eag.logging import get_logger
 
@@ -13,9 +14,11 @@ class Kernel:
     def __init__(
         self,
         settings: Settings,
+        event_bus: EventBus,
         logger: FilteringBoundLogger | None = None,
     ) -> None:
         self._settings = settings
+        self._event_bus = event_bus
         self._state = KernelState.CREATED
         self._logger = logger or get_logger(component="kernel")
 

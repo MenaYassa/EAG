@@ -1,17 +1,26 @@
-"""Application bootstrap orchestration."""
+"""EAG bootstrap: initialise the kernel and platform state."""
 
-from eag.config import Settings, load_settings
+from pathlib import Path
+
+from eag.config import load_settings
+from eag.events import EventBus
 from eag.kernel import Kernel
-from eag.logging import configure_logging, get_logger
+from eag.logging import get_logger
 
 
-def bootstrap(settings: Settings | None = None) -> Kernel:
-    """Create and boot the EAG kernel."""
-    resolved_settings = settings or load_settings()
+def bootstrap(config_path: Path | None = None) -> Kernel:
+    """Bootstrap the EAG platform.
 
-    configure_logging(resolved_settings.logging)
+    Args:
+        config_path: Optional path to a configuration file.
 
+    Returns:
+        A booted Kernel instance.
+    """
     logger = get_logger(component="bootstrap")
+
+    # Load and resolve settings.
+    resolved_settings = load_settings()
 
     logger.info(
         "bootstrap_started",
@@ -19,7 +28,12 @@ def bootstrap(settings: Settings | None = None) -> Kernel:
         workspace=str(resolved_settings.kernel.workspace),
     )
 
-    kernel = Kernel(settings=resolved_settings)
+    # Create event bus and kernel.
+    event_bus = EventBus()
+    kernel = Kernel(
+        settings=resolved_settings,
+        event_bus=event_bus,
+    )
     kernel.boot()
 
     logger.info(
