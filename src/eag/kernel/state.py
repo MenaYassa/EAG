@@ -12,3 +12,4 @@ class KernelState(StrEnum):
     SHUTTING_DOWN = "shutting_down"
     STOPPED = "stopped"
     FAILED = "failed"
+    READY_DEGRADED = "ready_degraded"

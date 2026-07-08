@@ -11,6 +11,7 @@ from eag.events import (
     KernelShutdownCompleted,
     KernelShutdownStarted,
 )
+from eag.kernel.health import RuntimeHealth
 from eag.kernel.state import KernelState
 from eag.logging import get_logger
 from eag.plugins import PluginManager
@@ -96,7 +97,10 @@ class Kernel:
             self._plugin_manager.load_all()
 
             # Mark kernel as ready
-            self._state = KernelState.READY
+            if self._plugin_manager.degraded():
+                self._state = KernelState.READY_DEGRADED
+            else:
+                self._state = KernelState.READY
 
             # Publish boot completed event
             self.event_bus.publish(
@@ -124,22 +128,26 @@ class Kernel:
         if self._state is KernelState.STOPPED:
             return
 
-        if self._state is not KernelState.READY:
+        if self._state not in {
+            KernelState.READY,
+            KernelState.READY_DEGRADED,
+        }:
             raise RuntimeError(f"Cannot shut down kernel from state: {self._state.value}")
+
+        previous_state = self._state
+        self._state = KernelState.SHUTTING_DOWN
 
         self._logger.info(
             "kernel_shutdown_started",
-            previous_state=self._state.value,
+            previous_state=previous_state.value,
         )
 
         # Publish shutdown started event
         self.event_bus.publish(
             KernelShutdownStarted(
-                previous_state=self._state.value,
+                previous_state=previous_state.value,
             )
         )
-
-        self._state = KernelState.SHUTTING_DOWN
 
         try:
             # Unload all plugins (reverse boot order)
@@ -168,3 +176,11 @@ class Kernel:
             )
 
             raise
+
+    def health(self) -> RuntimeHealth:
+        """Return current runtime health."""
+        return RuntimeHealth(
+            kernel_state=self._state,
+            plugins=self._plugin_manager.health_report(),
+            capability_count=self.capability_registry.count(),
+        )

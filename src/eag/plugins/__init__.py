@@ -6,7 +6,15 @@ from eag.plugins.errors import (
     PluginLifecycleError,
     PluginNotFoundError,
 )
+from eag.plugins.health import (
+    PluginHealth,
+    PluginRuntimeStatus,
+)
 from eag.plugins.manager import PluginManager
+from eag.plugins.policy import PluginPolicy
+from eag.plugins.registration import (
+    PluginRegistration,
+)
 
 __all__ = [
     "PluginAlreadyRegisteredError",
@@ -14,4 +22,8 @@ __all__ = [
     "PluginLifecycleError",
     "PluginManager",
     "PluginNotFoundError",
+    "PluginHealth",
+    "PluginPolicy",
+    "PluginRegistration",
+    "PluginRuntimeStatus",
 ]

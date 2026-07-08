@@ -128,3 +128,7 @@ class CapabilityRegistry:
     def clear(self) -> None:
         """Remove all capability registrations."""
         self._registrations.clear()
+
+    def count(self) -> int:
+        """Return the number of registered capabilities."""
+        return len(self._registrations)

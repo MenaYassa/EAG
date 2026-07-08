@@ -7,7 +7,10 @@ from eag.core import RuntimeContext
 from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.logging import get_logger
-from eag.plugins import PluginManager
+from eag.plugins import (
+    PluginManager,
+    PluginPolicy,
+)
 from eag.plugins.builtin.filesystem import (
     FilesystemPlugin,
 )
@@ -57,11 +60,20 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         context=runtime_context,
     )
 
-    plugin_manager.register(FilesystemPlugin())
+    plugin_manager.register(
+        FilesystemPlugin(),
+        policy=PluginPolicy.REQUIRED,
+    )
 
-    plugin_manager.register(WorkspacePlugin())
+    plugin_manager.register(
+        WorkspacePlugin(),
+        policy=PluginPolicy.REQUIRED,
+    )
 
-    plugin_manager.register(GitPlugin())
+    plugin_manager.register(
+        GitPlugin(),
+        policy=PluginPolicy.OPTIONAL,
+    )
 
     kernel = Kernel(
         context=runtime_context,

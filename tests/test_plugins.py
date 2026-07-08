@@ -20,6 +20,8 @@ from eag.plugins import (
     PluginLifecycleError,
     PluginManager,
     PluginNotFoundError,
+    PluginPolicy,
+    PluginRuntimeStatus,
 )
 
 
@@ -317,3 +319,106 @@ def test_unload_publishes_lifecycle_events(
         received[1],
         PluginUnloadCompleted,
     )
+
+
+def test_plugin_default_policy_is_required(
+    plugin_manager: PluginManager,
+) -> None:
+    plugin_manager.register(ExamplePlugin())
+
+    registration = plugin_manager.registration("example-plugin")
+
+    assert registration.policy is PluginPolicy.REQUIRED
+
+
+def test_optional_plugin_failure_is_recorded(
+    plugin_manager: PluginManager,
+) -> None:
+    plugin_manager.register(
+        ExamplePlugin(fail_load=True),
+        policy=PluginPolicy.OPTIONAL,
+    )
+
+    plugin_manager.load_all()
+
+    health = plugin_manager.health("example-plugin")
+
+    assert health.status is PluginRuntimeStatus.UNAVAILABLE
+    assert health.error_type == "RuntimeError"
+    assert health.error_message == "load failed"
+
+
+def test_required_plugin_failure_aborts_load_all(
+    plugin_manager: PluginManager,
+) -> None:
+    plugin_manager.register(
+        ExamplePlugin(fail_load=True),
+        policy=PluginPolicy.REQUIRED,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="load failed",
+    ):
+        plugin_manager.load_all()
+
+    health = plugin_manager.health("example-plugin")
+
+    assert health.status is PluginRuntimeStatus.FAILED
+
+
+def test_optional_failure_does_not_block_next_plugin(
+    plugin_manager: PluginManager,
+) -> None:
+    calls: list[str] = []
+
+    plugin_manager.register(
+        ExamplePlugin(
+            name="broken",
+            fail_load=True,
+            calls=calls,
+        ),
+        policy=PluginPolicy.OPTIONAL,
+    )
+
+    plugin_manager.register(
+        ExamplePlugin(
+            name="working",
+            calls=calls,
+        ),
+        policy=PluginPolicy.REQUIRED,
+    )
+
+    plugin_manager.load_all()
+
+    assert calls == [
+        "load:broken",
+        "load:working",
+    ]
+
+    assert plugin_manager.health("broken").status is PluginRuntimeStatus.UNAVAILABLE
+
+    assert plugin_manager.health("working").status is PluginRuntimeStatus.LOADED
+
+
+def test_manager_reports_degraded_state(
+    plugin_manager: PluginManager,
+) -> None:
+    plugin_manager.register(
+        ExamplePlugin(fail_load=True),
+        policy=PluginPolicy.OPTIONAL,
+    )
+
+    plugin_manager.load_all()
+
+    assert plugin_manager.degraded() is True
+
+
+def test_manager_not_degraded_when_all_plugins_load(
+    plugin_manager: PluginManager,
+) -> None:
+    plugin_manager.register(ExamplePlugin())
+
+    plugin_manager.load_all()
+
+    assert plugin_manager.degraded() is False

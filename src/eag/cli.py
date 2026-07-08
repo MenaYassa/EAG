@@ -145,3 +145,27 @@ def git_status() -> None:
                 typer.echo(f"  {file.index_status}{file.worktree_status} {file.path}")
     finally:
         kernel.shutdown()
+
+
+@app.command()
+def health() -> None:
+    """Show EAG runtime health."""
+    kernel = bootstrap()
+
+    try:
+        report = kernel.health()
+
+        typer.echo(f"Kernel: {report.kernel_state.value}")
+        typer.echo(f"Capabilities: {report.capability_count}")
+
+        typer.echo("\nPlugins:")
+
+        for plugin in report.plugins:
+            marker = "✓" if plugin.available else "○"
+
+            typer.echo(f"  {marker} {plugin.name}: {plugin.status.value} ({plugin.policy.value})")
+
+            if plugin.error_message:
+                typer.echo(f"      {plugin.error_message}")
+    finally:
+        kernel.shutdown()
