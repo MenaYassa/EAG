@@ -8,6 +8,7 @@ from eag.plugins.builtin.filesystem import (
     FILESYSTEM_LIST,
     FILESYSTEM_READ,
 )
+from eag.plugins.builtin.git import GIT_STATUS
 from eag.plugins.builtin.workspace import (
     WORKSPACE_INSPECT,
 )
@@ -120,5 +121,27 @@ def inspect() -> None:
 
         for path in inspection.important_files:
             typer.echo(f"  {path}")
+    finally:
+        kernel.shutdown()
+
+
+@app.command(name="git-status")
+def git_status() -> None:
+    """Show structured Git workspace status."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(GIT_STATUS)
+
+        status = registration.handler()
+
+        typer.echo(f"Branch: {status.branch or '(detached HEAD)'}")
+        typer.echo(f"Clean: {'yes' if status.clean else 'no'}")
+
+        if status.files:
+            typer.echo("\nChanges:")
+
+            for file in status.files:
+                typer.echo(f"  {file.index_status}{file.worktree_status} {file.path}")
     finally:
         kernel.shutdown()
