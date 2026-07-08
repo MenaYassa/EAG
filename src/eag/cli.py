@@ -8,6 +8,9 @@ from eag.plugins.builtin.filesystem import (
     FILESYSTEM_LIST,
     FILESYSTEM_READ,
 )
+from eag.plugins.builtin.workspace import (
+    WORKSPACE_INSPECT,
+)
 
 app = typer.Typer(
     name="eag",
@@ -80,5 +83,42 @@ def list_directory(
 
         for entry in entries:
             typer.echo(entry)
+    finally:
+        kernel.shutdown()
+
+
+@app.command()
+def inspect() -> None:
+    """Inspect and profile the current workspace."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(WORKSPACE_INSPECT)
+
+        inspection = registration.handler()
+
+        typer.echo(f"Workspace: {inspection.profile.root}")
+        typer.echo(f"Files: {inspection.profile.total_files}")
+        typer.echo(f"Directories: {inspection.profile.total_directories}")
+
+        typer.echo("\nLanguages:")
+
+        for language in inspection.profile.languages:
+            typer.echo(f"  {language.language}: {language.files}")
+
+        typer.echo("\nProject markers:")
+
+        for marker in inspection.profile.markers:
+            typer.echo(f"  {marker}")
+
+        typer.echo("\nLikely entry points:")
+
+        for path in inspection.likely_entry_points:
+            typer.echo(f"  {path}")
+
+        typer.echo("\nImportant files:")
+
+        for path in inspection.important_files:
+            typer.echo(f"  {path}")
     finally:
         kernel.shutdown()

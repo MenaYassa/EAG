@@ -11,6 +11,9 @@ from eag.plugins import PluginManager
 from eag.plugins.builtin.filesystem import (
     FilesystemPlugin,
 )
+from eag.plugins.builtin.workspace import (
+    WorkspacePlugin,
+)
 from eag.registry import CapabilityRegistry
 
 
@@ -54,6 +57,8 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
     )
 
     plugin_manager.register(FilesystemPlugin())
+
+    plugin_manager.register(WorkspacePlugin())
 
     kernel = Kernel(
         context=runtime_context,
