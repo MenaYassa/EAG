@@ -8,6 +8,9 @@ from eag.events import EventBus
 from eag.kernel import Kernel
 from eag.logging import get_logger
 from eag.plugins import PluginManager
+from eag.plugins.builtin.filesystem import (
+    FilesystemPlugin,
+)
 from eag.registry import CapabilityRegistry
 
 
@@ -46,6 +49,12 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
     plugin_manager = PluginManager(context=runtime_context)
 
     # Create and boot the kernel.
+    plugin_manager = PluginManager(
+        context=runtime_context,
+    )
+
+    plugin_manager.register(FilesystemPlugin())
+
     kernel = Kernel(
         context=runtime_context,
         plugin_manager=plugin_manager,

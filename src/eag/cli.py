@@ -4,6 +4,10 @@ import typer
 
 from eag import __version__
 from eag.bootstrap import bootstrap
+from eag.plugins.builtin.filesystem import (
+    FILESYSTEM_LIST,
+    FILESYSTEM_READ,
+)
 
 app = typer.Typer(
     name="eag",
@@ -46,3 +50,35 @@ def main(
 
 if __name__ == "__main__":
     app()
+
+
+@app.command()
+def read(path: str) -> None:
+    """Read a text file from the current workspace."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(FILESYSTEM_READ)
+
+        content = registration.handler(path)
+        typer.echo(content)
+    finally:
+        kernel.shutdown()
+
+
+@app.command(name="list")
+def list_directory(
+    path: str = ".",
+) -> None:
+    """List files in a workspace directory."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(FILESYSTEM_LIST)
+
+        entries = registration.handler(path)
+
+        for entry in entries:
+            typer.echo(entry)
+    finally:
+        kernel.shutdown()
