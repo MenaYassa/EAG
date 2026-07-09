@@ -1,9 +1,12 @@
 """Command-line interface for EAG."""
 
+from pathlib import Path
+
 import typer
 
 from eag import __version__
 from eag.bootstrap import bootstrap
+from eag.plugins.builtin.command import COMMAND_RUN, COMMAND_WHICH
 from eag.plugins.builtin.filesystem import (
     FILESYSTEM_LIST,
     FILESYSTEM_READ,
@@ -23,7 +26,7 @@ app = typer.Typer(
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: bool = typer.Option(
+    version: bool = typer.Option(  # noqa: B008  # noqa: B008
         False,
         "--version",
         "-V",
@@ -167,5 +170,87 @@ def health() -> None:
 
             if plugin.error_message:
                 typer.echo(f"      {plugin.error_message}")
+    finally:
+        kernel.shutdown()
+
+
+@app.command()
+def which(
+    executable: str,
+) -> None:
+    """Resolve an executable available to EAG."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(COMMAND_WHICH)
+
+        resolved = registration.handler(executable)
+
+        if resolved is None:
+            typer.echo(f"Executable not found: {executable}")
+            raise typer.Exit(code=1)
+
+        typer.echo(str(resolved))
+    finally:
+        kernel.shutdown()
+
+
+@app.command(name="run")
+def run_command(
+    executable: str,
+    arguments: list[str] | None = typer.Argument(None),  # noqa: B008
+    timeout: float = typer.Option(60.0, "--timeout"),  # noqa: B008
+    cwd: Path | None = typer.Option(None, "--cwd"),  # noqa: B008
+) -> None:
+    """Run a command through EAG's execution engine."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(COMMAND_RUN)
+
+        result = registration.handler(
+            executable=executable,
+            arguments=tuple(arguments or ()),
+            working_directory=cwd,
+            timeout_seconds=timeout,
+        )
+
+        typer.echo(f"Executable: {executable}")
+
+        if arguments:
+            typer.echo(f"Arguments: {' '.join(arguments)}")
+
+        typer.echo(f"Exit code: {result.exit_code}")
+        typer.echo(f"Duration: {result.duration_seconds:.3f}s")
+        typer.echo(f"Timed out: {'yes' if result.timed_out else 'no'}")
+
+        if result.stdout:
+            typer.echo("\nStdout:")
+            typer.echo(result.stdout, nl=False)
+
+            if not result.stdout.endswith("\n"):
+                typer.echo()
+
+        if result.stderr:
+            typer.echo("\nStderr:")
+            typer.echo(result.stderr, nl=False)
+
+            if not result.stderr.endswith("\n"):
+                typer.echo()
+
+        if result.stdout_truncated:
+            typer.echo("\n[stdout truncated]")
+
+        if result.stderr_truncated:
+            typer.echo("\n[stderr truncated]")
+
+        if result.timed_out:
+            raise typer.Exit(code=124)
+
+        if result.exit_code not in (
+            None,
+            0,
+        ):
+            raise typer.Exit(code=result.exit_code)
     finally:
         kernel.shutdown()

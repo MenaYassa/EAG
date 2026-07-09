@@ -11,13 +11,10 @@ from eag.plugins import (
     PluginManager,
     PluginPolicy,
 )
-from eag.plugins.builtin.filesystem import (
-    FilesystemPlugin,
-)
+from eag.plugins.builtin.command import CommandPlugin
+from eag.plugins.builtin.filesystem import FilesystemPlugin
 from eag.plugins.builtin.git import GitPlugin
-from eag.plugins.builtin.workspace import (
-    WorkspacePlugin,
-)
+from eag.plugins.builtin.workspace import WorkspacePlugin
 from eag.registry import CapabilityRegistry
 
 
@@ -55,26 +52,25 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
     # Create plugin manager with the full context.
     plugin_manager = PluginManager(context=runtime_context)
 
-    # Create and boot the kernel.
-    plugin_manager = PluginManager(
-        context=runtime_context,
-    )
-
+    # Register plugins in recommended order.
     plugin_manager.register(
         FilesystemPlugin(),
         policy=PluginPolicy.REQUIRED,
     )
-
     plugin_manager.register(
         WorkspacePlugin(),
         policy=PluginPolicy.REQUIRED,
     )
-
     plugin_manager.register(
         GitPlugin(),
         policy=PluginPolicy.OPTIONAL,
     )
+    plugin_manager.register(
+        CommandPlugin(),
+        policy=PluginPolicy.REQUIRED,
+    )
 
+    # Create and boot the kernel.
     kernel = Kernel(
         context=runtime_context,
         plugin_manager=plugin_manager,
