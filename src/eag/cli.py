@@ -6,7 +6,15 @@ import typer
 
 from eag import __version__
 from eag.bootstrap import bootstrap
-from eag.plugins.builtin.command import COMMAND_RUN, COMMAND_WHICH
+from eag.execution.errors import (
+    CommandApprovalRequiredError,
+    CommandDeniedError,
+)
+from eag.plugins.builtin.command import (
+    COMMAND_EVALUATE,
+    COMMAND_RUN,
+    COMMAND_WHICH,
+)
 from eag.plugins.builtin.filesystem import (
     FILESYSTEM_LIST,
     FILESYSTEM_READ,
@@ -26,7 +34,7 @@ app = typer.Typer(
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: bool = typer.Option(  # noqa: B008  # noqa: B008
+    version: bool = typer.Option(  # noqa: B008
         False,
         "--version",
         "-V",
@@ -195,6 +203,35 @@ def which(
         kernel.shutdown()
 
 
+@app.command()
+def policy(
+    executable: str,
+    arguments: list[str] = typer.Argument([]),  # noqa: B008
+    cwd: Path | None = typer.Option(None, "--cwd"),  # noqa: B008
+    timeout: float = typer.Option(60.0, "--timeout"),  # noqa: B008
+) -> None:
+    """Evaluate command policy without execution."""
+    kernel = bootstrap()
+
+    try:
+        registration = kernel.capability_registry.resolve(COMMAND_EVALUATE)
+
+        decision = registration.handler(
+            executable=executable,
+            arguments=tuple(arguments),
+            working_directory=cwd,
+            timeout_seconds=timeout,
+        )
+
+        typer.echo(f"Command: {executable} {' '.join(arguments)}")
+        typer.echo(f"Classification: {decision.classification.value}")
+        typer.echo(f"Outcome: {decision.outcome.value}")
+        typer.echo(f"Rule: {decision.matched_rule}")
+        typer.echo(f"Reason: {decision.reason}")
+    finally:
+        kernel.shutdown()
+
+
 @app.command(name="run")
 def run_command(
     executable: str,
@@ -208,13 +245,24 @@ def run_command(
     try:
         registration = kernel.capability_registry.resolve(COMMAND_RUN)
 
-        result = registration.handler(
-            executable=executable,
-            arguments=tuple(arguments or ()),
-            working_directory=cwd,
-            timeout_seconds=timeout,
-        )
+        # --- Execute the command, handling policy rejections ---
+        try:
+            result = registration.handler(
+                executable=executable,
+                arguments=tuple(arguments or ()),
+                working_directory=cwd,
+                timeout_seconds=timeout,
+            )
+        except CommandApprovalRequiredError as exc:
+            typer.echo("Execution blocked: approval required")
+            typer.echo(f"Reason: {exc}")
+            raise typer.Exit(code=3) from None
+        except CommandDeniedError as exc:
+            typer.echo("Execution denied")
+            typer.echo(f"Reason: {exc}")
+            raise typer.Exit(code=4) from None
 
+        # --- Render the result (unchanged) ---
         typer.echo(f"Executable: {executable}")
 
         if arguments:
@@ -227,14 +275,12 @@ def run_command(
         if result.stdout:
             typer.echo("\nStdout:")
             typer.echo(result.stdout, nl=False)
-
             if not result.stdout.endswith("\n"):
                 typer.echo()
 
         if result.stderr:
             typer.echo("\nStderr:")
             typer.echo(result.stderr, nl=False)
-
             if not result.stderr.endswith("\n"):
                 typer.echo()
 
@@ -247,10 +293,8 @@ def run_command(
         if result.timed_out:
             raise typer.Exit(code=124)
 
-        if result.exit_code not in (
-            None,
-            0,
-        ):
+        if result.exit_code not in (None, 0):
             raise typer.Exit(code=result.exit_code)
+
     finally:
         kernel.shutdown()

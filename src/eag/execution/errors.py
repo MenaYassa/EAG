@@ -1,5 +1,9 @@
 """Execution subsystem errors."""
 
+from eag.execution.classification import (
+    PolicyDecision,
+)
+
 
 class ExecutionError(Exception):
     """Base exception for execution subsystem failures."""
@@ -27,3 +31,22 @@ class ExecutableNotFoundError(ExecutionError):
 
 class CommandStartError(ExecutionError):
     """Raised when a command process cannot be started."""
+
+
+class CommandPolicyDecisionError(ExecutionPolicyError):
+    """Base error for rejected policy decisions."""
+
+    def __init__(
+        self,
+        decision: PolicyDecision,
+    ) -> None:
+        self.decision = decision
+        super().__init__(decision.reason)
+
+
+class CommandApprovalRequiredError(CommandPolicyDecisionError):
+    """Raised when a command requires explicit approval."""
+
+
+class CommandDeniedError(CommandPolicyDecisionError):
+    """Raised when command policy denies execution."""

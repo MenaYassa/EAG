@@ -3,7 +3,15 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from eag.execution.classification import (
+    CommandClassifier,
+    PolicyDecision,
+    PolicyOutcome,
+    builtin_rules,
+)
 from eag.execution.errors import (
+    CommandApprovalRequiredError,
+    CommandDeniedError,
     InvalidOutputLimitError,
     InvalidTimeoutError,
     WorkingDirectoryOutsideWorkspaceError,
@@ -24,6 +32,42 @@ class ExecutionPolicy:
     max_timeout_seconds: float = 300.0
     default_max_output_bytes: int = 1_000_000
     max_output_bytes: int = 10_000_000
+    classifier: CommandClassifier | None = None
+
+    def __post_init__(self) -> None:
+        """Initialize the default classifier."""
+        if self.classifier is None:
+            object.__setattr__(
+                self,
+                "classifier",
+                CommandClassifier(rules=builtin_rules()),
+            )
+
+    def evaluate(
+        self,
+        request: CommandRequest,
+    ) -> PolicyDecision:
+        """Classify a structurally valid request."""
+        self.validate(request)
+
+        assert self.classifier is not None
+
+        return self.classifier.classify(request)
+
+    def authorize(
+        self,
+        request: CommandRequest,
+    ) -> PolicyDecision:
+        """Authorize a request or raise a policy error."""
+        decision = self.evaluate(request)
+
+        if decision.outcome is PolicyOutcome.DENY:
+            raise CommandDeniedError(decision)
+
+        if decision.outcome is PolicyOutcome.REQUIRE_APPROVAL:
+            raise CommandApprovalRequiredError(decision)
+
+        return decision
 
     def validate(
         self,

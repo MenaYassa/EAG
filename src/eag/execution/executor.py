@@ -42,8 +42,6 @@ class CommandExecutor:
     def _publish(self, event: object) -> None:
         """Publish an execution event when an event bus is available."""
         if self._event_bus is not None:
-            # The event is a subclass of Event, but we keep the type loose
-            # to avoid mypy issues with the event class hierarchy.
             self._event_bus.publish(event)  # type: ignore[arg-type]
 
     @property
@@ -61,20 +59,7 @@ class CommandExecutor:
         return Path(resolved).resolve()
 
     def execute(self, request: CommandRequest) -> CommandResult:
-        # --- Policy validation ---
-        try:
-            self._policy.validate(request)
-        except ExecutionPolicyError as exc:
-            self._publish(
-                CommandExecutionRejected(
-                    request=request,
-                    error_type=type(exc).__name__,
-                    error_message=str(exc),
-                )
-            )
-            raise
-
-        # --- Resolve executable ---
+        # --- Resolve executable first ---
         executable = self.which(request.executable)
         if executable is None:
             err = ExecutableNotFoundError(f"Executable not found: '{request.executable}'")
@@ -87,6 +72,19 @@ class CommandExecutor:
             )
             raise err
 
+        # --- Evaluate policy (may raise ExecutionPolicyError) ---
+        try:
+            self._policy.authorize(request)
+        except ExecutionPolicyError as exc:
+            self._publish(
+                CommandExecutionRejected(
+                    request=request,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                )
+            )
+            raise
+        # --- Prepare execution ---
         working_directory = self._policy.resolve_working_directory(request.working_directory)
         environment = os.environ.copy()
         environment.update(request.environment)

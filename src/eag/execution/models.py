@@ -1,47 +1,35 @@
 """Data models for command execution."""
 
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import MappingProxyType
 
 
-def _empty_environment() -> Mapping[str, str]:
-    """Return an immutable empty environment mapping."""
-    return MappingProxyType({})
-
-
-@dataclass(
-    frozen=True,
-    slots=True,
-    kw_only=True,
-)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CommandRequest:
-    """Describe a command execution request."""
+    """Request to execute a command."""
 
     executable: str
     arguments: tuple[str, ...] = ()
     working_directory: Path | None = None
     timeout_seconds: float = 60.0
-    environment: Mapping[str, str] = field(default_factory=_empty_environment)
+    environment: dict[str, str] = field(default_factory=dict)
     max_output_bytes: int = 1_000_000
+
+    def __post_init__(self) -> None:
+        """Validate request parameters."""
+        if not self.executable:
+            raise ValueError("Executable cannot be empty")
+        # Timeout and output limit validation is delegated to policy
 
     @property
     def argv(self) -> tuple[str, ...]:
-        """Return the complete argument vector."""
-        return (
-            self.executable,
-            *self.arguments,
-        )
+        """Return full argument vector."""
+        return (self.executable,) + self.arguments
 
 
-@dataclass(
-    frozen=True,
-    slots=True,
-    kw_only=True,
-)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CommandResult:
-    """Describe the result of command execution."""
+    """Result of a command execution."""
 
     request: CommandRequest
     exit_code: int | None
@@ -54,10 +42,20 @@ class CommandResult:
 
     @property
     def succeeded(self) -> bool:
-        """Return whether the command completed successfully."""
-        return not self.timed_out and self.exit_code == 0
+        """Return True if the command succeeded (exit code 0 and not timed out)."""
+        return self.exit_code == 0 and not self.timed_out
 
     @property
     def failed(self) -> bool:
-        """Return whether the command did not succeed."""
+        """Return True if the command failed (non-zero exit code or timed out)."""
         return not self.succeeded
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PolicyDecision:
+    """Result of evaluating a command request against policy."""
+
+    classification: str
+    outcome: str
+    rule: str
+    reason: str

@@ -10,10 +10,12 @@ from eag.execution import (
     CommandRequest,
     CommandResult,
 )
+from eag.execution.classification import PolicyDecision
 from eag.registry import Capability
 
 COMMAND_RUN = Capability.parse("command.run")
 COMMAND_WHICH = Capability.parse("command.which")
+COMMAND_EVALUATE = Capability.parse("command.evaluate")
 
 
 class CommandTool(Tool):
@@ -40,6 +42,7 @@ class CommandTool(Tool):
         return (
             COMMAND_RUN,
             COMMAND_WHICH,
+            COMMAND_EVALUATE,
         )
 
     def execute(
@@ -86,6 +89,31 @@ class CommandTool(Tool):
                 ),
             )
 
+        if capability == COMMAND_EVALUATE:
+            return self.evaluate(
+                executable=str(arguments["executable"]),
+                arguments=tuple(
+                    str(argument)
+                    for argument in arguments.get(
+                        "arguments",
+                        (),
+                    )
+                ),
+                working_directory=self._optional_path(arguments.get("working_directory")),
+                timeout_seconds=float(
+                    arguments.get(
+                        "timeout_seconds",
+                        60.0,
+                    )
+                ),
+                max_output_bytes=int(
+                    arguments.get(
+                        "max_output_bytes",
+                        1_000_000,
+                    )
+                ),
+            )
+
         raise ValueError(f"Unsupported capability: '{capability.identifier}'")
 
     def which(
@@ -111,11 +139,29 @@ class CommandTool(Tool):
             arguments=arguments,
             working_directory=working_directory,
             timeout_seconds=timeout_seconds,
-            environment=environment or {},
+            environment=dict(environment or {}),
             max_output_bytes=max_output_bytes,
         )
-
         return self._executor.execute(request)
+
+    def evaluate(
+        self,
+        *,
+        executable: str,
+        arguments: tuple[str, ...] = (),
+        working_directory: Path | None = None,
+        timeout_seconds: float = 60.0,
+        max_output_bytes: int = 1_000_000,
+    ) -> PolicyDecision:
+        """Evaluate command policy without execution."""
+        request = CommandRequest(
+            executable=executable,
+            arguments=arguments,
+            working_directory=working_directory,
+            timeout_seconds=timeout_seconds,
+            max_output_bytes=max_output_bytes,
+        )
+        return self._executor.policy.evaluate(request)
 
     @staticmethod
     def _optional_path(
@@ -124,5 +170,4 @@ class CommandTool(Tool):
         """Convert an optional value into a path."""
         if value is None:
             return None
-
         return Path(str(value))

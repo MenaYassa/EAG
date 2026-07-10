@@ -4,8 +4,8 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
-from helpers import allowing_policy, permissive_python_policy
 
+# --- Add imports for event testing ---
 from eag.events import EventBus
 from eag.execution import (
     CommandExecutor,
@@ -14,7 +14,12 @@ from eag.execution import (
     ExecutionPolicy,
     InvalidOutputLimitError,
     InvalidTimeoutError,
-    WorkingDirectoryOutsideWorkspaceError,
+ from eag.execution.classification import (
+    CommandClassification,
+    CommandClassifier,
+    ExecutableRule,
+    PolicyOutcome,
+)   WorkingDirectoryOutsideWorkspaceError,
 )
 from eag.execution.events import (
     CommandExecutionCompleted,
@@ -22,6 +27,10 @@ from eag.execution.events import (
     CommandExecutionStarted,
     CommandExecutionTimedOut,
 )
+
+# -------------------------------------
+
+# [Existing tests remain unchanged...]
 
 
 def test_command_request_is_immutable() -> None:
@@ -162,16 +171,10 @@ def test_policy_rejects_invalid_output_limit(
         policy.validate(request)
 
 
-# -----------------------------------------------------------------
-# Executor tests – use permissive_python_policy to allow "python"
-# -----------------------------------------------------------------
 def test_executor_resolves_executable(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     resolved = executor.which("python")
 
@@ -182,10 +185,7 @@ def test_executor_resolves_executable(
 def test_executor_returns_none_for_missing_executable(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     assert executor.which("eag-definitely-not-a-real-command") is None
 
@@ -193,10 +193,7 @@ def test_executor_returns_none_for_missing_executable(
 def test_executor_runs_successful_command(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -219,10 +216,7 @@ def test_executor_runs_successful_command(
 def test_executor_captures_nonzero_exit(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -243,10 +237,7 @@ def test_executor_captures_nonzero_exit(
 def test_executor_captures_stderr(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -265,10 +256,7 @@ def test_executor_captures_stderr(
 def test_executor_reports_timeout(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -289,10 +277,7 @@ def test_executor_reports_timeout(
 def test_executor_rejects_missing_executable(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     request = CommandRequest(executable=("eag-definitely-not-a-real-command"))
 
@@ -306,10 +291,7 @@ def test_executor_uses_working_directory(
     child = tmp_path / "child"
     child.mkdir()
 
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -328,10 +310,7 @@ def test_executor_uses_working_directory(
 def test_executor_passes_environment_values(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -350,10 +329,7 @@ def test_executor_passes_environment_values(
 def test_executor_truncates_stdout(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -373,10 +349,7 @@ def test_executor_truncates_stdout(
 def test_executor_preserves_arguments_without_shell(
     tmp_path: Path,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        policy=permissive_python_policy(tmp_path),
-    )
+    executor = CommandExecutor(workspace=tmp_path)
 
     result = executor.execute(
         CommandRequest(
@@ -392,23 +365,21 @@ def test_executor_preserves_arguments_without_shell(
     assert result.stdout.strip() == ("hello && echo dangerous")
 
 
-# -----------------------------------------------------------------
-# Event publication tests – also use permissive policy
-# -----------------------------------------------------------------
+# ====================================================================
+# New event‑publication tests
+# ====================================================================
 
 
 @pytest.fixture
 def event_bus() -> EventBus:
+    """Create an isolated event bus for testing."""
     return EventBus()
 
 
 @pytest.fixture
 def executor_with_events(tmp_path: Path, event_bus: EventBus) -> CommandExecutor:
-    return CommandExecutor(
-        workspace=tmp_path,
-        event_bus=event_bus,
-        policy=permissive_python_policy(tmp_path),
-    )
+    """Return a CommandExecutor configured with an event bus."""
+    return CommandExecutor(workspace=tmp_path, event_bus=event_bus)
 
 
 def test_successful_execution_publishes_started_and_completed(
@@ -466,13 +437,10 @@ def test_policy_rejection_publishes_rejected(
     tmp_path: Path,
     event_bus: EventBus,
 ) -> None:
+    # Create a workspace and an executor with a strict policy (default)
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    executor = CommandExecutor(
-        workspace=workspace,
-        event_bus=event_bus,
-        # Note: we DO NOT use permissive policy here – we want rejection
-    )
+    executor = CommandExecutor(workspace=workspace, event_bus=event_bus)
 
     received = []
 
@@ -481,6 +449,7 @@ def test_policy_rejection_publishes_rejected(
 
     event_bus.subscribe(CommandExecutionRejected, handler)
 
+    # Request with working directory outside workspace
     outside = tmp_path / "outside"
     outside.mkdir()
     request = CommandRequest(
@@ -495,20 +464,15 @@ def test_policy_rejection_publishes_rejected(
     assert len(received) == 1
     assert isinstance(received[0], CommandExecutionRejected)
     assert received[0].request is request
+    # Optionally check error fields
+    assert "outside" in received[0].error_message
 
 
 def test_missing_executable_publishes_rejected(
     tmp_path: Path,
     event_bus: EventBus,
 ) -> None:
-    executor = CommandExecutor(
-        workspace=tmp_path,
-        event_bus=event_bus,
-        policy=allowing_policy(
-            tmp_path,
-            "definitely-not-a-real-executable",
-        ),
-    )
+    executor = CommandExecutor(workspace=tmp_path, event_bus=event_bus)
 
     received = []
 
@@ -529,3 +493,22 @@ def test_missing_executable_publishes_rejected(
     assert isinstance(received[0], CommandExecutionRejected)
     assert received[0].request is request
     assert "not found" in received[0].error_message.lower()
+
+
+def permissive_python_policy(workspace: Path) -> ExecutionPolicy:
+    """Create a policy allowing Python for executor tests."""
+    classifier = CommandClassifier(
+        rules=(
+            ExecutableRule(
+                rule_name="test.python",
+                executables=frozenset({"python"}),
+                classification=CommandClassification.VALIDATION,
+                outcome=PolicyOutcome.ALLOW,
+                reason="Allowed for executor testing.",
+            ),
+        )
+    )
+    return ExecutionPolicy(
+        workspace=workspace,
+        classifier=classifier,
+    )

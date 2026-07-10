@@ -3,10 +3,12 @@
 from eag.core import (
     ComponentMetadata,
     Plugin,
+    PluginState,
     RuntimeContext,
 )
 from eag.execution import CommandExecutor
 from eag.plugins.builtin.command.tool import (
+    COMMAND_EVALUATE,
     COMMAND_RUN,
     COMMAND_WHICH,
     CommandTool,
@@ -29,7 +31,7 @@ class CommandPlugin(Plugin):
         return ComponentMetadata(
             name="command",
             version="0.1.0",
-            description=("Safe structured command execution"),
+            description="Safe structured command execution",
         )
 
     def load(
@@ -38,21 +40,16 @@ class CommandPlugin(Plugin):
     ) -> None:
         """Register command capabilities."""
         executor = CommandExecutor(
-            workspace=(context.settings.kernel.workspace),
+            workspace=context.settings.kernel.workspace,
             event_bus=context.event_bus,
         )
 
         tool = CommandTool(executor=executor)
 
         registrations = (
-            (
-                COMMAND_RUN,
-                tool.run,
-            ),
-            (
-                COMMAND_WHICH,
-                tool.which,
-            ),
+            (COMMAND_RUN, tool.run),
+            (COMMAND_WHICH, tool.which),
+            (COMMAND_EVALUATE, tool.evaluate),
         )
 
         for capability, handler in registrations:
@@ -65,6 +62,7 @@ class CommandPlugin(Plugin):
             )
 
         self._tool = tool
+        self._state = PluginState.LOADED
 
     def unload(
         self,
@@ -74,6 +72,7 @@ class CommandPlugin(Plugin):
         for capability in (
             COMMAND_RUN,
             COMMAND_WHICH,
+            COMMAND_EVALUATE,
         ):
             context.capability_registry.unregister(
                 capability,
@@ -81,3 +80,4 @@ class CommandPlugin(Plugin):
             )
 
         self._tool = None
+        self._state = PluginState.UNLOADED
