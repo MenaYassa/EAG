@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from helpers import allowing_policy, permissive_python_policy
 
-from eag.events import EventBus
+from eag.events import Event, EventBus
 from eag.execution import (
     CommandExecutor,
     CommandRequest,
@@ -529,3 +529,19 @@ def test_missing_executable_publishes_rejected(
     assert isinstance(received[0], CommandExecutionRejected)
     assert received[0].request is request
     assert "not found" in received[0].error_message.lower()
+
+
+@pytest.mark.parametrize(
+    "event_type",
+    (
+        CommandExecutionStarted,
+        CommandExecutionCompleted,
+        CommandExecutionTimedOut,
+        CommandExecutionRejected,
+    ),
+)
+def test_execution_events_follow_event_contract(
+    event_type: type[Event],
+) -> None:
+    """Test execution events inherit the EAG event contract."""
+    assert issubclass(event_type, Event)
