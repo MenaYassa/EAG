@@ -121,6 +121,8 @@ def create_context_with_workspace(
         settings=settings,
         event_bus=runtime_context.event_bus,
         capability_registry=runtime_context.capability_registry,
+        approval_manager=runtime_context.approval_manager,
+        approval_coordinator=runtime_context.approval_coordinator,
     )
 
 

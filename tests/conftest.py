@@ -5,6 +5,12 @@ import io
 import pytest
 import structlog
 
+# New imports for approval
+from eag.approval import (
+    ApprovalCoordinator,
+    ApprovalManager,
+    InMemoryApprovalStore,
+)
 from eag.config import Settings
 from eag.core import RuntimeContext
 from eag.events import EventBus
@@ -59,11 +65,23 @@ def runtime_context(
     event_bus: EventBus,
     capability_registry: CapabilityRegistry,
 ) -> RuntimeContext:
-    """Create an isolated runtime context."""
+    """Create an isolated runtime context with shared approval components."""
+
+    # Build approval components using the same event_bus
+    approval_manager = ApprovalManager(
+        store=InMemoryApprovalStore(),
+        event_bus=event_bus,
+    )
+    approval_coordinator = ApprovalCoordinator(
+        manager=approval_manager,
+    )
+
     return RuntimeContext(
         settings=settings,
         event_bus=event_bus,
         capability_registry=capability_registry,
+        approval_manager=approval_manager,
+        approval_coordinator=approval_coordinator,
     )
 
 

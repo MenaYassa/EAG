@@ -1,5 +1,9 @@
 """EAG approval subsystem."""
 
+from eag.approval.coordinator import (
+    ApprovalCoordinationResult,
+    ApprovalCoordinator,
+)
 from eag.approval.errors import (
     ApprovalAlreadyExistsError,
     ApprovalCommandMismatchError,
@@ -44,4 +48,6 @@ __all__ = [
     "ApprovalExpired",
     "ApprovalRejected",
     "ApprovalRequested",
+    "ApprovalCoordinationResult",
+    "ApprovalCoordinator",
 ]

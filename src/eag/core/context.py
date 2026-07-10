@@ -2,6 +2,10 @@
 
 from dataclasses import dataclass
 
+from eag.approval import (
+    ApprovalCoordinator,
+    ApprovalManager,
+)
 from eag.config import Settings
 from eag.events import EventBus
 from eag.registry import CapabilityRegistry
@@ -14,3 +18,5 @@ class RuntimeContext:
     settings: Settings
     event_bus: EventBus
     capability_registry: CapabilityRegistry
+    approval_manager: ApprovalManager
+    approval_coordinator: ApprovalCoordinator

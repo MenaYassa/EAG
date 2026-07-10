@@ -330,3 +330,10 @@ class TestKernelLifecycle:
         kernel.shutdown()
 
         assert kernel.state is KernelState.STOPPED
+
+    def test_runtime_context_shares_approval_control_plane(
+        self,
+        runtime_context: RuntimeContext,
+    ) -> None:
+        """Test runtime approval infrastructure shares one manager."""
+        assert runtime_context.approval_coordinator.manager is runtime_context.approval_manager

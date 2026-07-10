@@ -2,6 +2,11 @@
 
 from pathlib import Path
 
+from eag.approval import (
+    ApprovalCoordinator,
+    ApprovalManager,
+    InMemoryApprovalStore,
+)
 from eag.config import load_settings
 from eag.core import RuntimeContext
 from eag.events import EventBus
@@ -42,11 +47,24 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
     event_bus = EventBus()
     capability_registry = CapabilityRegistry(event_bus=event_bus)
 
+    approval_store = InMemoryApprovalStore()
+
+    approval_manager = ApprovalManager(
+        store=approval_store,
+        event_bus=event_bus,
+    )
+
+    approval_coordinator = ApprovalCoordinator(
+        manager=approval_manager,
+    )
+
     # Create runtime context.
     runtime_context = RuntimeContext(
         settings=resolved_settings,
         event_bus=event_bus,
         capability_registry=capability_registry,
+        approval_manager=approval_manager,
+        approval_coordinator=approval_coordinator,
     )
 
     # Create plugin manager with the full context.
