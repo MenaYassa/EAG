@@ -53,9 +53,7 @@ class TimelineEntry:
         if not self.event_type.strip():
             raise ValueError("Timeline event type cannot be empty.")
         if not isinstance(self.metadata, MappingProxyType):
-            object.__setattr__(
-                self, "metadata", MappingProxyType(dict(self.metadata))
-            )
+            object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -74,9 +72,7 @@ class FailureRecord:
 
     def __post_init__(self) -> None:
         if not isinstance(self.details, MappingProxyType):
-            object.__setattr__(
-                self, "details", MappingProxyType(dict(self.details))
-            )
+            object.__setattr__(self, "details", MappingProxyType(dict(self.details)))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -127,31 +123,22 @@ class ExecutionSession:
     def __post_init__(self) -> None:
         if self.state == "created":
             if self.started_at is not None or self.completed_at is not None:
-                raise ValueError(
-                    "CREATED state requires started_at and completed_at to be None."
-                )
+                raise ValueError("CREATED state requires started_at and completed_at to be None.")
         elif self.state in ("running", "paused"):
             if self.started_at is None or self.completed_at is not None:
                 raise ValueError(
                     f"{self.state.upper()} state requires started_at and no completed_at."
                 )
-        elif (
-            self.state in ("completed", "failed", "cancelled")
-            and (self.started_at is None or self.completed_at is None)
+        elif self.state in ("completed", "failed", "cancelled") and (
+            self.started_at is None or self.completed_at is None
         ):
-            raise ValueError(
-                f"{self.state.upper()} state requires started_at and completed_at."
-            )
+            raise ValueError(f"{self.state.upper()} state requires started_at and completed_at.")
 
         if self.metrics is not None:
             if self.metrics.changeset_count != len(self.changesets):
-                raise ValueError(
-                    "Metrics changeset_count does not match actual changesets."
-                )
+                raise ValueError("Metrics changeset_count does not match actual changesets.")
             if self.metrics.failure_count != len(self.failures):
-                raise ValueError(
-                    "Metrics failure_count does not match actual failures."
-                )
+                raise ValueError("Metrics failure_count does not match actual failures.")
 
         if self.timeline:
             for entry in self.timeline:

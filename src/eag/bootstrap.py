@@ -21,6 +21,9 @@ from eag.plugins.builtin.filesystem import FilesystemPlugin
 from eag.plugins.builtin.git import GitPlugin
 from eag.plugins.builtin.workspace import WorkspacePlugin
 from eag.registry import CapabilityRegistry
+from eag.repository.ignore import IgnoreEngine
+from eag.repository.runtime import RepositoryRuntime, RepositoryServices
+from eag.repository.scanner import RepositoryScanner
 from eag.safety import (
     CheckpointManager,
     GitSafetyBackend,
@@ -67,16 +70,10 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
 
     # Create Safety Runtime.
     workspace_pure = PurePosixPath(resolved_settings.kernel.workspace)
-    git_safety_backend = GitSafetyBackend(
-        workspace=resolved_settings.kernel.workspace
-    )
+    git_safety_backend = GitSafetyBackend(workspace=resolved_settings.kernel.workspace)
     safety_inspector = WorkspaceInspector(backend=git_safety_backend)
-    checkpoint_manager = CheckpointManager(
-        backend=git_safety_backend, event_bus=event_bus
-    )
-    rollback_engine = RollbackEngine(
-        backend=git_safety_backend, event_bus=event_bus
-    )
+    checkpoint_manager = CheckpointManager(backend=git_safety_backend, event_bus=event_bus)
+    rollback_engine = RollbackEngine(backend=git_safety_backend, event_bus=event_bus)
     safety_runtime = SafetyRuntime(
         workspace=workspace_pure,
         inspector=safety_inspector,
@@ -85,7 +82,17 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         event_bus=event_bus,
     )
 
-    # Create runtime context.
+    # Inside bootstrap(), AFTER safety_runtime creation and BEFORE RuntimeContext:
+    ignore_engine = IgnoreEngine()
+    repository_scanner = RepositoryScanner(ignore_engine=ignore_engine)
+    repository_services = RepositoryServices(
+        scanner=repository_scanner,
+        event_bus=event_bus,
+        settings=resolved_settings,
+    )
+    repository_runtime = RepositoryRuntime(services=repository_services)
+
+    # Then update the RuntimeContext instantiation:
     runtime_context = RuntimeContext(
         settings=resolved_settings,
         event_bus=event_bus,
@@ -93,6 +100,7 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         approval_manager=approval_manager,
         approval_coordinator=approval_coordinator,
         safety_runtime=safety_runtime,
+        repository_runtime=repository_runtime,
     )
 
     # Create plugin manager with the full context.

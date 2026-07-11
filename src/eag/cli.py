@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import click
 import typer
 
 from eag import __version__
@@ -328,3 +329,83 @@ def run_command(
 
     finally:
         kernel.shutdown()
+
+
+# ==================== FIXED scan COMMAND ====================
+@app.command()
+def scan(
+    path: Path | None = typer.Argument(  # noqa: B008
+        None,
+        help="Path to repository to scan (defaults to workspace)",
+    ),
+) -> None:
+    """Scan a repository and display its profile."""
+    kernel = bootstrap()
+
+    from eag.repository.ignore import IgnoreEngine
+    from eag.repository.runtime import RepositoryRuntime, RepositoryServices
+    from eag.repository.scanner import RepositoryScanner
+
+    ignore_engine = IgnoreEngine()
+    scanner = RepositoryScanner(ignore_engine=ignore_engine)
+    services = RepositoryServices(
+        scanner=scanner,
+        event_bus=kernel.context.event_bus,
+        settings=kernel.context.settings,
+    )
+    runtime = RepositoryRuntime(services=services)
+
+    target = path or kernel.context.settings.kernel.workspace
+    snapshot = runtime.scan(target)
+    profile = snapshot.profile
+
+    click.echo("Repository")
+    click.echo("─" * 40)
+    click.echo(f"Name:    {profile.identity.name}")
+    click.echo(f"Root:    {profile.identity.root}")
+    click.echo(f"Health:  {profile.health.value.upper()}")
+    click.echo(f"Kind:    {profile.kind.value.upper()}")
+    click.echo(f"Layout:  {profile.layout.value.upper()}")
+    click.echo("")
+    click.echo("Statistics")
+    click.echo("─" * 40)
+    click.echo(f"Directories:   {profile.statistics.directories}")
+    click.echo(f"Files:         {profile.statistics.files}")
+    click.echo(f"Packages:      {profile.statistics.packages}")
+    click.echo(f"Tests:         {profile.statistics.tests}")
+    click.echo(f"Documentation: {profile.statistics.documentation}")
+    click.echo(f"Total Size:    {profile.statistics.total_bytes} bytes")
+    click.echo("")
+    click.echo("Capabilities")
+    click.echo("─" * 40)
+    caps = profile.capabilities
+    click.echo(f"{'✓' if caps.git else '✗'} Git")
+    click.echo(f"{'✓' if caps.tests else '✗'} Tests")
+    pkg_str = f" ({profile.metadata.package_manager})" if profile.metadata.package_manager else ""
+    click.echo(f"{'✓' if caps.package_manager else '✗'} Package Manager{pkg_str}")
+    click.echo(f"{'✓' if caps.docker else '✗'} Docker")
+    click.echo(f"{'✓' if caps.type_checking else '✗'} Type Checking")
+    click.echo(f"{'✓' if caps.formatting else '✗'} Formatting")
+    click.echo("")
+    click.echo("Metadata")
+    click.echo("─" * 40)
+    if profile.metadata.git_repository:
+        click.echo("Git Repository: Yes")
+    else:
+        click.echo("Git Repository: No")
+
+    if profile.metadata.pyproject:
+        click.echo("pyproject.toml: Present")
+    if profile.metadata.readme:
+        click.echo("README: Present")
+    if profile.metadata.license:
+        click.echo("License: Present")
+
+    click.echo("")
+    click.echo("Repository Facts")
+    click.echo("─" * 40)
+    for fact in profile.facts:
+        click.echo(f"- {fact.kind}: {fact.value} (confidence: {fact.confidence:.0%})")
+
+    click.echo("")
+    click.echo(f"Generated: {profile.generated_at.isoformat()}")

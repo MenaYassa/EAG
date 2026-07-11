@@ -79,67 +79,49 @@ class TestSessionRuntimeInitialization:
         assert runtime.workspace == workspace
         assert runtime.identity.id is not None
 
-    def test_current_changeset_id(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_current_changeset_id(self, runtime: ExecutionSessionRuntime) -> None:
         assert runtime.current_changeset_id is not None
 
 
 class TestSessionRuntimeTransitions:
-    def test_start(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_start(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         assert runtime.state == SessionState.RUNNING
 
-    def test_pause_and_resume(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_pause_and_resume(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.pause()
         assert runtime.state == SessionState.PAUSED
         runtime.resume()
         assert runtime.state == SessionState.RUNNING
 
-    def test_complete(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_complete(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.complete()
         assert runtime.state == SessionState.COMPLETED
 
-    def test_fail(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_fail(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.fail()
         assert runtime.state == SessionState.FAILED
 
-    def test_cancel(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_cancel(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.cancel()
         assert runtime.state == SessionState.CANCELLED
 
-    def test_illegal_start(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_illegal_start(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         with pytest.raises(SessionStateError):
             runtime.start()
 
-    def test_illegal_complete(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_illegal_complete(self, runtime: ExecutionSessionRuntime) -> None:
         with pytest.raises(SessionStateError):
             runtime.complete()
 
 
 class TestSessionRuntimeRecording:
-    def test_record_failure(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_record_failure(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.record_failure(
             component="executor",
@@ -179,16 +161,12 @@ class TestSessionRuntimeFinalization:
         assert session.metrics.changeset_count == 1
         assert session.summary is not None
 
-    def test_finalize_illegal(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_finalize_illegal(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         with pytest.raises(SessionStateError):
             runtime.finalize()
 
-    def test_finalize_twice(
-        self, runtime: ExecutionSessionRuntime
-    ) -> None:
+    def test_finalize_twice(self, runtime: ExecutionSessionRuntime) -> None:
         runtime.start()
         runtime.complete()
         runtime.finalize()

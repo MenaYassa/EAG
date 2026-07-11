@@ -9,6 +9,7 @@ from eag.approval import (
 from eag.config import Settings
 from eag.events import EventBus
 from eag.registry import CapabilityRegistry
+from eag.repository.runtime import RepositoryRuntime
 from eag.safety import SafetyRuntime
 
 
@@ -22,6 +23,7 @@ class RuntimeContext:
     approval_manager: ApprovalManager
     approval_coordinator: ApprovalCoordinator
     safety_runtime: SafetyRuntime
+    repository_runtime: RepositoryRuntime
 
 
 __all__ = [

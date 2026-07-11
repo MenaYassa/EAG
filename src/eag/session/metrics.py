@@ -25,17 +25,11 @@ class SessionMetricsCalculator:
         artifact_count = sum(len(cs.artifacts) for cs in changesets)
 
         failure_count = failures.count()
-        recoverable_failures = sum(
-            1 for f in failures.failures if f.recoverable
-        )
+        recoverable_failures = sum(1 for f in failures.failures if f.recoverable)
         unrecoverable_failures = failure_count - recoverable_failures
         error_count = unrecoverable_failures
 
-        penalty = (
-            (2 * warning_count)
-            + (5 * recoverable_failures)
-            + (10 * unrecoverable_failures)
-        )
+        penalty = (2 * warning_count) + (5 * recoverable_failures) + (10 * unrecoverable_failures)
         health_score = max(0, min(100, 100 - penalty))
 
         return SessionMetrics(

@@ -9,6 +9,7 @@ description = "An open software engineering operating system for AI engineers."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "click>=8.4.2",
     "pydantic-settings>=2.14.2",
     "structlog>=26.1.0",
     "typer>=0.12,<1.0",
@@ -23,6 +24,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.11",
+    "types-click>=7.1.8",
 ]
 
 [tool.hatch.build.targets.wheel]
