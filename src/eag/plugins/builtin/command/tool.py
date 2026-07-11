@@ -87,6 +87,11 @@ class CommandTool(Tool):
                         1_000_000,
                     )
                 ),
+                approval_id=(
+                    str(arguments["approval_id"])
+                    if arguments.get("approval_id") is not None
+                    else None
+                ),
             )
 
         if capability == COMMAND_EVALUATE:
@@ -132,6 +137,7 @@ class CommandTool(Tool):
         timeout_seconds: float = 60.0,
         environment: Mapping[str, str] | None = None,
         max_output_bytes: int = 1_000_000,
+        approval_id: str | None = None,
     ) -> CommandResult:
         """Run a structured command request."""
         request = CommandRequest(
@@ -142,7 +148,10 @@ class CommandTool(Tool):
             environment=dict(environment or {}),
             max_output_bytes=max_output_bytes,
         )
-        return self._executor.execute(request)
+        return self._executor.execute(
+            request,
+            approval_id=approval_id,
+        )
 
     def evaluate(
         self,

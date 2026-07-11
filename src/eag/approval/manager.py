@@ -13,7 +13,9 @@ from eag.approval.events import (
     ApprovalConsumed,
     ApprovalExpired,
     ApprovalRejected,
+    ApprovalReleased,
     ApprovalRequested,
+    ApprovalReserved,
 )
 from eag.approval.models import (
     ApprovalRequest,
@@ -172,6 +174,94 @@ class ApprovalManager:
 
         return rejected
 
+    def reserve(
+        self,
+        approval_id: str,
+        *,
+        command: CommandRequest,
+        now: datetime | None = None,
+    ) -> ApprovalRequest:
+        """Atomically reserve approved authorization for execution."""
+        request = self._store.get(approval_id)
+        current_time = now or datetime.now(UTC)
+
+        request = self._expire_if_needed(
+            request,
+            now=current_time,
+        )
+
+        if request.status is ApprovalStatus.EXPIRED:
+            raise ApprovalExpiredError(f"Approval request has expired: '{approval_id}'")
+
+        if request.command != command:
+            raise ApprovalCommandMismatchError(
+                f"Execution request does not match approval '{approval_id}'"
+            )
+
+        reserved = replace(
+            request,
+            status=ApprovalStatus.RESERVED,
+        )
+
+        transitioned = self._store.transition(
+            approval_id,
+            expected=ApprovalStatus.APPROVED,
+            replacement=reserved,
+        )
+
+        if not transitioned:
+            current = self._store.get(approval_id)
+            raise ApprovalInvalidTransitionError(
+                "Cannot reserve approval in state "
+                f"'{current.status.value}'; expected "
+                f"'{ApprovalStatus.APPROVED.value}'"
+            )
+
+        self._publish(
+            ApprovalReserved(
+                request=reserved,
+            )
+        )
+
+        return reserved
+
+    def release(
+        self,
+        approval_id: str,
+        *,
+        command: CommandRequest | None = None,
+        now: datetime | None = None,
+    ) -> ApprovalRequest:
+        """Release reserved authorization back to approved state."""
+        request = self._store.get(approval_id)
+
+        released = replace(
+            request,
+            status=ApprovalStatus.APPROVED,
+        )
+
+        transitioned = self._store.transition(
+            approval_id,
+            expected=ApprovalStatus.RESERVED,
+            replacement=released,
+        )
+
+        if not transitioned:
+            current = self._store.get(approval_id)
+            raise ApprovalInvalidTransitionError(
+                "Cannot release approval in state "
+                f"'{current.status.value}'; expected "
+                f"'{ApprovalStatus.RESERVED.value}'"
+            )
+
+        self._publish(
+            ApprovalReleased(
+                request=released,
+            )
+        )
+
+        return released
+
     def consume(
         self,
         approval_id: str,
@@ -193,11 +283,13 @@ class ApprovalManager:
 
         self._require_status(
             request,
-            ApprovalStatus.APPROVED,
+            ApprovalStatus.RESERVED,
             action="consume",
         )
 
         if request.command != command:
+            # Release the reservation before raising
+            self.release(approval_id, now=now)
             raise ApprovalCommandMismatchError(
                 f"Execution request does not match approval '{approval_id}'"
             )
@@ -208,7 +300,19 @@ class ApprovalManager:
             consumed_at=current_time,
         )
 
-        self._store.save(consumed)
+        transitioned = self._store.transition(
+            approval_id,
+            expected=ApprovalStatus.RESERVED,
+            replacement=consumed,
+        )
+
+        if not transitioned:
+            current = self._store.get(approval_id)
+            raise ApprovalInvalidTransitionError(
+                "Cannot consume approval in state "
+                f"'{current.status.value}'; expected "
+                f"'{ApprovalStatus.RESERVED.value}'"
+            )
 
         self._publish(
             ApprovalConsumed(

@@ -134,7 +134,7 @@ def test_consume_publishes_consumed_event() -> None:
     )
 
     manager.approve(request.id)
-
+    manager.reserve(request.id, command=command)
     event_bus.subscribe(
         ApprovalConsumed,
         received.append,
@@ -260,7 +260,10 @@ def test_full_lifecycle_event_order() -> None:
     )
 
     manager.approve(request.id)
-
+    manager.reserve(
+        request.id,
+        command=command,
+    )
     manager.consume(
         request.id,
         command=command,

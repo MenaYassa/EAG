@@ -42,6 +42,7 @@ class CommandPlugin(Plugin):
         executor = CommandExecutor(
             workspace=context.settings.kernel.workspace,
             event_bus=context.event_bus,
+            approval_manager=context.approval_manager,
         )
 
         tool = CommandTool(executor=executor)

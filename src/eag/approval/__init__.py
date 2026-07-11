@@ -17,7 +17,9 @@ from eag.approval.events import (
     ApprovalConsumed,
     ApprovalExpired,
     ApprovalRejected,
+    ApprovalReleased,
     ApprovalRequested,
+    ApprovalReserved,
 )
 from eag.approval.manager import ApprovalManager
 from eag.approval.models import (
@@ -50,4 +52,6 @@ __all__ = [
     "ApprovalRequested",
     "ApprovalCoordinationResult",
     "ApprovalCoordinator",
+    "ApprovalReleased",
+    "ApprovalReserved",
 ]

@@ -39,3 +39,17 @@ class ApprovalConsumed(Event):
     """Published when an approval authorization is consumed."""
 
     request: ApprovalRequest
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ApprovalReserved(Event):
+    """Published when approval authorization is reserved."""
+
+    request: ApprovalRequest
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ApprovalReleased(Event):
+    """Published when reserved authorization is released."""
+
+    request: ApprovalRequest

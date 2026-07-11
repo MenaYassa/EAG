@@ -1,5 +1,6 @@
 """Tests for approval lifecycle management."""
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -52,7 +53,7 @@ def create_pending(
         command=command or make_command(),
         classification=CommandClassification.MUTATING,
         policy_outcome=PolicyOutcome.REQUIRE_APPROVAL,
-        policy_reason=("Creating commits requires explicit approval."),
+        policy_reason="Creating commits requires explicit approval.",
         matched_rule="git.commit",
         now=now,
         expires_at=expires_at,
@@ -126,6 +127,12 @@ def test_approved_request_can_be_consumed() -> None:
 
     manager.approve(request.id)
 
+    # --- NEW: reserve before consume ---
+    manager.reserve(
+        request.id,
+        command=command,
+    )
+
     consumed = manager.consume(
         request.id,
         command=command,
@@ -183,11 +190,16 @@ def test_consumed_request_cannot_be_replayed() -> None:
     )
 
     manager.approve(request.id)
+    manager.reserve(
+        request.id,
+        command=command,
+    )
     manager.consume(
         request.id,
         command=command,
     )
 
+    # Attempt to consume again should fail
     with pytest.raises(ApprovalInvalidTransitionError):
         manager.consume(
             request.id,
@@ -213,12 +225,20 @@ def test_consume_rejects_command_mismatch() -> None:
     )
     manager.approve(request.id)
 
+    # Reserve with original command (should succeed)
+    manager.reserve(
+        request.id,
+        command=original,
+    )
+
+    # Consume with different command should fail
     with pytest.raises(ApprovalCommandMismatchError):
         manager.consume(
             request.id,
             command=different,
         )
 
+    # After mismatch, the reservation is released, so status is back to APPROVED
     assert manager.get(request.id).status is ApprovalStatus.APPROVED
 
 
@@ -250,8 +270,8 @@ def test_expired_pending_request_cannot_be_approved() -> None:
     assert manager.get(request.id).status is ApprovalStatus.EXPIRED
 
 
-def test_expired_approved_request_cannot_be_consumed() -> None:
-    """Test approved request cannot execute after expiry."""
+def test_expired_approved_request_cannot_be_reserved() -> None:
+    """Test approved request cannot be reserved after expiry."""
     manager = make_manager()
 
     now = datetime(
@@ -277,8 +297,9 @@ def test_expired_approved_request_cannot_be_consumed() -> None:
         now=now + timedelta(minutes=1),
     )
 
+    # Reserve after expiry should raise ApprovalExpiredError
     with pytest.raises(ApprovalExpiredError):
-        manager.consume(
+        manager.reserve(
             request.id,
             command=command,
             now=now + timedelta(minutes=6),
@@ -349,3 +370,125 @@ def test_rejected_request_cannot_expire() -> None:
 
     with pytest.raises(ApprovalInvalidTransitionError):
         manager.expire(request.id)
+
+
+def test_approved_request_can_be_reserved() -> None:
+    """Test approved authorization can be reserved."""
+    manager = make_manager()
+    command = make_command()
+
+    request = create_pending(
+        manager,
+        command=command,
+    )
+
+    manager.approve(request.id)
+
+    reserved = manager.reserve(
+        request.id,
+        command=command,
+    )
+
+    assert reserved.status is ApprovalStatus.RESERVED
+
+
+def test_reserved_request_can_be_released() -> None:
+    """Test reserved authorization can return to approved."""
+    manager = make_manager()
+    command = make_command()
+
+    request = create_pending(
+        manager,
+        command=command,
+    )
+
+    manager.approve(request.id)
+
+    manager.reserve(
+        request.id,
+        command=command,
+    )
+
+    released = manager.release(request.id)
+
+    assert released.status is ApprovalStatus.APPROVED
+
+
+def test_reserved_request_can_be_consumed() -> None:
+    """Test reserved authorization can be consumed."""
+    manager = make_manager()
+    command = make_command()
+
+    request = create_pending(
+        manager,
+        command=command,
+    )
+
+    manager.approve(request.id)
+
+    manager.reserve(
+        request.id,
+        command=command,
+    )
+
+    consumed = manager.consume(
+        request.id,
+        command=command,
+    )
+
+    assert consumed.status is ApprovalStatus.CONSUMED
+
+
+def test_approved_request_cannot_be_consumed_without_reservation() -> None:
+    """Test approval must be reserved before consumption."""
+    manager = make_manager()
+    command = make_command()
+
+    request = create_pending(
+        manager,
+        command=command,
+    )
+
+    manager.approve(request.id)
+
+    with pytest.raises(ApprovalInvalidTransitionError):
+        manager.consume(
+            request.id,
+            command=command,
+        )
+
+
+def test_only_one_concurrent_reservation_succeeds() -> None:
+    """Test approved authorization can be reserved only once."""
+    manager = make_manager()
+    command = make_command()
+
+    request = create_pending(
+        manager,
+        command=command,
+    )
+
+    manager.approve(request.id)
+
+    def attempt_reservation() -> bool:
+        try:
+            manager.reserve(
+                request.id,
+                command=command,
+            )
+        except ApprovalInvalidTransitionError:
+            return False
+
+        return True
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = tuple(
+            executor.map(
+                lambda _: attempt_reservation(),
+                range(8),
+            )
+        )
+
+    assert results.count(True) == 1
+    assert results.count(False) == 7
+    assert manager.get(request.id).status is ApprovalStatus.RESERVED

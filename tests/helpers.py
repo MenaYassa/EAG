@@ -43,3 +43,25 @@ def permissive_python_policy(
         "python",
         "python3",
     )
+
+
+# Add to helpers.py
+
+
+def approval_required_python_policy(workspace: Path) -> ExecutionPolicy:
+    """Create a policy where Python commands require approval."""
+    classifier = CommandClassifier(
+        rules=(
+            ExecutableRule(
+                rule_name="test.python.requires_approval",
+                executables=frozenset({"python", "python3"}),
+                classification=CommandClassification.MUTATING,
+                outcome=PolicyOutcome.REQUIRE_APPROVAL,
+                reason="Python execution requires explicit approval for tests.",
+            ),
+        )
+    )
+    return ExecutionPolicy(
+        workspace=workspace,
+        classifier=classifier,
+    )

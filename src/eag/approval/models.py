@@ -17,6 +17,7 @@ class ApprovalStatus(StrEnum):
 
     PENDING = "pending"
     APPROVED = "approved"
+    RESERVED = "reserved"
     REJECTED = "rejected"
     CONSUMED = "consumed"
     EXPIRED = "expired"
