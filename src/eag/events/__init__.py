@@ -1,6 +1,6 @@
 """EAG domain events and event bus."""
 
-from eag.events.bus import EventBus
+from eag.events.bus import EventBus, Subscription
 from eag.events.event import Event
 from eag.events.types import (
     CapabilityRegistered,
@@ -23,6 +23,7 @@ from eag.events.types import (
 __all__ = [
     "Event",
     "EventBus",
+    "Subscription",
     "KernelBootCompleted",
     "KernelBootFailed",
     "KernelBootStarted",
