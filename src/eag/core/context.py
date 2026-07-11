@@ -9,6 +9,7 @@ from eag.approval import (
 from eag.config import Settings
 from eag.events import EventBus
 from eag.registry import CapabilityRegistry
+from eag.safety import SafetyRuntime
 
 
 @dataclass(frozen=True)
@@ -20,3 +21,9 @@ class RuntimeContext:
     capability_registry: CapabilityRegistry
     approval_manager: ApprovalManager
     approval_coordinator: ApprovalCoordinator
+    safety_runtime: SafetyRuntime
+
+
+__all__ = [
+    "RuntimeContext",
+]

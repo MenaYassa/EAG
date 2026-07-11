@@ -48,20 +48,12 @@ class ChangeSetRecorder:
         if self._attached:
             return
         self._subscriptions = [
-            self._event_bus.subscribe(
-                CommandExecutionCompleted, self._on_command_completed
-            ),
-            self._event_bus.subscribe(
-                CommandExecutionTimedOut, self._on_command_timed_out
-            ),
-            self._event_bus.subscribe(
-                CommandExecutionRejected, self._on_command_rejected
-            ),
+            self._event_bus.subscribe(CommandExecutionCompleted, self._on_command_completed),
+            self._event_bus.subscribe(CommandExecutionTimedOut, self._on_command_timed_out),
+            self._event_bus.subscribe(CommandExecutionRejected, self._on_command_rejected),
         ]
         self._attached = True
-        self._event_bus.publish(
-            ChangeSetRecordingStarted(identity_id=self.identity.id)
-        )
+        self._event_bus.publish(ChangeSetRecordingStarted(identity_id=self.identity.id))
 
     def detach(self) -> None:
         """Unsubscribe from runtime events."""
@@ -75,9 +67,7 @@ class ChangeSetRecorder:
     def finalize(self) -> ChangeSet:
         """Return the completed ChangeSet."""
         if not self._attached:
-            raise RecorderNotAttachedError(
-                "Recorder has not been attached to the event bus."
-            )
+            raise RecorderNotAttachedError("Recorder has not been attached to the event bus.")
 
         changeset = self._builder.finalize()
         self._event_bus.publish(ChangeSetCompleted(changeset=changeset))

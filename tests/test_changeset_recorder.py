@@ -50,9 +50,7 @@ class TestRecorderInitialization:
         recorder = ChangeSetRecorder(event_bus=event_bus)
         assert recorder._builder is not None
 
-    def test_identity_injection(
-        self, event_bus: EventBus, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_identity_injection(self, event_bus: EventBus, valid_identity: ChangeIdentity) -> None:
         recorder = ChangeSetRecorder(event_bus=event_bus, identity=valid_identity)
         assert recorder.identity == valid_identity
 

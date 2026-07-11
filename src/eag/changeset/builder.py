@@ -56,16 +56,12 @@ class ChangeSetBuilder:
         self._data = _BuilderData()
 
         if self._event_bus:
-            self._event_bus.publish(
-                ChangeSetBuilderStarted(identity_id=self._identity.id)
-            )
+            self._event_bus.publish(ChangeSetBuilderStarted(identity_id=self._identity.id))
 
     def _ensure_building(self) -> None:
         """Ensure the builder is still in the BUILDING state."""
         if self._state != ChangeSetBuilderState.BUILDING:
-            raise ChangeSetFinalizedError(
-                "Cannot modify a finalized ChangeSetBuilder."
-            )
+            raise ChangeSetFinalizedError("Cannot modify a finalized ChangeSetBuilder.")
 
     def record_file(self, file: ChangedFile) -> None:
         """Record a file change."""
@@ -135,9 +131,7 @@ class ChangeSetBuilder:
         self._state = ChangeSetBuilderState.FINALIZED
 
         if self._event_bus:
-            self._event_bus.publish(
-                ChangeSetFinalized(changeset_id=self._identity.id)
-            )
+            self._event_bus.publish(ChangeSetFinalized(changeset_id=self._identity.id))
 
         return changeset
 

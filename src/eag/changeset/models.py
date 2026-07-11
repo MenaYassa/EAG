@@ -62,17 +62,12 @@ class ChangedFile:
 
         if self.change_type == FileChangeType.ADDED:
             if self.checksum_before is not None or self.checksum_after is None:
-                raise ValueError(
-                    "ADDED file must have no checksum_before and a checksum_after."
-                )
+                raise ValueError("ADDED file must have no checksum_before and a checksum_after.")
         elif self.change_type == FileChangeType.DELETED:
             if self.checksum_before is None or self.checksum_after is not None:
-                raise ValueError(
-                    "DELETED file must have a checksum_before and no checksum_after."
-                )
-        elif (
-            self.change_type in (FileChangeType.MODIFIED, FileChangeType.RENAMED)
-            and (self.checksum_before is None or self.checksum_after is None)
+                raise ValueError("DELETED file must have a checksum_before and no checksum_after.")
+        elif self.change_type in (FileChangeType.MODIFIED, FileChangeType.RENAMED) and (
+            self.checksum_before is None or self.checksum_after is None
         ):
             raise ValueError(
                 f"{self.change_type.value.upper()} file must have "
@@ -95,8 +90,7 @@ class CommandRecord:
             raise ValueError("Duration cannot be negative.")
         if self.completed_at - self.started_at != self.duration:
             raise ValueError(
-                "Duration does not match the difference between "
-                "completed_at and started_at."
+                "Duration does not match the difference between completed_at and started_at."
             )
 
 
@@ -187,13 +181,9 @@ class ChangeSet:
     def __post_init__(self) -> None:
         if self.metrics is not None:
             if self.metrics.commands != len(self.commands):
-                raise ValueError(
-                    "Metrics commands count does not match actual commands."
-                )
+                raise ValueError("Metrics commands count does not match actual commands.")
             if self.metrics.changed_files != len(self.files):
-                raise ValueError(
-                    "Metrics changed_files count does not match actual files."
-                )
+                raise ValueError("Metrics changed_files count does not match actual files.")
             if self.metrics.tests != len(self.tests):
                 raise ValueError("Metrics tests count does not match actual tests.")
 

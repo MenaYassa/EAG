@@ -161,9 +161,7 @@ class TestChangeSetBuilderRecording:
 
 
 class TestChangeSetBuilderFinalization:
-    def test_finalize_returns_immutable_changeset(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_finalize_returns_immutable_changeset(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         changeset = builder.finalize()
 
@@ -171,9 +169,7 @@ class TestChangeSetBuilderFinalization:
         with pytest.raises(FrozenInstanceError):
             changeset.files = ()  # type: ignore[misc]
 
-    def test_finalize_preserves_identity(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_finalize_preserves_identity(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         changeset = builder.finalize()
         assert changeset.identity == valid_identity
@@ -211,16 +207,12 @@ class TestChangeSetBuilderFinalization:
         assert changeset.metrics.tests == 1
         assert changeset.metrics.duration == timedelta(seconds=5)
 
-    def test_finalize_transitions_state(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_finalize_transitions_state(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         builder.finalize()
         assert builder._state == ChangeSetBuilderState.FINALIZED
 
-    def test_finalize_publishes_event(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_finalize_publishes_event(self, valid_identity: ChangeIdentity) -> None:
         event_bus = EventBus()
         received = []
         event_bus.subscribe(ChangeSetFinalized, lambda e: received.append(e))
@@ -231,9 +223,7 @@ class TestChangeSetBuilderFinalization:
         assert len(received) == 1
         assert received[0].changeset_id == valid_identity.id
 
-    def test_finalize_empty_builder(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_finalize_empty_builder(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         changeset = builder.finalize()
         assert changeset.files == ()
@@ -282,17 +272,13 @@ class TestChangeSetBuilderLifecycle:
         with pytest.raises(ChangeSetFinalizedError):
             builder.record_summary(valid_summary)
 
-    def test_record_artifact_after_finalize_raises(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_record_artifact_after_finalize_raises(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         builder.finalize()
         with pytest.raises(ChangeSetFinalizedError):
             builder.record_artifact(PurePosixPath("report.html"))
 
-    def test_double_finalize_raises(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_double_finalize_raises(self, valid_identity: ChangeIdentity) -> None:
         builder = ChangeSetBuilder(identity=valid_identity)
         builder.finalize()
         with pytest.raises(ChangeSetFinalizedError):

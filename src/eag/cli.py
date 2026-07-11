@@ -23,6 +23,7 @@ from eag.plugins.builtin.git import GIT_STATUS
 from eag.plugins.builtin.workspace import (
     WORKSPACE_INSPECT,
 )
+from eag.safety import SafetyBackend
 
 app = typer.Typer(
     name="eag",
@@ -178,6 +179,35 @@ def health() -> None:
 
             if plugin.error_message:
                 typer.echo(f"      {plugin.error_message}")
+    finally:
+        kernel.shutdown()
+
+
+@app.command()
+def safety() -> None:
+    """Show engineering safety status."""
+    kernel = bootstrap()
+
+    try:
+        report = kernel.context.safety_runtime.inspect()
+
+        typer.echo("\nEngineering Safety")
+        typer.echo("─────────────────────────\n")
+
+        repo_marker = "✓" if report.status.backend == SafetyBackend.GIT else "○"
+        typer.echo(f"Workspace:\n  {repo_marker} Git repository")
+
+        typer.echo(f"\nBranch:\n  {report.status.branch or '(detached HEAD)'}")
+        typer.echo(f"\nHEAD:\n  {report.status.head or 'None'}")
+
+        tree_marker = "✓ Clean" if not report.status.dirty else "✗ Dirty"
+        typer.echo(f"\nWorking Tree:\n  {tree_marker}")
+
+        typer.echo(f"\nConflicts:\n  {'None' if not report.status.has_conflicts else 'Present'}")
+
+        typer.echo(f"\nRollback:\n  {'✓ Available' if report.checkpoint else '○ Not available'}")
+        typer.echo(f"\nStatus:\n  {report.state.value.upper()}\n")
+
     finally:
         kernel.shutdown()
 

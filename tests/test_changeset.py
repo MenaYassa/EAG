@@ -351,9 +351,7 @@ class TestExecutionMetrics:
     def test_valid_metrics(self, valid_metrics: ExecutionMetrics) -> None:
         assert valid_metrics.commands == 1
 
-    @pytest.mark.parametrize(
-        "field", ["commands", "changed_files", "tests", "warnings", "errors"]
-    )
+    @pytest.mark.parametrize("field", ["commands", "changed_files", "tests", "warnings", "errors"])
     def test_negative_counts_raises(self, field: str) -> None:
         kwargs = {
             "commands": 0,
@@ -442,9 +440,7 @@ class TestChangeSet:
         assert cs.metrics.commands == 1
         assert cs.artifacts[0] == PurePosixPath("report.html")
 
-    def test_metrics_mismatch_commands_raises(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_metrics_mismatch_commands_raises(self, valid_identity: ChangeIdentity) -> None:
         with pytest.raises(ValueError, match="commands count does not match"):
             ChangeSet(
                 identity=valid_identity,
@@ -461,9 +457,7 @@ class TestChangeSet:
                 ),
             )
 
-    def test_metrics_mismatch_files_raises(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_metrics_mismatch_files_raises(self, valid_identity: ChangeIdentity) -> None:
         with pytest.raises(ValueError, match="changed_files count does not match"):
             ChangeSet(
                 identity=valid_identity,
@@ -480,9 +474,7 @@ class TestChangeSet:
                 ),
             )
 
-    def test_metrics_mismatch_tests_raises(
-        self, valid_identity: ChangeIdentity
-    ) -> None:
+    def test_metrics_mismatch_tests_raises(self, valid_identity: ChangeIdentity) -> None:
         with pytest.raises(ValueError, match="tests count does not match"):
             ChangeSet(
                 identity=valid_identity,
@@ -499,9 +491,7 @@ class TestChangeSet:
                 ),
             )
 
-    def test_immutability(
-        self, valid_identity: ChangeIdentity, valid_file: ChangedFile
-    ) -> None:
+    def test_immutability(self, valid_identity: ChangeIdentity, valid_file: ChangedFile) -> None:
         cs = ChangeSet(
             identity=valid_identity,
             files=(valid_file,),
@@ -511,9 +501,7 @@ class TestChangeSet:
         with pytest.raises(FrozenInstanceError):
             cs.files = ()  # type: ignore[misc]
 
-    def test_hashing(
-        self, valid_identity: ChangeIdentity, valid_file: ChangedFile
-    ) -> None:
+    def test_hashing(self, valid_identity: ChangeIdentity, valid_file: ChangedFile) -> None:
         cs1 = ChangeSet(
             identity=valid_identity,
             files=(valid_file,),
@@ -528,9 +516,7 @@ class TestChangeSet:
         )
         assert hash(cs1) == hash(cs2)
 
-    def test_equality(
-        self, valid_identity: ChangeIdentity, valid_file: ChangedFile
-    ) -> None:
+    def test_equality(self, valid_identity: ChangeIdentity, valid_file: ChangedFile) -> None:
         cs1 = ChangeSet(
             identity=valid_identity,
             files=(valid_file,),

@@ -1,6 +1,6 @@
 """EAG bootstrap: initialise the kernel and platform state."""
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from eag.approval import (
     ApprovalCoordinator,
@@ -21,6 +21,13 @@ from eag.plugins.builtin.filesystem import FilesystemPlugin
 from eag.plugins.builtin.git import GitPlugin
 from eag.plugins.builtin.workspace import WorkspacePlugin
 from eag.registry import CapabilityRegistry
+from eag.safety import (
+    CheckpointManager,
+    GitSafetyBackend,
+    RollbackEngine,
+    SafetyRuntime,
+    WorkspaceInspector,
+)
 
 
 def bootstrap(config_path: Path | None = None) -> Kernel:
@@ -58,6 +65,26 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         manager=approval_manager,
     )
 
+    # Create Safety Runtime.
+    workspace_pure = PurePosixPath(resolved_settings.kernel.workspace)
+    git_safety_backend = GitSafetyBackend(
+        workspace=resolved_settings.kernel.workspace
+    )
+    safety_inspector = WorkspaceInspector(backend=git_safety_backend)
+    checkpoint_manager = CheckpointManager(
+        backend=git_safety_backend, event_bus=event_bus
+    )
+    rollback_engine = RollbackEngine(
+        backend=git_safety_backend, event_bus=event_bus
+    )
+    safety_runtime = SafetyRuntime(
+        workspace=workspace_pure,
+        inspector=safety_inspector,
+        checkpoint_manager=checkpoint_manager,
+        rollback_engine=rollback_engine,
+        event_bus=event_bus,
+    )
+
     # Create runtime context.
     runtime_context = RuntimeContext(
         settings=resolved_settings,
@@ -65,6 +92,7 @@ def bootstrap(config_path: Path | None = None) -> Kernel:
         capability_registry=capability_registry,
         approval_manager=approval_manager,
         approval_coordinator=approval_coordinator,
+        safety_runtime=safety_runtime,
     )
 
     # Create plugin manager with the full context.

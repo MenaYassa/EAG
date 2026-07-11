@@ -1,11 +1,12 @@
 """Shared pytest fixtures for EAG tests."""
 
 import io
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 import structlog
 
-# New imports for approval
 from eag.approval import (
     ApprovalCoordinator,
     ApprovalManager,
@@ -16,6 +17,7 @@ from eag.core import RuntimeContext
 from eag.events import EventBus
 from eag.plugins import PluginManager
 from eag.registry import CapabilityRegistry
+from eag.safety import SafetyRuntime
 
 
 @pytest.fixture(autouse=True)
@@ -34,12 +36,17 @@ def configure_structlog_for_tests() -> None:
 
 
 @pytest.fixture
-def settings() -> Settings:
-    """Create isolated test settings."""
+def settings(tmp_path: Path) -> Settings:
+    """Create test settings."""
+    from eag.config import KernelSettings, LoggingSettings
+
     return Settings(
-        kernel={
-            "environment": "testing",
-        }
+        kernel=KernelSettings(
+            name="EAG",
+            environment="testing",
+            workspace=tmp_path,
+        ),
+        logging=LoggingSettings(level="INFO", json_output=False),
     )
 
 
@@ -76,12 +83,22 @@ def runtime_context(
         manager=approval_manager,
     )
 
+    # Build safety runtime with mocked dependencies
+    safety_runtime = SafetyRuntime(
+        workspace=settings.kernel.workspace,
+        inspector=MagicMock(),
+        checkpoint_manager=MagicMock(),
+        rollback_engine=MagicMock(),
+        event_bus=event_bus,
+    )
+
     return RuntimeContext(
         settings=settings,
         event_bus=event_bus,
         capability_registry=capability_registry,
         approval_manager=approval_manager,
         approval_coordinator=approval_coordinator,
+        safety_runtime=safety_runtime,
     )
 
 
