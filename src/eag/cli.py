@@ -426,6 +426,7 @@ def scan(
     click.echo(f"Generated: {profile.generated_at.isoformat()}")
 
 
+# ==================== MODIFIED symbols COMMAND ====================
 @app.command()
 def symbols(
     path: Path = typer.Argument(  # noqa: B008
@@ -460,7 +461,7 @@ def symbols(
     click.echo(result.module.name)
     click.echo("")
 
-    click.echo("Symbols")
+    click.echo("Public API")
     click.echo("─" * 40)
 
     classes = [s for s in result.symbols if s.identity.kind.value == "class"]
@@ -470,16 +471,19 @@ def symbols(
     if classes:
         click.echo("Classes:")
         for c in classes:
-            click.echo(f"  - {c.identity.qualified_name.split('.')[-1]}")
+            name = c.identity.qualified_name.split(".")[-1]
+            click.echo(f"  - {name}")
     if functions:
         click.echo("Functions:")
         for f in functions:
-            click.echo(f"  - {f.identity.qualified_name.split('.')[-1]}()")
+            name = f.identity.qualified_name.split(".")[-1]
+            click.echo(f"  - {name}()")
     if methods:
         click.echo("Methods:")
         for m in methods:
             parts = m.identity.qualified_name.split(".")
             click.echo(f"  - {parts[-2]}.{parts[-1]}()")
+
     click.echo("")
     click.echo("Dependencies")
     click.echo("─" * 40)
@@ -494,9 +498,12 @@ def symbols(
     click.echo(f"Imports:  {result.metrics.dependencies}")
 
 
+# ==================== MODIFIED index COMMAND ====================
 @app.command()
 def index() -> None:
     """Build and display the repository engineering index."""
+    import time
+
     from eag.index.runtime import IndexRuntime
     from eag.source.python.analyzer import PythonAnalyzer
     from eag.source.registry import SourceAnalyzerRegistry
@@ -504,31 +511,42 @@ def index() -> None:
 
     kernel = bootstrap()
 
-    # Setup Source Runtime
     registry = SourceAnalyzerRegistry()
     registry.register(PythonAnalyzer())
     source_runtime = SourceRuntime(registry, kernel.context.event_bus)
 
-    # Setup Index Runtime
     index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
 
     repo_root = kernel.context.settings.kernel.workspace
     repo_name = repo_root.name
 
     click.echo(f"Building engineering index for {repo_name}...")
+    start_time = time.time()
     idx = index_runtime.build(repo_root, repo_name)
+    duration_ms = (time.time() - start_time) * 1000
 
     click.echo("")
     click.echo("Repository Index")
     click.echo("─" * 40)
+    click.echo(f"Repository:   {repo_name}")
+    click.echo(f"Files:        {idx.statistics.files}")
     click.echo(f"Modules:      {idx.statistics.modules}")
+    click.echo("")
+    click.echo("Symbols")
+    click.echo("─" * 40)
     click.echo(f"Classes:      {idx.statistics.classes}")
+    click.echo(f"Interfaces:   {idx.statistics.interfaces}")
+    click.echo(f"Protocols:    {idx.statistics.protocols}")
+    click.echo(f"Enums:        {idx.statistics.enums}")
+    click.echo(f"Dataclasses:  {idx.statistics.dataclasses}")
     click.echo(f"Functions:    {idx.statistics.functions}")
     click.echo(f"Methods:      {idx.statistics.methods}")
-    click.echo(f"Symbols:      {idx.statistics.symbols}")
+    click.echo(f"Constants:    {idx.statistics.constants}")
+    click.echo(f"Total:        {idx.statistics.symbols}")
+    click.echo("")
     click.echo(f"Dependencies: {idx.statistics.dependencies}")
     click.echo("")
-    click.echo(f"Generated: {idx.identity.created_at.isoformat()}")
+    click.echo(f"Generated in: {duration_ms:.0f} ms")
 
 
 # Helper function to get the explorer runtime

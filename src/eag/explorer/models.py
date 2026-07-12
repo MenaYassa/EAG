@@ -60,10 +60,16 @@ class OverviewView(View):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class StatisticsView(View):
+    files: int
     modules: int
     classes: int
+    interfaces: int
+    protocols: int
+    enums: int
+    dataclasses: int
     functions: int
     methods: int
+    constants: int
     symbols: int
     dependencies: int
     avg_symbols_per_module: float

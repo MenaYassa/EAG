@@ -20,18 +20,30 @@ class RepositoryIndexIdentity:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RepositoryIndexStatistics:
+    files: int = 0
     modules: int = 0
     classes: int = 0
+    interfaces: int = 0
+    protocols: int = 0
+    enums: int = 0
+    dataclasses: int = 0
     functions: int = 0
     methods: int = 0
+    constants: int = 0
     symbols: int = 0
     dependencies: int = 0
 
     def __post_init__(self) -> None:
+        _validate_non_negative_int(self.files, "files")
         _validate_non_negative_int(self.modules, "modules")
         _validate_non_negative_int(self.classes, "classes")
+        _validate_non_negative_int(self.interfaces, "interfaces")
+        _validate_non_negative_int(self.protocols, "protocols")
+        _validate_non_negative_int(self.enums, "enums")
+        _validate_non_negative_int(self.dataclasses, "dataclasses")
         _validate_non_negative_int(self.functions, "functions")
         _validate_non_negative_int(self.methods, "methods")
+        _validate_non_negative_int(self.constants, "constants")
         _validate_non_negative_int(self.symbols, "symbols")
         _validate_non_negative_int(self.dependencies, "dependencies")
 

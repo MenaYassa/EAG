@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from datetime import UTC, datetime
 
 from eag.index.errors import IndexBuildError
@@ -16,11 +17,13 @@ class RepositoryIndexBuilder:
         self._modules: dict[str, ModuleIdentity] = {}
         self._symbols: dict[str, Symbol] = {}
         self._dependencies: list[Dependency] = []
+        self._files = 0
 
     def add_result(self, result: AnalysisResult) -> None:
         if not isinstance(result, AnalysisResult):
             raise TypeError("result must be an AnalysisResult")
 
+        self._files += 1
         self._modules[result.module.name] = result.module
 
         for sym in result.symbols:
@@ -28,6 +31,15 @@ class RepositoryIndexBuilder:
 
         for dep in result.dependencies:
             self._dependencies.append(dep)
+
+    @classmethod
+    def build_from_results(
+        cls, results: Iterable[AnalysisResult], repository_name: str
+    ) -> RepositoryIndex:
+        builder = cls(repository_name)
+        for res in results:
+            builder.add_result(res)
+        return builder.build()
 
     def build(self) -> RepositoryIndex:
         try:
@@ -47,14 +59,27 @@ class RepositoryIndexBuilder:
 
     def _calculate_statistics(self) -> RepositoryIndexStatistics:
         classes = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.CLASS)
+        interfaces = sum(
+            1 for s in self._symbols.values() if s.identity.kind == SymbolKind.INTERFACE
+        )
+        protocols = sum(1 for s in self._symbols.values() if "is_protocol" in s.attributes)
+        enums = sum(1 for s in self._symbols.values() if "is_enum" in s.attributes)
+        dataclasses = sum(1 for s in self._symbols.values() if "is_dataclass" in s.attributes)
         functions = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.FUNCTION)
         methods = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.METHOD)
+        constants = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.CONSTANT)
 
         return RepositoryIndexStatistics(
+            files=self._files,
             modules=len(self._modules),
             classes=classes,
+            interfaces=interfaces,
+            protocols=protocols,
+            enums=enums,
+            dataclasses=dataclasses,
             functions=functions,
             methods=methods,
+            constants=constants,
             symbols=len(self._symbols),
             dependencies=len(self._dependencies),
         )

@@ -206,7 +206,8 @@ def test_registered_read_handler_executes(
         capability_registry=runtime_context.capability_registry,
         approval_manager=runtime_context.approval_manager,
         approval_coordinator=runtime_context.approval_coordinator,
-        safety_runtime=runtime_context.safety_runtime,  # Added missing argument
+        safety_runtime=runtime_context.safety_runtime,
+        repository_runtime=runtime_context.repository_runtime,  # <-- ADD THIS LINE
     )
 
     manager = PluginManager(

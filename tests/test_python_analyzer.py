@@ -52,7 +52,7 @@ def test_analyzer_produces_result(analyzer, context):
     result = analyzer.analyze(context)
 
     assert result.identity.language == "python"
-    assert result.module.name == "src.eag.main"
+    assert result.module.name == "eag.main"  # <-- CHANGE "src.eag.main" TO "eag.main"
 
     # Verify extracted symbols documentation summaries
     main_func = next(s for s in result.symbols if s.identity.qualified_name.endswith(".main"))

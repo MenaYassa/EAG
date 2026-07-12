@@ -99,6 +99,7 @@ def runtime_context(
         approval_manager=approval_manager,
         approval_coordinator=approval_coordinator,
         safety_runtime=safety_runtime,
+        repository_runtime=MagicMock(),
     )
 
 

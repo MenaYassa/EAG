@@ -57,6 +57,11 @@ class PythonAnalyzer(SourceAnalyzer):
         try:
             rel_path = path.relative_to(repo_root)
             parts = list(rel_path.with_suffix("").parts)
+
+            # Strip 'src' if it's the root package directory
+            if parts and parts[0] == "src":
+                parts.pop(0)
+
             if parts and parts[-1] == "__init__":
                 parts.pop()
             return ".".join(parts)

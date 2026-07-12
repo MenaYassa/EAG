@@ -39,21 +39,21 @@ class ExplorerRuntime:
     def statistics(self, request: StatisticsRequest) -> StatisticsView:
         stats = self._index.statistics
         avg = stats.symbols / stats.modules if stats.modules > 0 else 0.0
-
-        # Find largest module
-        largest = "N/A"
-        _max_syms = -1
-        # In a real system, we'd track this in stats. For now, we infer.
-        # This is a limitation of the current IndexStats, we'll just return placeholder.
         return StatisticsView(
+            files=stats.files,
             modules=stats.modules,
             classes=stats.classes,
+            interfaces=stats.interfaces,
+            protocols=stats.protocols,
+            enums=stats.enums,
+            dataclasses=stats.dataclasses,
             functions=stats.functions,
             methods=stats.methods,
+            constants=stats.constants,
             symbols=stats.symbols,
             dependencies=stats.dependencies,
             avg_symbols_per_module=round(avg, 2),
-            largest_module=largest,
+            largest_module="N/A",
         )
 
     def find_symbol(self, request: FindSymbolRequest) -> SymbolView:
@@ -84,11 +84,7 @@ class ExplorerRuntime:
         ]
 
         # Extract dependencies (imports in the same file)
-        deps = [
-            d.target
-            for d in self._index.dependencies
-            if d.source == "module"  # Simplified
-        ]
+        deps = list(set(d.target for d in self._index.dependencies if d.source == "module"))
 
         return SymbolView(
             name=sym.identity.qualified_name.split(".")[-1],
