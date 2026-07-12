@@ -41,7 +41,7 @@ class PythonTranslator:
         )
 
         symbols = self._translate_symbols(module)
-        dependencies = self._translate_imports(module.imports)
+        dependencies = self._translate_imports(module.name, module.imports)
         metrics = self._calculate_metrics(lines, symbols, dependencies)
 
         return AnalysisResult(
@@ -139,13 +139,21 @@ class PythonTranslator:
             attributes=frozenset(attributes),
         )
 
-    def _translate_imports(self, imports: tuple[PythonImport, ...]) -> tuple[Dependency, ...]:
+    def _translate_imports(
+        self, module_name: str, imports: tuple[PythonImport, ...]
+    ) -> tuple[Dependency, ...]:
         deps: list[Dependency] = []
         for imp in imports:
             target = f"{imp.module}.{imp.symbol}" if imp.symbol else imp.module
             if imp.relative_level > 0:
                 target = f"{'.' * imp.relative_level}{target}"
-            deps.append(Dependency(source="module", target=target, kind=DependencyKind.IMPORT))
+            deps.append(
+                Dependency(
+                    source=module_name,
+                    target=target,
+                    kind=DependencyKind.IMPORT,
+                )
+            )
         return tuple(deps)
 
     def _determine_visibility(self, name: str) -> Visibility:
