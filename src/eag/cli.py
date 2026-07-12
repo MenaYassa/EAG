@@ -340,6 +340,7 @@ def scan(
     ),
 ) -> None:
     """Scan a repository and display its profile."""
+    # ... rest of the function body (unchanged)
     kernel = bootstrap()
 
     from eag.repository.ignore import IgnoreEngine
@@ -409,3 +410,109 @@ def scan(
 
     click.echo("")
     click.echo(f"Generated: {profile.generated_at.isoformat()}")
+
+
+# Add this command to your existing app group in src/eag/cli.py
+@app.command()
+def symbols(
+    path: Path = typer.Argument(  # noqa: B008
+        ...,
+        exists=True,
+        dir_okay=False,
+        help="Path to the source file to analyze.",
+    ),
+) -> None:
+    """Analyze a source file and display its engineering symbols."""
+    from eag.source.analyzer import AnalysisContext
+    from eag.source.python.analyzer import PythonAnalyzer
+
+    kernel = bootstrap()
+    analyzer = PythonAnalyzer()
+
+    if not analyzer.supports(path):
+        click.echo(f"Unsupported file type: {path.suffix}")
+        return
+
+    context = AnalysisContext(
+        path=path,
+        repository_root=kernel.context.settings.kernel.workspace,
+        settings=kernel.context.settings,
+        cache=None,
+    )
+
+    result = analyzer.analyze(context)
+
+    click.echo("Module")
+    click.echo("─" * 40)
+    click.echo(result.module.name)
+    click.echo("")
+
+    click.echo("Symbols")
+    click.echo("─" * 40)
+
+    classes = [s for s in result.symbols if s.identity.kind.value == "class"]
+    functions = [s for s in result.symbols if s.identity.kind.value == "function"]
+    methods = [s for s in result.symbols if s.identity.kind.value == "method"]
+
+    if classes:
+        click.echo("Classes:")
+        for c in classes:
+            click.echo(f"  - {c.identity.qualified_name.split('.')[-1]}")
+    if functions:
+        click.echo("Functions:")
+        for f in functions:
+            click.echo(f"  - {f.identity.qualified_name.split('.')[-1]}()")
+    if methods:
+        click.echo("Methods:")
+        for m in methods:
+            parts = m.identity.qualified_name.split(".")
+            click.echo(f"  - {parts[-2]}.{parts[-1]}()")
+    click.echo("")
+    click.echo("Dependencies")
+    click.echo("─" * 40)
+    for dep in result.dependencies:
+        click.echo(f"  - {dep.target}")
+
+    click.echo("")
+    click.echo("Metrics")
+    click.echo("─" * 40)
+    click.echo(f"Lines:    {result.metrics.lines}")
+    click.echo(f"Symbols:  {result.metrics.symbols}")
+    click.echo(f"Imports:  {result.metrics.dependencies}")
+
+
+@app.command()
+def index() -> None:
+    """Build and display the repository engineering index."""
+    from eag.index.runtime import IndexRuntime
+    from eag.source.python.analyzer import PythonAnalyzer
+    from eag.source.registry import SourceAnalyzerRegistry
+    from eag.source.runtime import SourceRuntime
+
+    kernel = bootstrap()
+
+    # Setup Source Runtime
+    registry = SourceAnalyzerRegistry()
+    registry.register(PythonAnalyzer())
+    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
+
+    # Setup Index Runtime
+    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
+
+    repo_root = kernel.context.settings.kernel.workspace
+    repo_name = repo_root.name
+
+    click.echo(f"Building engineering index for {repo_name}...")
+    idx = index_runtime.build(repo_root, repo_name)
+
+    click.echo("")
+    click.echo("Repository Index")
+    click.echo("─" * 40)
+    click.echo(f"Modules:      {idx.statistics.modules}")
+    click.echo(f"Classes:      {idx.statistics.classes}")
+    click.echo(f"Functions:    {idx.statistics.functions}")
+    click.echo(f"Methods:      {idx.statistics.methods}")
+    click.echo(f"Symbols:      {idx.statistics.symbols}")
+    click.echo(f"Dependencies: {idx.statistics.dependencies}")
+    click.echo("")
+    click.echo(f"Generated: {idx.identity.created_at.isoformat()}")

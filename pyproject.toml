@@ -52,3 +52,7 @@ select = [
 python_version = "3.12"
 strict = true
 packages = ["eag"]
+
+[[tool.mypy.overrides]]
+module = "eag.source.python.*"
+ignore_missing_imports = true
