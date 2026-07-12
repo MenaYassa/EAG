@@ -11,6 +11,19 @@ from eag.execution.errors import (
     CommandApprovalRequiredError,
     CommandDeniedError,
 )
+
+# Add these imports to the top of src/eag/cli.py
+from eag.explorer.formatter import JsonFormatter, TerminalFormatter
+from eag.explorer.models import (
+    DependencyRequest,
+    FindSymbolRequest,
+    ModuleRequest,
+    OverviewRequest,
+    SearchRequest,
+    StatisticsRequest,
+)
+from eag.explorer.runtime import ExplorerRuntime
+from eag.index.runtime import IndexRuntime
 from eag.plugins.builtin.command import (
     COMMAND_EVALUATE,
     COMMAND_RUN,
@@ -25,6 +38,9 @@ from eag.plugins.builtin.workspace import (
     WORKSPACE_INSPECT,
 )
 from eag.safety import SafetyBackend
+from eag.source.python.analyzer import PythonAnalyzer
+from eag.source.registry import SourceAnalyzerRegistry
+from eag.source.runtime import SourceRuntime
 
 app = typer.Typer(
     name="eag",
@@ -192,22 +208,22 @@ def safety() -> None:
     try:
         report = kernel.context.safety_runtime.inspect()
 
-        typer.echo("\nEngineering Safety")
-        typer.echo("─────────────────────────\n")
+        print("\nEngineering Safety")
+        print("─────────────────────────\n")
 
         repo_marker = "✓" if report.status.backend == SafetyBackend.GIT else "○"
-        typer.echo(f"Workspace:\n  {repo_marker} Git repository")
+        print(f"Workspace:\n  {repo_marker} Git repository")
 
-        typer.echo(f"\nBranch:\n  {report.status.branch or '(detached HEAD)'}")
-        typer.echo(f"\nHEAD:\n  {report.status.head or 'None'}")
+        print(f"\nBranch:\n  {report.status.branch or '(detached HEAD)'}")
+        print(f"\nHEAD:\n  {report.status.head or 'None'}")
 
         tree_marker = "✓ Clean" if not report.status.dirty else "✗ Dirty"
-        typer.echo(f"\nWorking Tree:\n  {tree_marker}")
+        print(f"\nWorking Tree:\n  {tree_marker}")
 
-        typer.echo(f"\nConflicts:\n  {'None' if not report.status.has_conflicts else 'Present'}")
+        print(f"\nConflicts:\n  {'None' if not report.status.has_conflicts else 'Present'}")
 
-        typer.echo(f"\nRollback:\n  {'✓ Available' if report.checkpoint else '○ Not available'}")
-        typer.echo(f"\nStatus:\n  {report.state.value.upper()}\n")
+        print(f"\nRollback:\n  {'✓ Available' if report.checkpoint else '○ Not available'}")
+        print(f"\nStatus:\n  {report.state.value.upper()}\n")
 
     finally:
         kernel.shutdown()
@@ -331,7 +347,6 @@ def run_command(
         kernel.shutdown()
 
 
-# ==================== FIXED scan COMMAND ====================
 @app.command()
 def scan(
     path: Path | None = typer.Argument(  # noqa: B008
@@ -340,7 +355,6 @@ def scan(
     ),
 ) -> None:
     """Scan a repository and display its profile."""
-    # ... rest of the function body (unchanged)
     kernel = bootstrap()
 
     from eag.repository.ignore import IgnoreEngine
@@ -412,7 +426,6 @@ def scan(
     click.echo(f"Generated: {profile.generated_at.isoformat()}")
 
 
-# Add this command to your existing app group in src/eag/cli.py
 @app.command()
 def symbols(
     path: Path = typer.Argument(  # noqa: B008
@@ -516,3 +529,121 @@ def index() -> None:
     click.echo(f"Dependencies: {idx.statistics.dependencies}")
     click.echo("")
     click.echo(f"Generated: {idx.identity.created_at.isoformat()}")
+
+
+# Helper function to get the explorer runtime
+def _get_explorer_runtime() -> tuple[ExplorerRuntime, str]:
+    kernel = bootstrap()
+
+    # 1. Setup Source Runtime
+    registry = SourceAnalyzerRegistry()
+    registry.register(PythonAnalyzer())
+    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
+
+    # 2. Setup Index Runtime and build index
+    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
+    repo_root = kernel.context.settings.kernel.workspace
+    repo_name = repo_root.name
+
+    # In a real app, this would be cached. For now, we build it on demand.
+    index = index_runtime.build(repo_root, repo_name)
+
+    # 3. Setup Explorer Runtime
+    return ExplorerRuntime(index, repo_name), repo_name
+
+
+# ==================== EXPLORER COMMANDS (TYPER NATIVE) ====================
+
+
+@app.command()
+def overview(
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """Display the engineering overview of the repository."""
+    runtime, repo_name = _get_explorer_runtime()
+    view = runtime.overview(OverviewRequest())
+
+    formatter = JsonFormatter() if json else TerminalFormatter()
+    click.echo(formatter.format(view))
+
+
+@app.command()
+def stats(
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """Display engineering statistics."""
+    runtime, _ = _get_explorer_runtime()
+    view = runtime.statistics(StatisticsRequest())
+
+    formatter = JsonFormatter() if json else TerminalFormatter()
+    click.echo(formatter.format(view))
+
+
+@app.command()
+def find(
+    name: str = typer.Argument(..., help="The symbol name to locate"),
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """Find a specific symbol in the engineering index."""
+    runtime, _ = _get_explorer_runtime()
+
+    try:
+        view = runtime.find_symbol(FindSymbolRequest(name=name))
+        formatter = JsonFormatter() if json else TerminalFormatter()
+        click.echo(formatter.format(view))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+@app.command()
+def module(
+    name: str = typer.Argument(..., help="The module name to locate"),
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """View details of a specific module."""
+    runtime, _ = _get_explorer_runtime()
+
+    try:
+        view = runtime.module(ModuleRequest(name=name))
+        formatter = JsonFormatter() if json else TerminalFormatter()
+        click.echo(formatter.format(view))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+@app.command()
+def deps(
+    source: str = typer.Argument(..., help="The source target module or symbol"),
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """View dependencies of a module or symbol."""
+    runtime, _ = _get_explorer_runtime()
+
+    view = runtime.dependencies(DependencyRequest(source=source))
+    formatter = JsonFormatter() if json else TerminalFormatter()
+    click.echo(formatter.format(view))
+
+
+@app.command()
+def search(
+    query: str = typer.Argument(..., help="The index search search query"),
+    json: bool = typer.Option(  # noqa: B008
+        False, "--json", help="Output as JSON"
+    ),
+) -> None:
+    """Search the engineering index."""
+    runtime, _ = _get_explorer_runtime()
+
+    view = runtime.search(SearchRequest(query=query))
+    formatter = JsonFormatter() if json else TerminalFormatter()
+    click.echo(formatter.format(view))
