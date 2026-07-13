@@ -20,7 +20,7 @@ class ImpactAnalyzer:
             RelationshipType.PUBLISHES_EVENT,  # Add if paths use events
             RelationshipType.SUBSCRIBES_EVENT,  # Add if paths use events
         }
-        self._dep_types = set()
+        self._dep_types: set[RelationshipType | str] = set()
         for t in raw_types:
             self._dep_types.add(t)
             self._dep_types.add(t.value)

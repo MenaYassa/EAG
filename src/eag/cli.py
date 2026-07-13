@@ -722,42 +722,6 @@ def graph() -> None:
         )
 
 
-@app.command(name="graph-deps")
-def graph_deps(name: str) -> None:
-    """View direct dependencies of a node."""
-    from eag.graph.builder import GraphBuilder
-    from eag.graph.runtime import GraphRuntime
-    from eag.index.runtime import IndexRuntime
-    from eag.source.python.analyzer import PythonAnalyzer
-    from eag.source.registry import SourceAnalyzerRegistry
-    from eag.source.runtime import SourceRuntime
-
-    kernel = bootstrap()
-    registry = SourceAnalyzerRegistry()
-    registry.register(PythonAnalyzer())
-    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
-    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
-    graph_runtime = GraphRuntime(GraphBuilder(kernel.context.event_bus), kernel.context.event_bus)
-
-    repo_root = kernel.context.settings.kernel.workspace
-    index = index_runtime.build(repo_root, repo_root.name)
-    graph_runtime.build(index)
-
-    try:
-        node = graph_runtime.find_node(name)
-        deps = graph_runtime.dependencies(node.id)
-
-        click.echo(f"Dependencies for {node.name}")
-        click.echo("─" * 40)
-        if not deps:
-            click.echo("  None")
-        else:
-            for d in deps:
-                click.echo(f"  • {d.name} ({d.kind.value})")
-    except Exception as e:
-        click.echo(f"Error: {e}", err=True)
-
-
 @app.command(name="dependents")
 def dependents(name: str) -> None:
     """View direct dependents of a node."""
@@ -794,11 +758,14 @@ def dependents(name: str) -> None:
         click.echo(f"Error: {e}", err=True)
 
 
-@app.command(name="impact")
-def impact(name: str) -> None:
-    """Analyze the engineering impact of changing a node."""
+@app.command(name="graph")
+@click.argument("subcommand", required=False)
+@click.argument("target", required=False)
+def graph_cmd(subcommand: str | None, target: str | None) -> None:
+    """Engineering graph operations."""
     from eag.graph.builder import GraphBuilder
     from eag.graph.runtime import GraphRuntime
+    from eag.graph.services import GraphExporter, GraphFormatter, GraphValidator
     from eag.index.runtime import IndexRuntime
     from eag.source.python.analyzer import PythonAnalyzer
     from eag.source.registry import SourceAnalyzerRegistry
@@ -809,7 +776,54 @@ def impact(name: str) -> None:
     registry.register(PythonAnalyzer())
     source_runtime = SourceRuntime(registry, kernel.context.event_bus)
     index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
-    graph_runtime = GraphRuntime(GraphBuilder(kernel.context.event_bus), kernel.context.event_bus)
+    graph_builder = GraphBuilder(kernel.context.event_bus)
+    graph_runtime = GraphRuntime(graph_builder, kernel.context.event_bus)
+
+    repo_root = kernel.context.settings.kernel.workspace
+    index = index_runtime.build(repo_root, repo_root.name)
+    graph_runtime.build(index)
+
+    formatter = GraphFormatter()
+    graph = graph_runtime.graph()
+
+    if subcommand == "stats" or subcommand is None:
+        click.echo(formatter.format_graph_stats(graph))
+    elif subcommand == "validate":
+        validator = GraphValidator()
+        report = validator.validate(graph)
+        click.echo("Engineering Graph Validation")
+        click.echo("─" * 40)
+        if report.healthy:
+            click.echo("✓ Graph is healthy.")
+        else:
+            for err in report.errors:
+                click.echo(f"✗ {err}", err=True)
+    elif subcommand == "export":
+        exporter = GraphExporter()
+        click.echo(exporter.to_json(graph))
+    else:
+        click.echo(f"Unknown subcommand: {subcommand}")
+
+
+@app.command(name="graph-deps")
+@click.argument("name")
+def graph_deps(name: str) -> None:
+    """View direct dependencies of a node."""
+    from eag.graph.builder import GraphBuilder
+    from eag.graph.runtime import GraphRuntime
+    from eag.graph.services import GraphFormatter
+    from eag.index.runtime import IndexRuntime
+    from eag.source.python.analyzer import PythonAnalyzer
+    from eag.source.registry import SourceAnalyzerRegistry
+    from eag.source.runtime import SourceRuntime
+
+    kernel = bootstrap()
+    registry = SourceAnalyzerRegistry()
+    registry.register(PythonAnalyzer())
+    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
+    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
+    graph_builder = GraphBuilder(kernel.context.event_bus)
+    graph_runtime = GraphRuntime(graph_builder, kernel.context.event_bus)
 
     repo_root = kernel.context.settings.kernel.workspace
     index = index_runtime.build(repo_root, repo_root.name)
@@ -817,84 +831,20 @@ def impact(name: str) -> None:
 
     try:
         node = graph_runtime.find_node(name)
-        report = graph_runtime.impact(node.id)
-
-        click.echo("Engineering Impact")
-        click.echo("────────────────────────")
-        click.echo(f"Changed Node:  {report.changed_node.name}")
-        click.echo("")
-
-        click.echo("Direct Impact:")
-        if not report.direct:
-            click.echo("  None")
-        else:
-            for d in report.direct:
-                click.echo(f"  • {d.name}")
-
-        click.echo("")
-        click.echo("Indirect Impact:")
-        if not report.indirect:
-            click.echo("  None")
-        else:
-            for d in report.indirect:
-                click.echo(f"  • {d.name}")
-
-        click.echo("")
-        click.echo(f"Maximum Depth: {report.depth}")
-        click.echo(f"Affected Nodes: {report.total}")
-    except Exception as e:
-        click.echo(f"Error: {e}", err=True)
-
-
-@app.command()
-@click.argument("start")
-@click.argument("end")
-def path(start: str, end: str) -> None:
-    """Find the shortest engineering path between two nodes."""
-    from eag.graph.builder import GraphBuilder
-    from eag.graph.runtime import GraphRuntime
-    from eag.index.runtime import IndexRuntime
-    from eag.source.python.analyzer import PythonAnalyzer
-    from eag.source.registry import SourceAnalyzerRegistry
-    from eag.source.runtime import SourceRuntime
-
-    kernel = bootstrap()
-    registry = SourceAnalyzerRegistry()
-    registry.register(PythonAnalyzer())
-    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
-    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
-    graph_runtime = GraphRuntime(GraphBuilder(kernel.context.event_bus), kernel.context.event_bus)
-
-    repo_root = kernel.context.settings.kernel.workspace
-    index = index_runtime.build(repo_root, repo_root.name)
-    graph_runtime.build(index)
-
-    try:
-        start_node = graph_runtime.find_node(start)
-        end_node = graph_runtime.find_node(end)
-        report = graph_runtime.path(start_node.id, end_node.id)
-
-        click.echo(f"Path: {start} -> {end}")
-        click.echo("─" * 40)
-
-        if report.distance == -1:
-            click.echo("  No path found.")
-        else:
-            for i, node in enumerate(report.path):
-                if i > 0:
-                    click.echo("  ↓")
-                click.echo(f"  {node.name} ({node.kind.value})")
-            click.echo("")
-            click.echo(f"Distance: {report.distance}")
+        resolved_deps = graph_runtime.dependencies(node.id)
+        formatter = GraphFormatter()
+        click.echo(formatter.format_dependencies(node, list(resolved_deps)))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
 
 
 @app.command(name="why")
+@click.argument("name")
 def why(name: str) -> None:
     """Explain why a node is connected to the rest of the system."""
     from eag.graph.builder import GraphBuilder
     from eag.graph.runtime import GraphRuntime
+    from eag.graph.services import GraphFormatter
     from eag.index.runtime import IndexRuntime
     from eag.source.python.analyzer import PythonAnalyzer
     from eag.source.registry import SourceAnalyzerRegistry
@@ -905,7 +855,8 @@ def why(name: str) -> None:
     registry.register(PythonAnalyzer())
     source_runtime = SourceRuntime(registry, kernel.context.event_bus)
     index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
-    graph_runtime = GraphRuntime(GraphBuilder(kernel.context.event_bus), kernel.context.event_bus)
+    graph_builder = GraphBuilder(kernel.context.event_bus)
+    graph_runtime = GraphRuntime(graph_builder, kernel.context.event_bus)
 
     repo_root = kernel.context.settings.kernel.workspace
     index = index_runtime.build(repo_root, repo_root.name)
@@ -915,26 +866,86 @@ def why(name: str) -> None:
         node = graph_runtime.find_node(name)
         graph = graph_runtime.graph()
 
-        click.echo(f"{node.name}")
-        click.echo("─" * 40)
-        click.echo("Referenced because:")
+        incoming = [
+            (graph_runtime.node(e.source), e.relationship)
+            for e in graph.edges
+            if e.target == node.id
+        ]
+        outgoing = [
+            (graph_runtime.node(e.target), e.relationship)
+            for e in graph.edges
+            if e.source == node.id
+        ]
 
-        incoming = [e for e in graph.edges if e.target == node.id]
-        outgoing = [e for e in graph.edges if e.source == node.id]
+        formatter = GraphFormatter()
+        click.echo(formatter.format_why(node, incoming, outgoing))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
 
-        for edge in incoming:
-            src = graph_runtime.node(edge.source)
-            click.echo(
-                f"  {src.name} ({src.kind.value}) --{edge.relationship.value}--> {node.name}"
-            )
 
-        for edge in outgoing:
-            tgt = graph_runtime.node(edge.target)
-            click.echo(
-                f"  {node.name} --{edge.relationship.value}--> {tgt.name} ({tgt.kind.value})"
-            )
+@app.command(name="impact")
+@click.argument("name")
+def impact(name: str) -> None:
+    """Analyze the engineering impact of changing a node."""
+    from eag.graph.builder import GraphBuilder
+    from eag.graph.runtime import GraphRuntime
+    from eag.graph.services import GraphFormatter
+    from eag.index.runtime import IndexRuntime
+    from eag.source.python.analyzer import PythonAnalyzer
+    from eag.source.registry import SourceAnalyzerRegistry
+    from eag.source.runtime import SourceRuntime
 
-        click.echo("")
-        click.echo(f"Total relationships: {len(incoming) + len(outgoing)}")
+    kernel = bootstrap()
+    registry = SourceAnalyzerRegistry()
+    registry.register(PythonAnalyzer())
+    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
+    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
+    graph_builder = GraphBuilder(kernel.context.event_bus)
+    graph_runtime = GraphRuntime(graph_builder, kernel.context.event_bus)
+
+    repo_root = kernel.context.settings.kernel.workspace
+    index = index_runtime.build(repo_root, repo_root.name)
+    graph_runtime.build(index)
+
+    try:
+        node = graph_runtime.find_node(name)
+        report = graph_runtime.impact(node.id)
+        formatter = GraphFormatter()
+        click.echo(formatter.format_impact(report))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+@app.command(name="path")
+@click.argument("start")
+@click.argument("end")
+def path(start: str, end: str) -> None:
+    """Find the shortest engineering path between two nodes."""
+    from eag.graph.builder import GraphBuilder
+    from eag.graph.runtime import GraphRuntime
+    from eag.graph.services import GraphFormatter
+    from eag.index.runtime import IndexRuntime
+    from eag.source.python.analyzer import PythonAnalyzer
+    from eag.source.registry import SourceAnalyzerRegistry
+    from eag.source.runtime import SourceRuntime
+
+    kernel = bootstrap()
+    registry = SourceAnalyzerRegistry()
+    registry.register(PythonAnalyzer())
+    source_runtime = SourceRuntime(registry, kernel.context.event_bus)
+    index_runtime = IndexRuntime(source_runtime, kernel.context.event_bus)
+    graph_builder = GraphBuilder(kernel.context.event_bus)
+    graph_runtime = GraphRuntime(graph_builder, kernel.context.event_bus)
+
+    repo_root = kernel.context.settings.kernel.workspace
+    index = index_runtime.build(repo_root, repo_root.name)
+    graph_runtime.build(index)
+
+    try:
+        start_node = graph_runtime.find_node(start)
+        end_node = graph_runtime.find_node(end)
+        report = graph_runtime.path(start_node.id, end_node.id)
+        formatter = GraphFormatter()
+        click.echo(formatter.format_path(report))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

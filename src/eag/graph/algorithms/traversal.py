@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-import ast
 
 from eag.graph.algorithms.models import TraversalResult
 from eag.graph.models import EngineeringGraph
@@ -23,8 +22,12 @@ class TraversalEngine:
         return adj
 
     def _bfs(
-        self, start: str, direction: str, relationship_types: set[RelationshipType] | None = None
+        self,
+        start: str,
+        direction: str,
+        relationship_types: set[RelationshipType | str] | None = None,
     ) -> tuple[str, ...]:
+
         visited = {start}
         queue = [start]
         order = [start]
@@ -32,7 +35,7 @@ class TraversalEngine:
         adj = self._outgoing if direction == "out" else self._incoming
 
         # Convert allowed types into matching strings for resilient cache matching
-        str_types = set()
+        str_types: set[RelationshipType | str] = set()
         if relationship_types:
             for t in relationship_types:
                 if isinstance(t, RelationshipType):

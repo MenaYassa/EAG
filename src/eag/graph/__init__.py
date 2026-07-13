@@ -33,6 +33,14 @@ from eag.graph.models import (
     GraphStatistics,
 )
 from eag.graph.runtime import GraphRuntime, GraphSnapshot
+from eag.graph.services import (
+    DependencyCategory,
+    DependencyClassifier,
+    GraphExporter,
+    GraphFormatter,
+    GraphValidationReport,
+    GraphValidator,
+)
 from eag.graph.state import (
     GraphNodeKind,
     GraphState,
@@ -73,4 +81,10 @@ __all__ = [
     "MetricsAnalyzer",
     "PathFinder",
     "TraversalEngine",
+    "DependencyCategory",
+    "DependencyClassifier",
+    "GraphExporter",
+    "GraphFormatter",
+    "GraphValidationReport",
+    "GraphValidator",
 ]
