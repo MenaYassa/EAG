@@ -9,6 +9,7 @@ from eag.source.python.extractors import (
     FunctionExtractor,
     ImportExtractor,
     ModuleExtractor,
+    SemanticExtractor,
 )
 from eag.source.python.parser import PythonParser
 from eag.source.python.translator import PythonTranslator
@@ -25,6 +26,7 @@ class PythonAnalyzer(SourceAnalyzer):
         self._function_extractor = FunctionExtractor()
         self._class_extractor = ClassExtractor()
         self._translator = PythonTranslator()
+        self._semantic_extractor = SemanticExtractor()
 
     def supports(self, path: Path) -> bool:
         return path.suffix in self.extensions
@@ -45,9 +47,14 @@ class PythonAnalyzer(SourceAnalyzer):
         py_imports = self._import_extractor.extract(tree)
         py_functions = self._function_extractor.extract(tree)
         py_classes = self._class_extractor.extract(tree)
+        py_semantic = self._semantic_extractor.extract(tree, module_name)
 
         py_module = replace(
-            py_module, imports=py_imports, functions=py_functions, classes=py_classes
+            py_module,
+            imports=py_imports,
+            functions=py_functions,
+            classes=py_classes,
+            semantic_relationships=py_semantic,
         )
 
         result = self._translator.translate(path, context.repository_root, py_module, lines)

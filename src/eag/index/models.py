@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from eag.index.errors import SymbolNotFoundError
-from eag.source.models import Dependency, ModuleIdentity, Symbol
+from eag.source.models import Dependency, ModuleIdentity, SemanticRelationship, Symbol
 from eag.source.state import SymbolKind
 
 
@@ -55,6 +55,7 @@ class RepositoryIndex:
     modules: tuple[ModuleIdentity, ...] = ()
     symbols: tuple[Symbol, ...] = ()
     dependencies: tuple[Dependency, ...] = ()
+    semantic_relationships: tuple[SemanticRelationship, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.identity, RepositoryIndexIdentity):
@@ -67,6 +68,8 @@ class RepositoryIndex:
             raise TypeError("symbols must be a tuple")
         if not isinstance(self.dependencies, tuple):
             raise TypeError("dependencies must be a tuple")
+        if not isinstance(self.semantic_relationships, tuple):
+            raise TypeError("semantic_relationships must be a tuple")
 
     # --- Query API ---
 

@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 
 from eag.source.diagnostics import AnalysisDiagnostic
 from eag.source.metrics import AnalysisMetrics
-from eag.source.state import DependencyKind, SymbolKind, Visibility
+from eag.source.state import DependencyKind, SemanticKind, SymbolKind, Visibility
 
 
 def _validate_non_empty_str(value: str, field_name: str) -> str:
@@ -154,6 +154,19 @@ class Dependency:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SemanticRelationship:
+    source: str
+    target: str
+    kind: "SemanticKind"
+
+    def __post_init__(self) -> None:
+        _validate_non_empty_str(self.source, "source")
+        _validate_non_empty_str(self.target, "target")
+        if not isinstance(self.kind, SemanticKind):
+            raise TypeError("kind must be a SemanticKind")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AnalysisResult:
     identity: SourceFileIdentity
     module: ModuleIdentity
@@ -162,6 +175,7 @@ class AnalysisResult:
     diagnostics: tuple[AnalysisDiagnostic, ...] = ()
     metrics: AnalysisMetrics = field(default_factory=AnalysisMetrics)
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    semantic_relationships: tuple[SemanticRelationship, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.identity, SourceFileIdentity):
@@ -176,3 +190,5 @@ class AnalysisResult:
             raise TypeError("diagnostics must be a tuple")
         if not isinstance(self.metrics, AnalysisMetrics):
             raise TypeError("metrics must be an AnalysisMetrics")
+        if not isinstance(self.semantic_relationships, tuple):
+            raise TypeError("semantic_relationships must be a tuple")

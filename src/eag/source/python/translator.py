@@ -50,6 +50,7 @@ class PythonTranslator:
             symbols=symbols,
             dependencies=dependencies,
             metrics=metrics,
+            semantic_relationships=module.semantic_relationships,  # ADD THIS LINE
         )
 
     def _translate_symbols(self, module: PythonModule) -> tuple[Symbol, ...]:

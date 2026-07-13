@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from eag.source.models import SemanticRelationship
+
 
 @dataclass(frozen=True, slots=True)
 class PythonParameter:
@@ -48,3 +50,4 @@ class PythonModule:
     functions: tuple[PythonFunction, ...] = ()
     classes: tuple[PythonClass, ...] = ()
     constants: tuple[str, ...] = ()
+    semantic_relationships: tuple[SemanticRelationship, ...] = ()

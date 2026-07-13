@@ -46,3 +46,11 @@ class AnalysisSeverity(StrEnum):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
+
+
+class SemanticKind(StrEnum):
+    CALLS = "calls"
+    INHERITS = "inherits"
+    USES = "uses"
+    PUBLISHES_EVENT = "publishes_event"
+    SUBSCRIBES_EVENT = "subscribes_event"

@@ -20,7 +20,7 @@ from eag.graph.models import (
 )
 from eag.graph.state import GraphState, RelationshipType
 from eag.index.models import RepositoryIndex
-from eag.source.state import SymbolKind
+from eag.source.state import SemanticKind, SymbolKind
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57,6 +57,7 @@ class GraphBuilder:
             self._collect_nodes()
             self._connect_contains()
             self._connect_imports()
+            self._connect_semantic()
             self._validate()
             stats = self._compute_statistics()
 
@@ -112,14 +113,22 @@ class GraphBuilder:
             self._add_node(NodeFactory.module(mod.name))
 
         for sym in self._index.symbols:
-            if sym.identity.kind == SymbolKind.CLASS:
-                self._add_node(NodeFactory.class_(sym.identity.qualified_name, sym.identity.module))
-            elif sym.identity.kind == SymbolKind.FUNCTION:
-                self._add_node(
-                    NodeFactory.function(sym.identity.qualified_name, sym.identity.module)
-                )
-            elif sym.identity.kind == SymbolKind.METHOD:
-                self._add_node(NodeFactory.method(sym.identity.qualified_name, sym.identity.module))
+            kind = sym.identity.kind
+            qname = sym.identity.qualified_name
+            module = sym.identity.module
+
+            if kind in (
+                SymbolKind.CLASS,
+                SymbolKind.INTERFACE,
+                SymbolKind.PROTOCOL,
+                SymbolKind.ENUM,
+                SymbolKind.DATACLASS,
+            ):
+                self._add_node(NodeFactory.class_(qname, module))
+            elif kind in (SymbolKind.FUNCTION, SymbolKind.CONSTANT):
+                self._add_node(NodeFactory.function(qname, module))
+            elif kind == SymbolKind.METHOD:
+                self._add_node(NodeFactory.method(qname, module))
 
         for dep in self._index.dependencies:
             self._add_node(NodeFactory.dependency(dep.target))
@@ -130,23 +139,29 @@ class GraphBuilder:
 
         for sym in self._index.symbols:
             mod_id = f"module:{sym.identity.module}"
+            kind = sym.identity.kind
+            qname = sym.identity.qualified_name
 
-            if sym.identity.kind == SymbolKind.CLASS:
-                cls_id = f"class:{sym.identity.qualified_name}"
+            if kind in (
+                SymbolKind.CLASS,
+                SymbolKind.INTERFACE,
+                SymbolKind.PROTOCOL,
+                SymbolKind.ENUM,
+                SymbolKind.DATACLASS,
+            ):
+                cls_id = f"class:{qname}"
                 self._add_edge(EdgeFactory.contains(mod_id, cls_id))
 
-            elif sym.identity.kind == SymbolKind.FUNCTION:
-                fn_id = f"function:{sym.identity.qualified_name}"
+            elif kind in (SymbolKind.FUNCTION, SymbolKind.CONSTANT):
+                fn_id = f"function:{qname}"
                 self._add_edge(EdgeFactory.contains(mod_id, fn_id))
 
-            elif sym.identity.kind == SymbolKind.METHOD:
-                # Method is contained by its parent Class
-                # e.g. eag.source.runtime.SourceRuntime.analyze -> eag.source.runtime.SourceRuntime
-                parts = sym.identity.qualified_name.rsplit(".", 1)
+            elif kind == SymbolKind.METHOD:
+                parts = qname.rsplit(".", 1)
                 if len(parts) == 2:
                     cls_qn = parts[0]
                     cls_id = f"class:{cls_qn}"
-                    meth_id = f"method:{sym.identity.qualified_name}"
+                    meth_id = f"method:{qname}"
                     self._add_edge(EdgeFactory.contains(cls_id, meth_id))
 
     def _connect_imports(self) -> None:
@@ -157,6 +172,60 @@ class GraphBuilder:
             mod_id = f"module:{dep.source}"
             dep_id = f"dependency:{dep.target}"
             self._add_edge(EdgeFactory.imports(mod_id, dep_id))
+
+    def _connect_semantic(self) -> None:
+        if not self._index:
+            return
+
+        kind_map = {
+            SemanticKind.CALLS: RelationshipType.CALLS,
+            SemanticKind.INHERITS: RelationshipType.INHERITS,
+            SemanticKind.USES: RelationshipType.USES,
+            SemanticKind.PUBLISHES_EVENT: RelationshipType.PUBLISHES_EVENT,
+            SemanticKind.SUBSCRIBES_EVENT: RelationshipType.SUBSCRIBES_EVENT,
+        }
+
+        for rel in self._index.semantic_relationships:
+            short_source = rel.source.split(".")[-1]
+
+            # 1. Resolve source node by checking real structural prefixed IDs first
+            source_node = (
+                self._nodes.get(f"class:{rel.source}")
+                or self._nodes.get(f"class:{short_source}")
+                or self._nodes.get(f"function:{rel.source}")
+                or self._nodes.get(f"method:{rel.source}")
+                or self._nodes.get(rel.source)
+                or self._nodes.get(short_source)
+            )
+            if not source_node:
+                continue
+
+            short_target = rel.target.split(".")[-1]
+
+            # 2. Resolve target node checking real structural prefixed IDs first
+            target_node = (
+                self._nodes.get(f"class:{rel.target}")
+                or self._nodes.get(f"class:{short_target}")
+                or self._nodes.get(f"function:{rel.target}")
+                or self._nodes.get(f"method:{rel.target}")
+                or self._nodes.get(rel.target)
+                or self._nodes.get(short_target)
+            )
+
+            # 3. Dynamic fallback if target component is outside this specific module
+            if not target_node:
+                target_node = NodeFactory.dependency(rel.target)
+                self._add_node(target_node)
+
+            edge_type = kind_map.get(rel.kind)
+            if edge_type:
+                self._add_edge(
+                    GraphEdge(
+                        source=source_node.id,
+                        target=target_node.id,
+                        relationship=edge_type,
+                    )
+                )
 
     def _validate(self) -> None:
         node_ids = set(self._nodes.keys())

@@ -12,3 +12,7 @@ class GraphBuildError(GraphError):
 
 class GraphQueryError(GraphError):
     """Raised when a graph query fails."""
+
+
+class GraphNotLoadedError(GraphError):
+    """Raised when an operation requires a loaded graph but none exists."""

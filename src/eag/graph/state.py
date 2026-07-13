@@ -21,6 +21,8 @@ class RelationshipType(StrEnum):
     INHERITS = "inherits"
     IMPLEMENTS = "implements"
     REFERENCES = "references"
+    PUBLISHES_EVENT = "publishes_event"
+    SUBSCRIBES_EVENT = "subscribes_event"
 
 
 class GraphState(StrEnum):

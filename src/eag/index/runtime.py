@@ -56,12 +56,10 @@ class IndexRuntime:
             raise IndexBuildError(f"Indexing failed: {e}") from e
 
     def _discover_source_files(self, root: Path) -> list[Path]:
-        # Simple discovery for now, respects source analyzers
         supported_exts = self._source_runtime._registry.supported_extensions()
         files = []
         for p in root.rglob("*"):
             if p.is_file() and p.suffix in supported_exts:
-                # Basic ignore logic
                 if ".venv" in p.parts or "__pycache__" in p.parts or ".git" in p.parts:
                     continue
                 files.append(p)
