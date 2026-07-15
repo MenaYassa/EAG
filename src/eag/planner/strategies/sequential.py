@@ -4,13 +4,18 @@ from datetime import timedelta
 
 from eag.planner.enums import GoalType, PlanState, RiskLevel
 from eag.planner.errors import InvalidGoalError
+from eag.planner.intelligence.models import (
+    EngineeringGoal,
+    EngineeringOperation,
+    EngineeringPlanningArtifact,
+)
+from eag.planner.intelligence.pipeline import EngineeringIntelligencePipeline
 from eag.planner.models import (
     EngineeringTask,
     ExecutionAction,
     ExecutionPlan,
     ExecutionStep,
     PlanningContext,
-    PlanningGoal,
     PlanningStatistics,
     PlanningStrategyInfo,
 )
@@ -19,9 +24,9 @@ from eag.planner.models import (
 class SequentialStrategy:
     """A deterministic, sequential planning strategy.
 
-    This strategy serves as the reference implementation for engineering
-    planning. It converts any supported goal into a standard 5-phase
-    engineering workflow: Locate, Analyze, Modify, Update, Validate.
+    This strategy delegates all engineering reasoning (decomposition,
+    dependency resolution, risk analysis, effort estimation) to the
+    EngineeringIntelligencePipeline and consumes the resulting artifact.
     """
 
     def __init__(self) -> None:
@@ -35,6 +40,13 @@ class SequentialStrategy:
         GoalType.ANALYSIS,
     )
 
+    _SUPPORTED_OPS = (
+        EngineeringOperation.REFACTOR,
+        EngineeringOperation.FIX,
+        EngineeringOperation.CREATE,
+        EngineeringOperation.ANALYZE,
+    )
+
     @property
     def info(self) -> PlanningStrategyInfo:
         return PlanningStrategyInfo(
@@ -46,165 +58,75 @@ class SequentialStrategy:
             experimental=False,
         )
 
-    def supports(self, goal: PlanningGoal, context: PlanningContext) -> bool:
-        return goal.goal_type in self._SUPPORTED_GOALS
+    def supports(self, eng_goal: EngineeringGoal, context: PlanningContext) -> bool:
+        # Validate both the underlying goal type and the engineering operation
+        planning_goal = getattr(eng_goal, "planning_goal", None)
+        if not planning_goal:
+            return False
 
-    def estimate_risk(self, goal: PlanningGoal, context: PlanningContext) -> RiskLevel:
-        if goal.goal_type == GoalType.ANALYSIS:
-            return RiskLevel.NONE
-        if goal.goal_type == GoalType.BUGFIX:
-            return RiskLevel.LOW
-        if goal.goal_type in (GoalType.FEATURE, GoalType.REFACTOR):
-            return RiskLevel.MEDIUM
-        return RiskLevel.HIGH
+        goal_type_supported = planning_goal.goal_type in self._SUPPORTED_GOALS
+        operation_supported = getattr(eng_goal, "operation", None) in self._SUPPORTED_OPS
 
-    def estimate_duration(self, goal: PlanningGoal, context: PlanningContext) -> timedelta:
-        # Estimate based on the standard 5-task workflow (2.5 minutes)
-        return timedelta(minutes=2.5)
+        return goal_type_supported and operation_supported
 
-    def create_plan(self, goal: PlanningGoal, context: PlanningContext) -> ExecutionPlan:
-        """Generate a deterministic execution plan.
+    def estimate_risk(self, eng_goal: EngineeringGoal, context: PlanningContext) -> RiskLevel:
+        """Determine overall risk using the intelligence pipeline."""
+        artifact = EngineeringIntelligencePipeline().analyze(eng_goal)
+        return artifact.risk.overall_risk
 
-        The pipeline is strictly ordered:
-        1. Analyze Goal
-        2. Build Tasks
-        3. Order Tasks
-        4. Build Execution Steps
-        5. Build Statistics
-        6. Assemble Plan
-        """
-        # Phase 1: Analyze Goal
-        self._analyze_goal(goal)
+    def estimate_duration(self, eng_goal: EngineeringGoal, context: PlanningContext) -> timedelta:
+        """Estimate total duration using the intelligence pipeline."""
+        artifact = EngineeringIntelligencePipeline().analyze(eng_goal)
+        return timedelta(minutes=artifact.execution_profile.total_engineering_time)
 
-        # Phase 2: Build Tasks
-        tasks = self._create_tasks(goal)
+    def create_plan(self, eng_goal: EngineeringGoal, context: PlanningContext) -> ExecutionPlan:
+        """Generate a deterministic execution plan using the intelligence pipeline."""
+        self._validate_goal(eng_goal)
 
-        # Phase 3: Order Tasks
-        ordered_tasks = self._order_tasks(tasks)
+        # Delegate all engineering reasoning to the pipeline
+        artifact = EngineeringIntelligencePipeline().analyze(eng_goal)
 
-        # Phase 4: Build Execution Steps
-        steps = self._create_execution_steps(ordered_tasks)
+        steps = self._create_execution_steps(artifact.tasks)
+        stats = self._build_statistics(artifact)
 
-        # Phase 5: Build Statistics
-        stats = self._build_statistics(goal, ordered_tasks, steps)
+        return self._assemble_plan(eng_goal, artifact, steps, stats)
 
-        # Phase 6: Assemble Plan
-        return self._assemble_plan(goal, ordered_tasks, steps, stats)
+    def _validate_goal(self, eng_goal: EngineeringGoal) -> None:
+        if not self.supports(eng_goal, PlanningContext()):
+            operation = getattr(eng_goal, "operation", "UNKNOWN")
+            title = "Unknown Goal"
+            planning_goal = getattr(eng_goal, "planning_goal", None)
+            if planning_goal:
+                title = getattr(planning_goal, "title", title)
 
-    def _analyze_goal(self, goal: PlanningGoal) -> None:
-        """Validate that the strategy can handle the goal."""
-        if not self.supports(goal, PlanningContext()):
             raise InvalidGoalError(
-                f"SequentialStrategy does not support goal type: {goal.goal_type}",
-                goal=goal.title,
+                f"SequentialStrategy does not support operation: {operation}",
+                goal=title,
             )
-
-    def _create_tasks(self, goal: PlanningGoal) -> list[EngineeringTask]:
-        """Create the canonical 5-phase engineering workflow."""
-        return [
-            EngineeringTask(
-                id="task-1",
-                title="Locate Target",
-                description=f"Locate the target for goal: {goal.title}",
-                estimated_duration=0.5,
-            ),
-            EngineeringTask(
-                id="task-2",
-                title="Analyze Impact",
-                description="Estimate the engineering impact of the changes.",
-                dependencies=("task-1",),
-                estimated_duration=0.5,
-            ),
-            EngineeringTask(
-                id="task-3",
-                title="Apply Changes",
-                description="Apply the core modifications.",
-                dependencies=("task-2",),
-                estimated_duration=1.0,
-            ),
-            EngineeringTask(
-                id="task-4",
-                title="Update References",
-                description="Update all dependent references.",
-                dependencies=("task-3",),
-                estimated_duration=0.5,
-            ),
-            EngineeringTask(
-                id="task-5",
-                title="Validate Repository",
-                description="Run tests and linters to validate changes.",
-                dependencies=("task-4",),
-                estimated_duration=0.5,
-            ),
-        ]
-
-    def _order_tasks(self, tasks: list[EngineeringTask]) -> tuple[EngineeringTask, ...]:
-        """Order tasks based on dependencies.
-
-        For this simple sequential strategy, creation order is dependency order.
-        A real topological sort would go here for complex dependency graphs.
-        """
-        return tuple(tasks)
 
     def _create_execution_steps(
         self, tasks: tuple[EngineeringTask, ...]
     ) -> tuple[ExecutionStep, ...]:
-        """Expand tasks into concrete execution steps."""
-        steps: list[ExecutionStep] = []
-        step_counter = 1
-        action_counter = 1
-
-        def make_step(task_id: str, desc: str, kind: str, target: str) -> ExecutionStep:
-            nonlocal step_counter, action_counter
+        """Create a generic execution step for each task."""
+        steps = []
+        for i, task in enumerate(tasks, start=1):
             action = ExecutionAction(
-                id=f"action-{action_counter}",
-                kind=kind,
-                target=target,
+                id=f"action-{i}",
+                kind="ExecuteTask",
+                target=task.title,
             )
             step = ExecutionStep(
-                id=f"step-{step_counter}",
-                task_id=task_id,
+                id=f"step-{i}",
+                task_id=task.id,
                 action=action,
-                description=desc,
+                description=f"Execute: {task.title}",
             )
-            step_counter += 1
-            action_counter += 1
-            return step
-
-        for task in tasks:
-            if task.id == "task-1":
-                steps.append(make_step(task.id, "Search for symbol", "SearchSymbol", "repository"))
-            elif task.id == "task-2":
-                steps.append(
-                    make_step(
-                        task.id, "Analyze dependency graph", "AnalyzeGraph", "engineering_graph"
-                    )
-                )
-            elif task.id == "task-3":
-                steps.append(
-                    make_step(task.id, "Modify file contents", "ModifyFile", "target_file")
-                )
-            elif task.id == "task-4":
-                steps.append(
-                    make_step(task.id, "Search references", "SearchReferences", "repository")
-                )
-                steps.append(
-                    make_step(task.id, "Update references", "ModifyFile", "dependent_files")
-                )
-            elif task.id == "task-5":
-                steps.append(make_step(task.id, "Run pytest", "RunCommand", "pytest"))
-                steps.append(make_step(task.id, "Run ruff", "RunCommand", "ruff check ."))
-
+            steps.append(step)
         return tuple(steps)
 
-    def _build_statistics(
-        self,
-        goal: PlanningGoal,
-        tasks: tuple[EngineeringTask, ...],
-        steps: tuple[ExecutionStep, ...],
-    ) -> PlanningStatistics:
-        """Generate deterministic planning statistics."""
-        risk = self.estimate_risk(goal, PlanningContext())
+    def _build_statistics(self, artifact: EngineeringPlanningArtifact) -> PlanningStatistics:
+        """Build planning statistics from the artifact."""
+        risk = artifact.risk.overall_risk
         risk_map = {
             RiskLevel.NONE: 0.0,
             RiskLevel.LOW: 0.25,
@@ -212,31 +134,30 @@ class SequentialStrategy:
             RiskLevel.HIGH: 0.75,
             RiskLevel.CRITICAL: 1.0,
         }
-
-        estimated_minutes = sum(t.estimated_duration for t in tasks)
-
         return PlanningStatistics(
-            task_count=len(tasks),
-            step_count=len(steps),
-            estimated_minutes=estimated_minutes,
+            task_count=len(artifact.tasks),
+            step_count=len(artifact.tasks),  # 1:1 mapping in this strategy
+            estimated_minutes=artifact.execution_profile.total_engineering_time,
             risk_score=risk_map.get(risk, 0.0),
         )
 
     def _assemble_plan(
         self,
-        goal: PlanningGoal,
-        tasks: tuple[EngineeringTask, ...],
+        eng_goal: EngineeringGoal,
+        artifact: EngineeringPlanningArtifact,
         steps: tuple[ExecutionStep, ...],
         stats: PlanningStatistics,
     ) -> ExecutionPlan:
-        """Assemble the final execution plan."""
+        """Assemble the final ExecutionPlan from the artifact and computed data."""
         return ExecutionPlan(
-            id=f"plan-{goal.id}",
-            goal=goal,
-            tasks=tasks,
+            id=f"plan-{eng_goal.planning_goal.id}",
+            goal=artifact.goal,
+            tasks=artifact.tasks,
             steps=steps,
-            risk=self.estimate_risk(goal, PlanningContext()),
+            risk=artifact.risk.overall_risk,
             state=PlanState.VALIDATED,
             statistics=stats,
-            strategy=self.info.name,  # Add this line
+            strategy=self.info.name,
+            risk_assessment=artifact.risk,
+            execution_profile=artifact.execution_profile,
         )

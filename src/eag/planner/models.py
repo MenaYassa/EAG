@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from eag.planner.enums import (
     ExecutionMode,
@@ -22,7 +22,14 @@ from eag.planner.enums import (
     TaskPriority,
 )
 
+if TYPE_CHECKING:
+    from eag.planner.intelligence.models import (
+        EngineeringExecutionProfile,
+        EngineeringRiskAssessment,
+    )
 
+
+# ---------- Validation helpers ----------
 def _validate_non_empty_str(value: str, field_name: str) -> str:
     """Validates that a value is a non-empty, non-whitespace string."""
     if not isinstance(value, str) or not value.strip():
@@ -73,6 +80,7 @@ def _validate_mapping(value: Mapping[str, str], field_name: str) -> Mapping[str,
     return MappingProxyType(dict(value))
 
 
+# ---------- Domain models ----------
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PlanningGoal:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -105,6 +113,13 @@ class EngineeringTask:
     priority: TaskPriority = TaskPriority.NORMAL
     estimated_duration: float = 0.0
     dependencies: tuple[str, ...] = ()
+    required_capabilities: tuple[str, ...] = ()
+    risk_level: RiskLevel = RiskLevel.NONE
+    parallelizable: bool = False
+    optional: bool = False
+    estimated_validation: float = 0.0
+    estimated_review: float = 0.0
+    blocking: bool = False
     metadata: Mapping[str, str] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -122,6 +137,29 @@ class EngineeringTask:
         object.__setattr__(
             self, "dependencies", _validate_str_tuple(self.dependencies, "dependencies")
         )
+        object.__setattr__(
+            self,
+            "required_capabilities",
+            _validate_str_tuple(self.required_capabilities, "required_capabilities"),
+        )
+        if not isinstance(self.risk_level, RiskLevel):
+            raise TypeError("risk_level must be a RiskLevel")
+        if not isinstance(self.parallelizable, bool):
+            raise TypeError("parallelizable must be a bool")
+        if not isinstance(self.optional, bool):
+            raise TypeError("optional must be a bool")
+        object.__setattr__(
+            self,
+            "estimated_validation",
+            _validate_non_negative_float(self.estimated_validation, "estimated_validation"),
+        )
+        object.__setattr__(
+            self,
+            "estimated_review",
+            _validate_non_negative_float(self.estimated_review, "estimated_review"),
+        )
+        if not isinstance(self.blocking, bool):
+            raise TypeError("blocking must be a bool")
         object.__setattr__(self, "metadata", _validate_mapping(self.metadata, "metadata"))
 
 
@@ -197,6 +235,8 @@ class ExecutionPlan:
     state: PlanState = PlanState.CREATED
     statistics: PlanningStatistics = field(default_factory=PlanningStatistics)
     strategy: str = "Unknown"
+    risk_assessment: Optional["EngineeringRiskAssessment"] = None
+    execution_profile: Optional["EngineeringExecutionProfile"] = None
     metadata: Mapping[str, str] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -215,11 +255,23 @@ class ExecutionPlan:
             raise TypeError("statistics must be a PlanningStatistics")
         if not isinstance(self.strategy, str):
             raise TypeError("strategy must be a str")
+        # Optional type check for risk_assessment
+        if (
+            self.risk_assessment is not None
+            and type(self.risk_assessment).__name__ != "EngineeringRiskAssessment"
+        ):
+            raise TypeError("risk_assessment must be an EngineeringRiskAssessment or None")
+
+        # Optional type check for execution_profile
+        if (
+            self.execution_profile is not None
+            and type(self.execution_profile).__name__ != "EngineeringExecutionProfile"
+        ):
+            raise TypeError("execution_profile must be an EngineeringExecutionProfile or None")
         object.__setattr__(self, "metadata", _validate_mapping(self.metadata, "metadata"))
 
     @property
     def is_executable(self) -> bool:
-        """Return True if the plan is in a state ready for execution."""
         return self.state in {PlanState.APPROVED, PlanState.VALIDATED}
 
 

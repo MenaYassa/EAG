@@ -8,6 +8,8 @@ from eag.planner.errors import (
     PlanningStrategyNotFoundError,
     PlanningStrategyUnavailableError,
 )
+from eag.planner.intelligence.goal_analyzer import GoalAnalyzer
+from eag.planner.intelligence.models import EngineeringGoal, EngineeringOperation
 from eag.planner.models import PlanningContext, PlanningGoal, PlanningStrategyInfo
 from eag.planner.registry import PlanningStrategyRegistry
 
@@ -17,7 +19,7 @@ class DummyLowPriorityStrategy:
     def info(self) -> PlanningStrategyInfo:
         return PlanningStrategyInfo(name="Low", priority=10)
 
-    def supports(self, goal: PlanningGoal, context: PlanningContext) -> bool:
+    def supports(self, eng_goal: EngineeringGoal, context: PlanningContext) -> bool:
         return True
 
 
@@ -26,7 +28,7 @@ class DummyHighPriorityStrategy:
     def info(self) -> PlanningStrategyInfo:
         return PlanningStrategyInfo(name="High", priority=100)
 
-    def supports(self, goal: PlanningGoal, context: PlanningContext) -> bool:
+    def supports(self, eng_goal: EngineeringGoal, context: PlanningContext) -> bool:
         return True
 
 
@@ -35,13 +37,18 @@ class DummySelectiveStrategy:
     def info(self) -> PlanningStrategyInfo:
         return PlanningStrategyInfo(name="Selective", priority=50)
 
-    def supports(self, goal: PlanningGoal, context: PlanningContext) -> bool:
-        return goal.goal_type == GoalType.ANALYSIS
+    def supports(self, eng_goal: EngineeringGoal, context: PlanningContext) -> bool:
+        return eng_goal.operation == EngineeringOperation.ANALYZE
 
 
 @pytest.fixture
 def registry() -> PlanningStrategyRegistry:
     return PlanningStrategyRegistry()
+
+
+@pytest.fixture
+def analyzer() -> GoalAnalyzer:
+    return GoalAnalyzer()
 
 
 class TestRegistryInitialization:
@@ -78,22 +85,28 @@ class TestRegistryRegistration:
 
 
 class TestRegistryLookup:
-    def test_find_no_match_raises(self, registry: PlanningStrategyRegistry) -> None:
+    def test_find_no_match_raises(
+        self, registry: PlanningStrategyRegistry, analyzer: GoalAnalyzer
+    ) -> None:
         registry.register(DummySelectiveStrategy())
-        goal = PlanningGoal(goal_type=GoalType.FEATURE, title="Test")
+        goal = analyzer.analyze(PlanningGoal(goal_type=GoalType.FEATURE, title="Test"))
         with pytest.raises(PlanningStrategyUnavailableError):
             registry.find(goal, PlanningContext())
 
-    def test_find_returns_match(self, registry: PlanningStrategyRegistry) -> None:
+    def test_find_returns_match(
+        self, registry: PlanningStrategyRegistry, analyzer: GoalAnalyzer
+    ) -> None:
         registry.register(DummySelectiveStrategy())
-        goal = PlanningGoal(goal_type=GoalType.ANALYSIS, title="Test")
+        goal = analyzer.analyze(PlanningGoal(goal_type=GoalType.ANALYSIS, title="Test"))
         found = registry.find(goal, PlanningContext())
         assert found.info.name == "Selective"
 
-    def test_find_returns_highest_priority(self, registry: PlanningStrategyRegistry) -> None:
+    def test_find_returns_highest_priority(
+        self, registry: PlanningStrategyRegistry, analyzer: GoalAnalyzer
+    ) -> None:
         registry.register(DummyLowPriorityStrategy())
         registry.register(DummyHighPriorityStrategy())
-        goal = PlanningGoal(goal_type=GoalType.FEATURE, title="Test")
+        goal = analyzer.analyze(PlanningGoal(goal_type=GoalType.FEATURE, title="Test"))
         found = registry.find(goal, PlanningContext())
         assert found.info.name == "High"
 

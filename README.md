@@ -127,8 +127,8 @@ eag path <a> <b>      # Find the dependency path between two symbols
 Each runtime service coordinates through the EventBus. The Kernel manages  
 lifecycle and dependency injection. No runtime depends on plugins; plugins  
 extend the platform through the Tool Registry.
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architectural specification  
-and [ENGINEERING_PLATFORM.md](ENGINEERING_PLATFORM.md) for the platform guide.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architectural specification  
+and [ENGINEERING_PLATFORM.md](docs/ENGINEERING_PLATFORM.md) for the platform guide.
 
 * * *
 
@@ -167,18 +167,18 @@ is what makes EAG safe, explainable, and sustainable.
 
 | Document | Purpose |
 | --- | --- |
-| [CONSTITUTION.md](CONSTITUTION.md) | Mission, immutable principles, ethics |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Full architectural specification |
-| [ENGINEERING_PLATFORM.md](ENGINEERING_PLATFORM.md) | Platform guide — every subsystem explained |
-| [ROADMAP.md](ROADMAP.md) | Sprint plan and version goals |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development philosophy and contribution workflow |
-| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [CONSTITUTION.md](docs/CONSTITUTION.md) | Mission, immutable principles, ethics |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Full architectural specification |
+| [ENGINEERING_PLATFORM.md](docs/ENGINEERING_PLATFORM.md) | Platform guide — every subsystem explained |
+| [ROADMAP.md](docs/ROADMAP.md) | Sprint plan and version goals |
+| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development philosophy and contribution workflow |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Release history |
 
 * * *
 
 ## Engineering Principles
 
-EAG is governed by a [CONSTITUTION.md](CONSTITUTION.md) with ten immutable  
+EAG is governed by a [CONSTITUTION.md](docs/CONSTITUTION.md) with ten immutable  
 principles:
 
 1.  Model agnostic
@@ -206,7 +206,7 @@ principles:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. In short:
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full guide. In short:
 
 *   Architecture first
     
@@ -235,4 +235,4 @@ EAG is under active development. The platform has completed four sprints
 and is preparing for Sprint 5 — the Planner Engine, which will add goal  
 decomposition, planning models, execution plans, validation, approval  
 flows, and dry-run capabilities.
-For the complete development plan, see [ROADMAP.md](ROADMAP.md).
+For the complete development plan, see [ROADMAP.md](docs/ROADMAP.md).

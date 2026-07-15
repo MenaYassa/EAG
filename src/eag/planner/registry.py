@@ -5,7 +5,8 @@ from eag.planner.errors import (
     PlanningStrategyNotFoundError,
     PlanningStrategyUnavailableError,
 )
-from eag.planner.models import PlanningContext, PlanningGoal
+from eag.planner.intelligence.models import EngineeringGoal
+from eag.planner.models import PlanningContext
 from eag.planner.strategy import PlanningStrategy
 
 
@@ -33,7 +34,7 @@ class PlanningStrategyRegistry:
             return True
         return False
 
-    def find(self, goal: PlanningGoal, context: PlanningContext) -> PlanningStrategy:
+    def find(self, eng_goal: EngineeringGoal, context: PlanningContext) -> PlanningStrategy:
         """Find the best matching strategy for a goal.
 
         Evaluates `supports()` on all registered strategies and returns the
@@ -42,9 +43,11 @@ class PlanningStrategyRegistry:
         Raises:
             PlanningStrategyUnavailableError: If no strategy supports the goal.
         """
-        matches = [s for s in self._strategies.values() if s.supports(goal, context)]
+        matches = [s for s in self._strategies.values() if s.supports(eng_goal, context)]
         if not matches:
-            raise PlanningStrategyUnavailableError(f"No strategy supports goal '{goal.title}'.")
+            raise PlanningStrategyUnavailableError(
+                f"No strategy supports goal '{eng_goal.planning_goal.title}'."
+            )
         matches.sort(key=lambda s: s.info.priority, reverse=True)
         return matches[0]
 

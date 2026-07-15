@@ -9,7 +9,8 @@ from datetime import timedelta
 from typing import Protocol, runtime_checkable
 
 from eag.planner.enums import RiskLevel
-from eag.planner.models import ExecutionPlan, PlanningContext, PlanningGoal, PlanningStrategyInfo
+from eag.planner.intelligence.models import EngineeringGoal
+from eag.planner.models import ExecutionPlan, PlanningContext, PlanningStrategyInfo
 
 
 @runtime_checkable
@@ -42,7 +43,7 @@ class PlanningStrategy(Protocol):
 
     def supports(
         self,
-        goal: PlanningGoal,
+        eng_goal: EngineeringGoal,
         context: PlanningContext,
     ) -> bool:
         """Check if this strategy can handle the given goal and context."""
@@ -50,7 +51,7 @@ class PlanningStrategy(Protocol):
 
     def create_plan(
         self,
-        goal: PlanningGoal,
+        eng_goal: EngineeringGoal,
         context: PlanningContext,
     ) -> ExecutionPlan:
         """Generate an execution plan for the given goal.
@@ -62,7 +63,7 @@ class PlanningStrategy(Protocol):
 
     def estimate_risk(
         self,
-        goal: PlanningGoal,
+        eng_goal: EngineeringGoal,
         context: PlanningContext,
     ) -> RiskLevel:
         """Estimate the risk level of executing the plan for this goal."""
@@ -70,7 +71,7 @@ class PlanningStrategy(Protocol):
 
     def estimate_duration(
         self,
-        goal: PlanningGoal,
+        eng_goal: EngineeringGoal,
         context: PlanningContext,
     ) -> timedelta:
         """Estimate the time required to execute the plan."""

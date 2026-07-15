@@ -72,3 +72,15 @@ class PlanningStrategyNotFoundError(PlannerError):
 
 class PlanningStrategyUnavailableError(PlannerError):
     """Raised when no registered strategy supports the given goal and context."""
+
+
+class DuplicateTaskError(PlannerError):
+    """Raised when duplicate task IDs are detected."""
+
+
+class UnknownDependencyError(PlannerError):
+    """Raised when a task depends on an unknown task."""
+
+
+class DependencyCycleError(PlannerError):
+    """Raised when a cycle is detected in the task dependency graph."""

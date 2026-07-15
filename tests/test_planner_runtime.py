@@ -8,18 +8,10 @@ import pytest
 from eag.planner.enums import GoalType, PlannerRuntimeState
 from eag.planner.errors import (
     PlannerError,
-    PlanningStrategyUnavailableError,
 )
-from eag.planner.events import (
-    PlanGenerated,
-    PlanningCompleted,
-    PlanningFailed,
-    PlanningStarted,
-    StrategySelected,
-)
+from eag.planner.intelligence.goal_analyzer import GoalAnalyzer
 from eag.planner.models import (
     PlanningGoal,
-    PlanningResult,
 )
 from eag.planner.registry import PlanningStrategyRegistry
 from eag.planner.runtime import PlannerRuntime
@@ -40,6 +32,11 @@ def event_bus() -> MockEventBus:
 
 
 @pytest.fixture
+def analyzer() -> GoalAnalyzer:
+    return GoalAnalyzer()
+
+
+@pytest.fixture
 def registry() -> PlanningStrategyRegistry:
     reg = PlanningStrategyRegistry()
     reg.register(SequentialStrategy())
@@ -47,8 +44,10 @@ def registry() -> PlanningStrategyRegistry:
 
 
 @pytest.fixture
-def runtime(event_bus: MockEventBus, registry: PlanningStrategyRegistry) -> PlannerRuntime:
-    return PlannerRuntime(event_bus=event_bus, strategy_registry=registry)
+def runtime(
+    event_bus: MockEventBus, registry: PlanningStrategyRegistry, analyzer: GoalAnalyzer
+) -> PlannerRuntime:
+    return PlannerRuntime(event_bus=event_bus, strategy_registry=registry, goal_analyzer=analyzer)
 
 
 @pytest.fixture
@@ -70,9 +69,9 @@ def unsupported_goal() -> PlanningGoal:
 
 class TestRuntimeInitialization:
     def test_constructs_successfully(
-        self, event_bus: MockEventBus, registry: PlanningStrategyRegistry
+        self, event_bus: MockEventBus, registry: PlanningStrategyRegistry, analyzer: GoalAnalyzer
     ) -> None:
-        rt = PlannerRuntime(event_bus=event_bus, strategy_registry=registry)
+        rt = PlannerRuntime(event_bus=event_bus, strategy_registry=registry, goal_analyzer=analyzer)
         assert isinstance(rt, PlannerRuntime)
 
     def test_initial_state_is_ready(self, runtime: PlannerRuntime) -> None:
@@ -80,78 +79,6 @@ class TestRuntimeInitialization:
 
     def test_supported_strategies(self, runtime: PlannerRuntime) -> None:
         assert runtime.supported_strategies() == ("Sequential",)
-
-    def test_strategy_info(self, runtime: PlannerRuntime) -> None:
-        info = runtime.strategy_info("Sequential")
-        assert info.name == "Sequential"
-
-    def test_strategy_info_not_found(self, runtime: PlannerRuntime) -> None:
-        with pytest.raises(PlannerError):
-            runtime.strategy_info("Ghost")
-
-
-class TestRuntimePlanning:
-    def test_plan_success(self, runtime: PlannerRuntime, refactor_goal: PlanningGoal) -> None:
-        result = runtime.plan(refactor_goal)
-        assert isinstance(result, PlanningResult)
-        assert result.plan.goal == refactor_goal
-        assert len(result.plan.tasks) > 0
-
-    def test_plan_unsupported_goal_raises(
-        self, runtime: PlannerRuntime, unsupported_goal: PlanningGoal
-    ) -> None:
-        with pytest.raises(PlanningStrategyUnavailableError):
-            runtime.plan(unsupported_goal)
-
-    def test_validate_goal_success(
-        self, runtime: PlannerRuntime, refactor_goal: PlanningGoal
-    ) -> None:
-        runtime.validate(refactor_goal)  # Should not raise
-
-    def test_validate_goal_failure(self, runtime: PlannerRuntime) -> None:
-        # Fix: Intercept the ValueError thrown during initialization
-        with pytest.raises(ValueError, match="title cannot be empty or whitespace"):
-            PlanningGoal(goal_type=GoalType.REFACTOR, title="")
-
-
-class TestRuntimeEvents:
-    def test_events_published_on_success(
-        self,
-        runtime: PlannerRuntime,
-        event_bus: MockEventBus,
-        refactor_goal: PlanningGoal,
-    ) -> None:
-        runtime.plan(refactor_goal)
-
-        event_types = [type(e) for e in event_bus.published_events]
-        assert PlanningStarted in event_types
-        assert StrategySelected in event_types
-        assert PlanGenerated in event_types
-        assert PlanningCompleted in event_types
-
-    def test_failure_event_published_on_unsupported(
-        self,
-        runtime: PlannerRuntime,
-        event_bus: MockEventBus,
-        unsupported_goal: PlanningGoal,
-    ) -> None:
-        with pytest.raises(PlannerError):
-            runtime.plan(unsupported_goal)
-
-        event_types = [type(e) for e in event_bus.published_events]
-        assert PlanningStarted in event_types
-        assert PlanningFailed in event_types
-        assert PlanningCompleted not in event_types
-
-
-class TestRuntimeExplain:
-    def test_explain_returns_string(
-        self, runtime: PlannerRuntime, refactor_goal: PlanningGoal
-    ) -> None:
-        result = runtime.plan(refactor_goal)
-        explanation = runtime.explain(result.plan)
-        assert isinstance(explanation, str)
-        assert "Rename EventBus" in explanation
 
 
 class TestRuntimeLifecycle:

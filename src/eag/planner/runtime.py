@@ -13,6 +13,8 @@ from eag.planner.events import (
     PlanningStarted,
     StrategySelected,
 )
+from eag.planner.intelligence.goal_analyzer import GoalAnalyzer
+from eag.planner.intelligence.models import EngineeringGoal
 from eag.planner.models import (
     ExecutionPlan,
     PlanningContext,
@@ -32,9 +34,11 @@ class PlannerRuntime:
         self,
         event_bus: EventBus,
         strategy_registry: PlanningStrategyRegistry,
+        goal_analyzer: GoalAnalyzer,
     ) -> None:
         self._event_bus = event_bus
         self._registry = strategy_registry
+        self._analyzer = goal_analyzer
         self._state = PlannerRuntimeState.CREATED
 
         self._metrics = PlanningRuntimeMetrics()
@@ -87,10 +91,12 @@ class PlannerRuntime:
         try:
             self._validate_goal(goal)
 
-            strategy = self._select_strategy(goal, ctx)
+            eng_goal = self._analyzer.analyze(goal)
+
+            strategy = self._select_strategy(eng_goal, ctx)
             self._event_bus.publish(StrategySelected(goal_id=goal.id, strategy=strategy.info.name))
 
-            execution_plan = self._generate_plan(strategy, goal, ctx)
+            execution_plan = self._generate_plan(strategy, eng_goal, ctx)
             self._last_plan = execution_plan
 
             self._state = PlannerRuntimeState.VALIDATING
@@ -148,22 +154,18 @@ class PlannerRuntime:
             raise
 
     def validate(self, goal: PlanningGoal) -> None:
-        """Validate a planning goal without generating a plan."""
         self._validate_goal(goal)
 
     def supported_strategies(self) -> tuple[str, ...]:
-        """Return the names of all registered strategies."""
         return self._registry.supported()
 
     def strategy_info(self, name: str) -> Any:
-        """Return metadata for a specific strategy by name."""
         for strategy in self._registry.all():
             if strategy.info.name == name:
                 return strategy.info
         raise PlannerError(f"Strategy '{name}' not found.")
 
     def explain(self, plan: ExecutionPlan) -> str:
-        """Provide a human-readable explanation of a plan."""
         return (
             f"Planning Goal\n"
             f"────────────────────────\n\n"
@@ -207,16 +209,18 @@ class PlannerRuntime:
         if not goal.title.strip():
             raise PlanningValidationError("Goal title cannot be empty.")
 
-    def _select_strategy(self, goal: PlanningGoal, context: PlanningContext) -> PlanningStrategy:
-        return self._registry.find(goal, context)
+    def _select_strategy(
+        self, eng_goal: EngineeringGoal, context: PlanningContext
+    ) -> PlanningStrategy:
+        return self._registry.find(eng_goal, context)
 
     def _generate_plan(
         self,
         strategy: PlanningStrategy,
-        goal: PlanningGoal,
+        eng_goal: EngineeringGoal,
         context: PlanningContext,
     ) -> ExecutionPlan:
-        return strategy.create_plan(goal, context)
+        return strategy.create_plan(eng_goal, context)
 
     def _validate_plan(self, plan: ExecutionPlan, original_goal: PlanningGoal) -> None:
         if not plan.tasks:
