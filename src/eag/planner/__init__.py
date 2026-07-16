@@ -1,23 +1,16 @@
 """Engineering Planning Platform — domain vocabulary, models, errors, and events."""
 
-# ------------------------------------------------------------------------------
-# Enums
-# ------------------------------------------------------------------------------
 from eag.planner.enums import (
     ExecutionMode,
     GoalType,
-    PlannerRuntimeState,
     PlanState,
+    PlannerRuntimeState,
     RiskLevel,
     TaskPriority,
 )
 from eag.planner.enums import (
     PlanningStrategy as PlanningStrategyType,  # enum (renamed to avoid clash)
 )
-
-# ------------------------------------------------------------------------------
-# Errors
-# ------------------------------------------------------------------------------
 from eag.planner.errors import (
     ApprovalRequiredError,
     DependencyCycleError,
@@ -34,10 +27,6 @@ from eag.planner.errors import (
     UnknownDependencyError,
     UnsafePlanError,
 )
-
-# ------------------------------------------------------------------------------
-# Events
-# ------------------------------------------------------------------------------
 from eag.planner.events import (
     PlanGenerated,
     PlanningCompleted,
@@ -45,10 +34,6 @@ from eag.planner.events import (
     PlanningStarted,
     StrategySelected,
 )
-
-# ------------------------------------------------------------------------------
-# Intelligence
-# ------------------------------------------------------------------------------
 from eag.planner.intelligence import (
     EffortEstimator,
     EngineeringComplexity,
@@ -68,10 +53,6 @@ from eag.planner.intelligence import (
     TaskDependencyResolver,
     TaskDependencyStatistics,
 )
-
-# ------------------------------------------------------------------------------
-# Core models
-# ------------------------------------------------------------------------------
 from eag.planner.models import (
     EngineeringTask,
     ExecutionAction,
@@ -85,25 +66,28 @@ from eag.planner.models import (
     PlanningStatistics,
     PlanningStrategyInfo,
 )
-
-# ------------------------------------------------------------------------------
-# Registry, Runtime, and Strategies
-# ------------------------------------------------------------------------------
+from eag.planner.operations import (
+    EngineeringOperationDefinition,
+    OperationCategory,
+    OperationComplexity,
+    OperationExecutionContext,
+    OperationExecutionResult,
+    OperationRegistry,
+    OperationSafety,
+    default_operation_registry,
+)
 from eag.planner.registry import PlanningStrategyRegistry
 from eag.planner.runtime import PlannerRuntime
 from eag.planner.strategies import SequentialStrategy
-from eag.planner.strategy import PlanningStrategy  # base class (not the enum)
+from eag.planner.strategy import PlanningStrategy
 
-# ------------------------------------------------------------------------------
-# Public API
-# ------------------------------------------------------------------------------
 __all__ = [
     # Enums
     "ExecutionMode",
     "GoalType",
     "PlanState",
     "PlannerRuntimeState",
-    "PlanningStrategyType",  # the enum (renamed)
+    "PlanningStrategyType",
     "RiskLevel",
     "TaskPriority",
     # Errors
@@ -145,7 +129,7 @@ __all__ = [
     "TaskDependencyNode",
     "TaskDependencyResolver",
     "TaskDependencyStatistics",
-    # Core models
+    # Models
     "EngineeringTask",
     "ExecutionAction",
     "ExecutionPlan",
@@ -157,9 +141,19 @@ __all__ = [
     "PlanningRuntimeMetrics",
     "PlanningStatistics",
     "PlanningStrategyInfo",
-    # Registry / Runtime / Strategies
+    # Operations
+    "EngineeringOperationDefinition",
+    "OperationCategory",
+    "OperationComplexity",
+    "OperationExecutionContext",
+    "OperationExecutionResult",
+    "OperationRegistry",
+    "OperationSafety",
+    "default_operation_registry",
+    # Registry & Strategy
     "PlanningStrategyRegistry",
-    "PlannerRuntime",
+    "PlanningStrategy",
     "SequentialStrategy",
-    "PlanningStrategy",  # base class
+    # Runtime
+    "PlannerRuntime",
 ]

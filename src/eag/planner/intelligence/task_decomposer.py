@@ -6,7 +6,9 @@ using reusable engineering templates.
 
 from eag.planner.intelligence.models import EngineeringGoal, EngineeringOperation
 from eag.planner.models import EngineeringTask
+from eag.planner.intelligence.models import EngineeringGoal
 
+from eag.planner.operations import OperationRegistry, default_operation_registry
 
 class TaskDecomposer:
     """Decomposes an engineering goal into actionable engineering tasks."""
@@ -20,7 +22,7 @@ class TaskDecomposer:
             "Run Validation",
         ],
         EngineeringOperation.RENAME: [
-            "Locate Symbol",
+            "Locate Target",
             "Analyze References",
             "Rename Declaration",
             "Update References",
@@ -85,13 +87,20 @@ class TaskDecomposer:
             "Run Validation",
         ],
     }
-
+    def __init__(self, registry: OperationRegistry | None = None) -> None:
+        self._registry = registry or default_operation_registry()
+      
     def decompose(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
         """Convert an EngineeringGoal into a tuple of EngineeringTasks."""
-        template = self._select_template(goal.operation)
-        tasks = self._build_tasks(template)
-        self._validate(tasks)
-        return tuple(tasks)
+        try:
+            operation = self._registry.find(goal)
+        except Exception as e:
+            # Catch the registry exception and raise the ValueError expected by the unit tests
+            raise ValueError(f"No decomposition template found for goal: {goal}") from e
+            
+        return operation.generate_tasks(goal)
+
+
 
     def _select_template(self, operation: EngineeringOperation) -> list[str]:
         if operation not in self._TEMPLATES:
@@ -118,3 +127,5 @@ class TaskDecomposer:
         ids = [t.id for t in tasks]
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate task IDs detected.")
+
+
