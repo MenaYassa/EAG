@@ -80,6 +80,14 @@ from eag.planner.registry import PlanningStrategyRegistry
 from eag.planner.runtime import PlannerRuntime
 from eag.planner.strategies import SequentialStrategy
 from eag.planner.strategy import PlanningStrategy
+from eag.planner.validation import (
+    EngineeringPlanValidationResult,
+    PlanValidationRule,
+    PlanValidator,
+    ValidationCategory,
+    ValidationIssue,
+    ValidationSeverity,
+)
 
 __all__ = [
     # Enums
@@ -156,4 +164,11 @@ __all__ = [
     "SequentialStrategy",
     # Runtime
     "PlannerRuntime",
+    # Validation
+    "EngineeringPlanValidationResult",
+    "PlanValidationRule",
+    "PlanValidator",
+    "ValidationCategory",
+    "ValidationIssue",
+    "ValidationSeverity",
 ]
