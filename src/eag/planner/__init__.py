@@ -1,3 +1,10 @@
+
+
+
+
+
+
+
 """Engineering Planning Platform — domain vocabulary, models, errors, and events."""
 
 from eag.planner.enums import (
@@ -78,6 +85,14 @@ from eag.planner.operations import (
 )
 from eag.planner.registry import PlanningStrategyRegistry
 from eag.planner.runtime import PlannerRuntime
+from eag.planner.simulation import (
+    EngineeringSimulationReport,
+    PlanSimulator,
+    SimulationCheckpoint,
+    SimulationImpact,
+    SimulationStatus,
+    SimulationTimeline,
+)
 from eag.planner.strategies import SequentialStrategy
 from eag.planner.strategy import PlanningStrategy
 from eag.planner.validation import (
@@ -164,6 +179,13 @@ __all__ = [
     "SequentialStrategy",
     # Runtime
     "PlannerRuntime",
+    # Simulation
+    "EngineeringSimulationReport",
+    "PlanSimulator",
+    "SimulationCheckpoint",
+    "SimulationImpact",
+    "SimulationStatus",
+    "SimulationTimeline",
     # Validation
     "EngineeringPlanValidationResult",
     "PlanValidationRule",
