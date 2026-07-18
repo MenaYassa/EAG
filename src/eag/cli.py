@@ -1,17 +1,13 @@
 """Command-line interface for EAG."""
-
 from pathlib import Path
-
 import click
 import typer
-
 from eag import __version__
 from eag.bootstrap import bootstrap
 from eag.execution.errors import (
     CommandApprovalRequiredError,
     CommandDeniedError,
 )
-
 # Add these imports to the top of src/eag/cli.py
 from eag.explorer.formatter import JsonFormatter, TerminalFormatter
 from eag.explorer.models import (
@@ -24,6 +20,7 @@ from eag.explorer.models import (
 )
 from eag.explorer.runtime import ExplorerRuntime
 from eag.index.runtime import IndexRuntime
+from eag.planner.cli import register_planner_commands
 from eag.plugins.builtin.command import (
     COMMAND_EVALUATE,
     COMMAND_RUN,
@@ -48,6 +45,8 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
+# Register Planner CLI commands
+register_planner_commands(app)
 
 @app.callback(invoke_without_command=True)
 def main(
@@ -63,18 +62,14 @@ def main(
     if version:
         typer.echo(f"EAG {__version__}")
         raise typer.Exit()
-
     if ctx.invoked_subcommand is not None:
         return
-
     typer.echo()
     typer.echo("EAG — Engineering Agent")
     typer.echo(f"Version {__version__}")
     typer.echo("Eager for Knowledge")
     typer.echo()
-
     kernel = bootstrap()
-
     typer.echo(f"Environment: {kernel.settings.kernel.environment}")
     typer.echo(f"Workspace: {kernel.settings.kernel.workspace}")
     typer.echo(f"Kernel state: {kernel.state.value}")
