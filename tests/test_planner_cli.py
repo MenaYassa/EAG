@@ -1,6 +1,7 @@
 """Tests for the planner CLI commands."""
 
 from typer.testing import CliRunner
+
 from eag.cli import app
 
 runner = CliRunner()

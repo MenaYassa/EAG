@@ -11,26 +11,32 @@ class StructureRule:
         issues: list[ValidationIssue] = []
 
         if not artifact.tasks:
-            issues.append(ValidationIssue(
-                category=ValidationCategory.STRUCTURE,
-                severity=ValidationSeverity.ERROR,
-                message="Plan must contain at least one task."
-            ))
+            issues.append(
+                ValidationIssue(
+                    category=ValidationCategory.STRUCTURE,
+                    severity=ValidationSeverity.ERROR,
+                    message="Plan must contain at least one task.",
+                )
+            )
 
         for task in artifact.tasks:
             if not task.title.strip():
-                issues.append(ValidationIssue(
-                    category=ValidationCategory.STRUCTURE,
-                    severity=ValidationSeverity.ERROR,
-                    message="Task title cannot be empty.",
-                    affected_tasks=(task.id,)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        category=ValidationCategory.STRUCTURE,
+                        severity=ValidationSeverity.ERROR,
+                        message="Task title cannot be empty.",
+                        affected_tasks=(task.id,),
+                    )
+                )
 
         if not artifact.graph.nodes:
-            issues.append(ValidationIssue(
-                category=ValidationCategory.STRUCTURE,
-                severity=ValidationSeverity.ERROR,
-                message="Dependency graph is empty."
-            ))
+            issues.append(
+                ValidationIssue(
+                    category=ValidationCategory.STRUCTURE,
+                    severity=ValidationSeverity.ERROR,
+                    message="Dependency graph is empty.",
+                )
+            )
 
         return tuple(issues)

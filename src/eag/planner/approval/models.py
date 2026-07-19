@@ -18,6 +18,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ApprovalRequest:
     """A request to approve an engineering plan."""
+
     id: str
     plan_id: str
     requested_by: str = "system"
@@ -41,6 +42,7 @@ class ApprovalRequest:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ApprovalDecision:
     """The outcome of an approval evaluation."""
+
     state: ApprovalState
     reason: ApprovalReason = ApprovalReason.LOW_RISK
     approved_by: str | None = None
@@ -58,6 +60,7 @@ class ApprovalDecision:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ApprovalFinding:
     """The result of a single approval policy evaluation."""
+
     policy_name: str
     approved: bool
     requires_manual: bool
@@ -81,6 +84,7 @@ class ApprovalFinding:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ApprovalResult:
     """The final, aggregated artifact produced by the ApprovalEngine."""
+
     approved: bool
     decision: ApprovalDecision
     required_level: ApprovalLevel

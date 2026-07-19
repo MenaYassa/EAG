@@ -1,22 +1,28 @@
 """Planner CLI commands for EAG."""
 
 import typer
-from eag.events import EventBus
+
 from eag.planner import (
     ApprovalEngine,
     EngineeringIntelligencePipeline,
     GoalAnalyzer,
     GoalType,
-    PlanSimulator,
-    PlanValidator,
     PlanningGoal,
     PlanningStrategyRegistry,
+    PlanSimulator,
+    PlanValidator,
     SequentialStrategy,
     default_operation_registry,
 )
 
 
-def get_pipeline_components():
+def get_pipeline_components() -> tuple[
+    GoalAnalyzer,
+    EngineeringIntelligencePipeline,
+    PlanValidator,
+    PlanSimulator,
+    ApprovalEngine,
+]:
     """Initialize and return the planning pipeline components."""
     analyzer = GoalAnalyzer()
     pipeline = EngineeringIntelligencePipeline()
@@ -46,7 +52,7 @@ def register_planner_commands(app: typer.Typer) -> None:
 
         typer.echo("Engineering Plan")
         typer.echo("────────────────────────────────")
-        typer.echo(f"Strategy: Sequential")
+        typer.echo("Strategy: Sequential")
         typer.echo(f"Tasks: {len(artifact.tasks)}")
         typer.echo(f"Risk: {artifact.risk.overall_risk.value.upper()}")
         typer.echo(f"Estimated Time: {artifact.execution_profile.total_engineering_time:.1f} min")
@@ -154,11 +160,13 @@ def register_planner_commands(app: typer.Typer) -> None:
 
         typer.echo("Available Strategies")
         typer.echo("────────────────────────────────")
-        for name in registry.supported():
+        for _name in registry.supported():
             strategy = registry.default()
             typer.echo(f"{strategy.info.name}")
             typer.echo(f"Priority: {strategy.info.priority}")
-            typer.echo(f"Supports: {', '.join([g.value for g in strategy.info.supported_goal_types])}")
+            typer.echo(
+                f"Supports: {', '.join([g.value for g in strategy.info.supported_goal_types])}"
+            )
             typer.echo("")
 
     @app.command()

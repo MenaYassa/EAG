@@ -1,6 +1,6 @@
 """Built-in approval policies for EAG."""
 
-from eag.planner.approval.enums import ApprovalLevel, ApprovalReason, ApprovalState
+from eag.planner.approval.enums import ApprovalLevel, ApprovalReason
 from eag.planner.approval.models import ApprovalFinding
 from eag.planner.enums import RiskLevel
 from eag.planner.intelligence.models import EngineeringPlanningArtifact

@@ -35,7 +35,6 @@ from eag.planner.simulation.models import (
 )
 from eag.planner.validation.models import (
     EngineeringPlanValidationResult,
-    ValidationIssue,
 )
 from eag.planner.validation.validator import PlanValidator
 
@@ -44,13 +43,16 @@ from eag.planner.validation.validator import PlanValidator
 def analyzer() -> GoalAnalyzer:
     return GoalAnalyzer()
 
+
 @pytest.fixture
 def pipeline() -> EngineeringIntelligencePipeline:
     return EngineeringIntelligencePipeline()
 
+
 @pytest.fixture
 def validator() -> PlanValidator:
     return PlanValidator()
+
 
 @pytest.fixture
 def engine() -> ApprovalEngine:
@@ -75,13 +77,18 @@ def build_artifact(
     node = TaskDependencyNode(task=task)
     graph = TaskDependencyGraph(
         nodes={"T1": node},
-        statistics=TaskDependencyStatistics(task_count=1, root_count=1, leaf_count=1)
+        statistics=TaskDependencyStatistics(task_count=1, root_count=1, leaf_count=1),
     )
     risk = EngineeringRiskAssessment(overall_risk=risk_level)
     profile = EngineeringExecutionProfile(
-        total_engineering_time=1.0, critical_path_duration=1.0, parallel_savings=0.0,
-        estimated_active_work=1.0, estimated_validation=0.0, estimated_review=0.0, confidence=1.0,
-        summary="Test execution profile summary"
+        total_engineering_time=1.0,
+        critical_path_duration=1.0,
+        parallel_savings=0.0,
+        estimated_active_work=1.0,
+        estimated_validation=0.0,
+        estimated_review=0.0,
+        confidence=1.0,
+        summary="Test execution profile summary",
     )
     return EngineeringPlanningArtifact(
         goal=planning_goal,
@@ -89,27 +96,35 @@ def build_artifact(
         tasks=(task,),
         graph=graph,
         risk=risk,
-        execution_profile=profile
+        execution_profile=profile,
     )
+
 
 def build_validation(valid: bool = True) -> EngineeringPlanValidationResult:
     return EngineeringPlanValidationResult(valid=valid)
 
-def build_simulation(status: SimulationStatus = SimulationStatus.READY) -> EngineeringSimulationReport:
-    impact = SimulationImpact(task_count=1, operation_count=1, affected_files=1, affected_symbols=1, affected_modules=1)
-    timeline = SimulationTimeline(estimated_minutes=1.0, critical_path_minutes=1.0, parallel_savings_minutes=0.0)
+
+def build_simulation(
+    status: SimulationStatus = SimulationStatus.READY,
+) -> EngineeringSimulationReport:
+    impact = SimulationImpact(
+        task_count=1, operation_count=1, affected_files=1, affected_symbols=1, affected_modules=1
+    )
+    timeline = SimulationTimeline(
+        estimated_minutes=1.0, critical_path_minutes=1.0, parallel_savings_minutes=0.0
+    )
     return EngineeringSimulationReport(status=status, impact=impact, timeline=timeline)
 
 
 class TestPlannerApprovalModels:
     def test_request_is_immutable(self) -> None:
         req = ApprovalRequest(id="req-1", plan_id="plan-1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="."):
             req.id = "new"  # type: ignore[misc]
 
     def test_decision_is_immutable(self) -> None:
         dec = ApprovalDecision(state=ApprovalState.APPROVED)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="."):
             dec.state = ApprovalState.REJECTED  # type: ignore[misc]
 
     def test_invalid_state_rejected(self) -> None:
@@ -173,17 +188,17 @@ class TestPlannerApprovalEngine:
         analyzer: GoalAnalyzer,
         pipeline: EngineeringIntelligencePipeline,
         validator: PlanValidator,
-        engine: ApprovalEngine
+        engine: ApprovalEngine,
     ) -> None:
         # Full pipeline: Goal -> Plan -> Validate -> Simulate -> Approve
         goal = analyzer.analyze(PlanningGoal(goal_type=GoalType.ANALYSIS, title="Analyze Export"))
         artifact = pipeline.analyze(goal)
-        
+
         validation = validator.validate(artifact)
         assert validation.valid is True
-        
+
         # Use a mock simulation report for the test
         simulation = build_simulation(status=SimulationStatus.READY)
-        
+
         approval = engine.evaluate(artifact, validation, simulation)
         assert approval.approved is True

@@ -1,5 +1,8 @@
 """Plan simulation engine for EAG."""
 
+from typing import Any
+
+from eag.planner.enums import RiskLevel
 from eag.planner.intelligence.models import EngineeringPlanningArtifact
 from eag.planner.simulation.analyzers import (
     CheckpointAnalyzer,
@@ -27,13 +30,10 @@ class PlanSimulator:
         checkpoints = self._checkpoint_analyzer.analyze(artifact)
 
         warnings: list[str] = []
-        
-        # Add warnings based on risk
-        from eag.planner.enums import RiskLevel
+
         if artifact.risk.overall_risk in [RiskLevel.HIGH, RiskLevel.CRITICAL]:
             warnings.append(f"High risk operation ({artifact.risk.overall_risk.value}) detected.")
-            
-        # Add warnings based on impact
+
         if impact.affected_files > 10:
             warnings.append(f"Impact affects {impact.affected_files} files.")
 
@@ -52,9 +52,21 @@ class PlanSimulator:
             summary=summary,
         )
 
-    def _build_summary(self, status: SimulationStatus, impact, timeline, warnings: list[str]) -> str:
+    def _build_summary(
+        self,
+        status: SimulationStatus,
+        impact: Any,  # Could be ImpactAnalysis, but not imported; using Any
+        timeline: Any,  # Could be TimelineAnalysis
+        warnings: list[str],
+    ) -> str:
         if status == SimulationStatus.READY:
-            return f"Plan is ready for execution. Estimated time: {timeline.estimated_minutes:.1f} minutes."
-        elif status == SimulationStatus.WARNING:
-            return f"Plan can proceed with {len(warnings)} warnings. Estimated time: {timeline.estimated_minutes:.1f} minutes."
+            return (
+                "Plan is ready for execution. "
+                f"Estimated time: {timeline.estimated_minutes:.1f} minutes."
+            )
+        if status == SimulationStatus.WARNING:
+            return (
+                f"Plan can proceed with {len(warnings)} warnings. "
+                f"Estimated time: {timeline.estimated_minutes:.1f} minutes."
+            )
         return "Plan is blocked and cannot proceed."

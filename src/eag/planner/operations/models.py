@@ -21,6 +21,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EngineeringOperationDefinition:
     """Metadata describing an engineering operation."""
+
     id: str
     name: str
     description: str = ""
@@ -56,6 +57,7 @@ class EngineeringOperationDefinition:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OperationExecutionContext:
     """Context provided to an operation during execution (future)."""
+
     workspace: str = ""
     repository: Any = None
     planning_goal: Any = None
@@ -63,12 +65,15 @@ class OperationExecutionContext:
     configuration: Mapping[str, Any] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "configuration", _validate_mapping(self.configuration, "configuration"))
+        object.__setattr__(
+            self, "configuration", _validate_mapping(self.configuration, "configuration")
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OperationExecutionResult:
     """Result returned by an operation after execution (future)."""
+
     success: bool
     generated_tasks: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()

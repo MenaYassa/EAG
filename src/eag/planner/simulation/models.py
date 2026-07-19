@@ -1,11 +1,12 @@
 """Simulation domain models for EAG."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 
 
 class SimulationStatus(StrEnum):
     """Status of a simulated plan."""
+
     READY = "ready"
     WARNING = "warning"
     BLOCKED = "blocked"
@@ -14,6 +15,7 @@ class SimulationStatus(StrEnum):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SimulationImpact:
     """Predicted impact of executing a plan."""
+
     task_count: int
     operation_count: int
     affected_files: int
@@ -21,7 +23,13 @@ class SimulationImpact:
     affected_modules: int
 
     def __post_init__(self) -> None:
-        for field_name in ["task_count", "operation_count", "affected_files", "affected_symbols", "affected_modules"]:
+        for field_name in [
+            "task_count",
+            "operation_count",
+            "affected_files",
+            "affected_symbols",
+            "affected_modules",
+        ]:
             val = getattr(self, field_name)
             if not isinstance(val, int) or isinstance(val, bool) or val < 0:
                 raise ValueError(f"{field_name} must be a non-negative integer")
@@ -30,13 +38,18 @@ class SimulationImpact:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SimulationTimeline:
     """Predicted timeline for a plan."""
+
     estimated_minutes: float
     critical_path_minutes: float
     parallel_savings_minutes: float
     phases: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        for field_name in ["estimated_minutes", "critical_path_minutes", "parallel_savings_minutes"]:
+        for field_name in [
+            "estimated_minutes",
+            "critical_path_minutes",
+            "parallel_savings_minutes",
+        ]:
             val = getattr(self, field_name)
             if not isinstance(val, (int, float)) or isinstance(val, bool) or val < 0:
                 raise ValueError(f"{field_name} must be a non-negative number")
@@ -47,6 +60,7 @@ class SimulationTimeline:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SimulationCheckpoint:
     """A predicted checkpoint for rollback during execution."""
+
     name: str
     task_ids: tuple[str, ...]
     rollback_available: bool
@@ -63,6 +77,7 @@ class SimulationCheckpoint:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EngineeringSimulationReport:
     """The final artifact produced by the PlanSimulator."""
+
     status: SimulationStatus
     impact: SimulationImpact
     timeline: SimulationTimeline

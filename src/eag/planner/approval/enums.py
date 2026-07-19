@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class ApprovalState(StrEnum):
     """Lifecycle state of an approval request."""
+
     PENDING = "pending"
     AUTO_APPROVED = "auto_approved"
     APPROVED = "approved"
@@ -14,6 +15,7 @@ class ApprovalState(StrEnum):
 
 class ApprovalLevel(StrEnum):
     """The authority level required to approve a plan."""
+
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
@@ -23,6 +25,7 @@ class ApprovalLevel(StrEnum):
 
 class ApprovalReason(StrEnum):
     """Deterministic reasons for an approval decision."""
+
     LOW_RISK = "low_risk"
     HIGH_RISK = "high_risk"
     DANGEROUS_OPERATION = "dangerous_operation"

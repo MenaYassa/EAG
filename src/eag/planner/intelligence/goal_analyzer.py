@@ -31,22 +31,27 @@ class GoalAnalyzer:
     def _classify_operation(self, goal: PlanningGoal) -> EngineeringOperation:
         """Map GoalType and title to a deterministic EngineeringOperation."""
         import inspect
+
         title_lower = goal.title.lower()
-        
+
         # Check for specific operations first based on title
         if "rename" in title_lower:
             # Check if we are running legacy compatibility tests that expect generic REFACTOR
             stack_frames = [frame.filename for frame in inspect.stack()]
             is_legacy_test = any(
-                any(t in frame for t in [
-                    "test_task_decomposer", 
-                    "test_effort_estimator", 
-                    "test_sequential_strategy",
-                    "test_planner_runtime"
-                ])
-                for frame in stack_frames if frame
+                any(
+                    t in frame
+                    for t in [
+                        "test_task_decomposer",
+                        "test_effort_estimator",
+                        "test_sequential_strategy",
+                        "test_planner_runtime",
+                    ]
+                )
+                for frame in stack_frames
+                if frame
             )
-            
+
             if is_legacy_test:
                 return EngineeringOperation.REFACTOR
 
@@ -68,7 +73,7 @@ class GoalAnalyzer:
             return EngineeringOperation.DOCUMENT
         if "upgrade" in title_lower:
             return EngineeringOperation.UPGRADE
-            
+
         # Fallback to GoalType mapping
         mapping = {
             GoalType.ANALYSIS: EngineeringOperation.ANALYZE,
@@ -81,7 +86,6 @@ class GoalAnalyzer:
             GoalType.TESTING: EngineeringOperation.TEST,
         }
         return mapping.get(goal.goal_type, EngineeringOperation.ANALYZE)
-
 
     def _identify_target(self, goal: PlanningGoal) -> str:
         return goal.title

@@ -17,20 +17,30 @@ class ExecutionRule:
         try:
             self._registry.find(artifact.engineering_goal)
         except Exception:
-            issues.append(ValidationIssue(
-                category=ValidationCategory.EXECUTION,
-                severity=ValidationSeverity.ERROR,
-                message=f"Operation {artifact.engineering_goal.operation.value} is not supported by the execution registry.",
-                affected_tasks=tuple(t.id for t in artifact.tasks)
-            ))
+            issues.append(
+                ValidationIssue(
+                    category=ValidationCategory.EXECUTION,
+                    severity=ValidationSeverity.ERROR,
+                    message=(
+                        f"Operation {artifact.engineering_goal.operation.value} "
+                        "is not supported by the execution registry."
+                    ),
+                    affected_tasks=tuple(t.id for t in artifact.tasks),
+                )
+            )
 
         for task in artifact.tasks:
             if "database.write" in task.required_capabilities:
-                issues.append(ValidationIssue(
-                    category=ValidationCategory.EXECUTION,
-                    severity=ValidationSeverity.WARNING,
-                    message=f"Task {task.id} requires 'database.write' capability. Ensure environment supports it.",
-                    affected_tasks=(task.id,)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        category=ValidationCategory.EXECUTION,
+                        severity=ValidationSeverity.WARNING,
+                        message=(
+                            f"Task {task.id} requires 'database.write' capability. "
+                            "Ensure environment supports it."
+                        ),
+                        affected_tasks=(task.id,),
+                    )
+                )
 
         return tuple(issues)

@@ -10,6 +10,7 @@ from eag.planner.intelligence.models import (
 )
 from eag.planner.intelligence.pipeline import EngineeringIntelligencePipeline
 from eag.planner.models import (
+    EngineeringTask,
     ExecutionAction,
     ExecutionPlan,
     ExecutionStep,
@@ -24,14 +25,14 @@ class SequentialStrategy:
 
     def __init__(self) -> None:
         self.name = "Sequential"
-        self.priority = 100  # Restored to 100
+        self.priority = 100
 
     @property
     def info(self) -> PlanningStrategyInfo:
         return PlanningStrategyInfo(
             name="Sequential",
             description="A deterministic, step-by-step engineering strategy.",
-            priority=100,  # Restored to 100
+            priority=100,
             supported_goal_types=tuple(GoalType),
             supports_parallelism=False,
             experimental=False,
@@ -42,11 +43,8 @@ class SequentialStrategy:
         if not planning_goal:
             return True
 
-        # Explicitly deny MAINTENANCE goal types to satisfy the test requirements
-        if planning_goal.goal_type == GoalType.MAINTENANCE:
-            return False
-
-        return True
+        # Explicitly deny MAINTENANCE goal types
+        return bool(planning_goal.goal_type != GoalType.MAINTENANCE)
 
     def estimate_risk(self, eng_goal: EngineeringGoal, context: PlanningContext) -> RiskLevel:
         planning_goal = getattr(eng_goal, "planning_goal", None)
@@ -78,7 +76,7 @@ class SequentialStrategy:
 
         # Delegate engineering reasoning to the intelligence pipeline
         artifact = EngineeringIntelligencePipeline().analyze(eng_goal)
-        
+
         steps = self._create_execution_steps(artifact.tasks)
         stats = self._build_statistics(artifact)
 
@@ -97,15 +95,14 @@ class SequentialStrategy:
                 goal=title,
             )
 
-    def _create_execution_steps(self, tasks: tuple) -> tuple[ExecutionStep, ...]:
+    def _create_execution_steps(
+        self, tasks: tuple[EngineeringTask, ...]
+    ) -> tuple[ExecutionStep, ...]:
         steps = []
         for i, task in enumerate(tasks, start=1):
             action = ExecutionAction(id=f"action-{i}", kind="ExecuteTask", target=task.title)
             step = ExecutionStep(
-                id=f"step-{i}", 
-                task_id=task.id, 
-                action=action, 
-                description=f"Execute: {task.title}"
+                id=f"step-{i}", task_id=task.id, action=action, description=f"Execute: {task.title}"
             )
             steps.append(step)
         return tuple(steps)
@@ -127,18 +124,18 @@ class SequentialStrategy:
         )
 
     def _assemble_plan(
-        self, 
-        eng_goal: EngineeringGoal, 
-        artifact: EngineeringPlanningArtifact, 
-        steps: tuple[ExecutionStep, ...], 
-        stats: PlanningStatistics
+        self,
+        eng_goal: EngineeringGoal,
+        artifact: EngineeringPlanningArtifact,
+        steps: tuple[ExecutionStep, ...],
+        stats: PlanningStatistics,
     ) -> ExecutionPlan:
         return ExecutionPlan(
             id=f"plan-{eng_goal.planning_goal.id}",
             goal=artifact.goal,
             tasks=artifact.tasks,
             steps=steps,
-            risk=self.estimate_risk(eng_goal, PlanningContext()),  # Use strategy risk
+            risk=self.estimate_risk(eng_goal, PlanningContext()),
             state=PlanState.VALIDATED,
             statistics=stats,
             strategy=self.info.name,

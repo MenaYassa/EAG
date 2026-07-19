@@ -9,6 +9,7 @@ from typing import Any
 
 class ValidationSeverity(StrEnum):
     """Severity levels for validation issues."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -17,6 +18,7 @@ class ValidationSeverity(StrEnum):
 
 class ValidationCategory(StrEnum):
     """Categories of validation rules."""
+
     STRUCTURE = "structure"
     DEPENDENCY = "dependency"
     SAFETY = "safety"
@@ -27,6 +29,7 @@ class ValidationCategory(StrEnum):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ValidationIssue:
     """An immutable representation of a validation finding."""
+
     category: ValidationCategory
     severity: ValidationSeverity
     message: str
@@ -50,6 +53,7 @@ class ValidationIssue:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EngineeringPlanValidationResult:
     """The final artifact produced by the PlanValidator."""
+
     valid: bool
     issues: tuple[ValidationIssue, ...] = ()
     warnings: int = 0

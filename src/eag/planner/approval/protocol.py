@@ -13,13 +13,11 @@ class ApprovalPolicy(Protocol):
     """The contract for an approval governance policy."""
 
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     def evaluate(
         self,
         artifact: EngineeringPlanningArtifact,
         validation: EngineeringPlanValidationResult,
         simulation: EngineeringSimulationReport,
-    ) -> ApprovalFinding:
-        ...
+    ) -> ApprovalFinding: ...

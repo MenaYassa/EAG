@@ -1,6 +1,9 @@
 """Built-in engineering operations for EAG."""
 
-from eag.planner.intelligence.models import EngineeringGoal, EngineeringOperation as EngOpEnum
+from typing import TYPE_CHECKING
+
+from eag.planner.intelligence.models import EngineeringGoal
+from eag.planner.intelligence.models import EngineeringOperation as EngOpEnum
 from eag.planner.models import EngineeringTask
 from eag.planner.operations.enums import (
     OperationCategory,
@@ -8,12 +11,14 @@ from eag.planner.operations.enums import (
     OperationSafety,
 )
 from eag.planner.operations.models import EngineeringOperationDefinition
-from eag.planner.operations.protocol import EngineeringOperation
+
+if TYPE_CHECKING:
+    from eag.planner.operations.registry import OperationRegistry
 
 
 class _BaseOperation:
     """Base class providing default implementations for operations."""
-    
+
     _definition: EngineeringOperationDefinition
 
     @property
@@ -37,7 +42,7 @@ def _make_tasks(titles: list[str]) -> tuple[EngineeringTask, ...]:
     tasks = []
     for i, title in enumerate(titles, start=1):
         task_id = f"TASK-{i:03d}"
-        deps = (f"TASK-{i-1:03d}",) if i > 1 else ()
+        deps = (f"TASK-{i - 1:03d}",) if i > 1 else ()
         tasks.append(EngineeringTask(id=task_id, title=title, dependencies=deps))
     return tuple(tasks)
 
@@ -58,13 +63,15 @@ class RenameSymbolOperation(_BaseOperation):
         return goal.operation == EngOpEnum.RENAME
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Locate Symbol",
-            "Analyze References",
-            "Rename Declaration",
-            "Update References",
-            "Validate Repository",
-        ])
+        return _make_tasks(
+            [
+                "Locate Symbol",
+                "Analyze References",
+                "Rename Declaration",
+                "Update References",
+                "Validate Repository",
+            ]
+        )
 
 
 class RefactorOperation(_BaseOperation):
@@ -83,13 +90,15 @@ class RefactorOperation(_BaseOperation):
         return goal.operation == EngOpEnum.REFACTOR
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Locate Target",
-            "Analyze Dependencies",
-            "Modify Code",
-            "Update References",
-            "Run Validation",
-        ])
+        return _make_tasks(
+            [
+                "Locate Target",
+                "Analyze Dependencies",
+                "Modify Code",
+                "Update References",
+                "Run Validation",
+            ]
+        )
 
 
 class FixBugOperation(_BaseOperation):
@@ -108,13 +117,15 @@ class FixBugOperation(_BaseOperation):
         return goal.operation == EngOpEnum.FIX
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Reproduce Problem",
-            "Locate Cause",
-            "Implement Fix",
-            "Run Tests",
-            "Verify Fix",
-        ])
+        return _make_tasks(
+            [
+                "Reproduce Problem",
+                "Locate Cause",
+                "Implement Fix",
+                "Run Tests",
+                "Verify Fix",
+            ]
+        )
 
 
 class CreateFeatureOperation(_BaseOperation):
@@ -133,13 +144,15 @@ class CreateFeatureOperation(_BaseOperation):
         return goal.operation == EngOpEnum.CREATE
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Analyze Requirement",
-            "Design Change",
-            "Implement",
-            "Test",
-            "Document",
-        ])
+        return _make_tasks(
+            [
+                "Analyze Requirement",
+                "Design Change",
+                "Implement",
+                "Test",
+                "Document",
+            ]
+        )
 
 
 class DocumentOperation(_BaseOperation):
@@ -158,11 +171,13 @@ class DocumentOperation(_BaseOperation):
         return goal.operation == EngOpEnum.DOCUMENT
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Analyze Existing Docs",
-            "Update Documentation",
-            "Review Consistency",
-        ])
+        return _make_tasks(
+            [
+                "Analyze Existing Docs",
+                "Update Documentation",
+                "Review Consistency",
+            ]
+        )
 
 
 class AnalyzeOperation(_BaseOperation):
@@ -181,12 +196,14 @@ class AnalyzeOperation(_BaseOperation):
         return goal.operation == EngOpEnum.ANALYZE
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Define Scope",
-            "Gather Data",
-            "Analyze",
-            "Report Findings",
-        ])
+        return _make_tasks(
+            [
+                "Define Scope",
+                "Gather Data",
+                "Analyze",
+                "Report Findings",
+            ]
+        )
 
 
 class DeleteOperation(_BaseOperation):
@@ -205,12 +222,14 @@ class DeleteOperation(_BaseOperation):
         return goal.operation == EngOpEnum.DELETE
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Identify Target",
-            "Check Dependencies",
-            "Remove Code",
-            "Run Validation",
-        ])
+        return _make_tasks(
+            [
+                "Identify Target",
+                "Check Dependencies",
+                "Remove Code",
+                "Run Validation",
+            ]
+        )
 
 
 class ExtractOperation(_BaseOperation):
@@ -229,13 +248,15 @@ class ExtractOperation(_BaseOperation):
         return goal.operation == EngOpEnum.EXTRACT
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Locate Target",
-            "Create New Module",
-            "Move Code",
-            "Update Imports",
-            "Run Validation",
-        ])
+        return _make_tasks(
+            [
+                "Locate Target",
+                "Create New Module",
+                "Move Code",
+                "Update Imports",
+                "Run Validation",
+            ]
+        )
 
 
 class MoveOperation(_BaseOperation):
@@ -254,13 +275,15 @@ class MoveOperation(_BaseOperation):
         return goal.operation == EngOpEnum.MOVE
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Identify Target",
-            "Determine Destination",
-            "Move Code",
-            "Update Imports",
-            "Run Validation",
-        ])
+        return _make_tasks(
+            [
+                "Identify Target",
+                "Determine Destination",
+                "Move Code",
+                "Update Imports",
+                "Run Validation",
+            ]
+        )
 
 
 class RunTestsOperation(_BaseOperation):
@@ -279,12 +302,14 @@ class RunTestsOperation(_BaseOperation):
         return goal.operation == EngOpEnum.TEST
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Identify Target",
-            "Write Tests",
-            "Run Tests",
-            "Verify Coverage",
-        ])
+        return _make_tasks(
+            [
+                "Identify Target",
+                "Write Tests",
+                "Run Tests",
+                "Verify Coverage",
+            ]
+        )
 
 
 class UpgradeOperation(_BaseOperation):
@@ -303,19 +328,21 @@ class UpgradeOperation(_BaseOperation):
         return goal.operation == EngOpEnum.UPGRADE
 
     def generate_tasks(self, goal: EngineeringGoal) -> tuple[EngineeringTask, ...]:
-        return _make_tasks([
-            "Identify Target Version",
-            "Check Breaking Changes",
-            "Upgrade Dependency",
-            "Fix Breaking Changes",
-            "Run Validation",
-        ])
+        return _make_tasks(
+            [
+                "Identify Target Version",
+                "Check Breaking Changes",
+                "Upgrade Dependency",
+                "Fix Breaking Changes",
+                "Run Validation",
+            ]
+        )
 
 
 def default_operation_registry() -> "OperationRegistry":
     """Returns a registry populated with all built-in operations."""
     from eag.planner.operations.registry import OperationRegistry
-    
+
     registry = OperationRegistry()
     ops = [
         RenameSymbolOperation(),

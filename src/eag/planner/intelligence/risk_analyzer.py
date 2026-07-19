@@ -93,27 +93,27 @@ class RiskAnalyzer:
         self, goal: EngineeringGoal, graph: TaskDependencyGraph
     ) -> tuple[EngineeringRiskFactor, ...]:
         factors = []
-        
+
         # Check scope risk factor
         if goal.scope.name in ["REPOSITORY", "SYSTEM"]:
             factors.append(EngineeringRiskFactor.LARGE_SCOPE)
-            
+
         # Check dependency density
         if graph.statistics.task_count > 10:
             factors.append(EngineeringRiskFactor.MANY_DEPENDENCIES)
-            
+
         # Check delete operations
         if goal.operation == EngineeringOperation.DELETE:
             factors.append(EngineeringRiskFactor.DELETE_OPERATION)
-            
+
         # Fix: Both REFACTOR and RENAME map to the REFACTOR risk factor
         if goal.operation in (EngineeringOperation.REFACTOR, EngineeringOperation.RENAME):
             factors.append(EngineeringRiskFactor.REFACTOR)
-            
+
         # Check goal type risk factors
         if goal.planning_goal.goal_type == GoalType.INFRASTRUCTURE:
             factors.append(EngineeringRiskFactor.INFRASTRUCTURE)
-            
+
         # Check specialized operations
         if goal.operation == EngineeringOperation.TEST:
             factors.append(EngineeringRiskFactor.TESTING_ONLY)
@@ -121,9 +121,8 @@ class RiskAnalyzer:
             factors.append(EngineeringRiskFactor.DOCUMENTATION_ONLY)
         if goal.operation == EngineeringOperation.ANALYZE:
             factors.append(EngineeringRiskFactor.ANALYSIS_ONLY)
-            
-        return tuple(factors)
 
+        return tuple(factors)
 
     def _aggregate(self, risks: list[RiskLevel]) -> RiskLevel:
         if RiskLevel.CRITICAL in risks:

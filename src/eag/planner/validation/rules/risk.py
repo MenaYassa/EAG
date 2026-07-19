@@ -12,11 +12,16 @@ class RiskRule:
         issues: list[ValidationIssue] = []
 
         if artifact.risk.overall_risk in [RiskLevel.HIGH, RiskLevel.CRITICAL]:
-            issues.append(ValidationIssue(
-                category=ValidationCategory.RISK,
-                severity=ValidationSeverity.WARNING,
-                message=f"Plan risk is {artifact.risk.overall_risk.value}. Approval required before execution.",
-                affected_tasks=tuple(t.id for t in artifact.tasks)
-            ))
+            issues.append(
+                ValidationIssue(
+                    category=ValidationCategory.RISK,
+                    severity=ValidationSeverity.WARNING,
+                    message=(
+                        f"Plan risk is {artifact.risk.overall_risk.value}. "
+                        "Approval required before execution."
+                    ),
+                    affected_tasks=tuple(t.id for t in artifact.tasks),
+                )
+            )
 
         return tuple(issues)

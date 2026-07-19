@@ -1,13 +1,17 @@
 """Command-line interface for EAG."""
+
 from pathlib import Path
+
 import click
 import typer
+
 from eag import __version__
 from eag.bootstrap import bootstrap
 from eag.execution.errors import (
     CommandApprovalRequiredError,
     CommandDeniedError,
 )
+
 # Add these imports to the top of src/eag/cli.py
 from eag.explorer.formatter import JsonFormatter, TerminalFormatter
 from eag.explorer.models import (
@@ -47,6 +51,7 @@ app = typer.Typer(
 
 # Register Planner CLI commands
 register_planner_commands(app)
+
 
 @app.callback(invoke_without_command=True)
 def main(

@@ -3,10 +3,11 @@
 from typing import Protocol, runtime_checkable
 
 from eag.planner.intelligence.models import (
-    EngineeringPlanningArtifact,
     EngineeringOperation as EngOpEnum,
 )
-from eag.planner.models import EngineeringTask
+from eag.planner.intelligence.models import (
+    EngineeringPlanningArtifact,
+)
 from eag.planner.simulation.models import (
     SimulationCheckpoint,
     SimulationImpact,
@@ -17,6 +18,7 @@ from eag.planner.simulation.models import (
 @runtime_checkable
 class SimulationAnalyzer(Protocol):
     """Protocol for simulation analyzers."""
+
     def analyze(self, artifact: EngineeringPlanningArtifact) -> object: ...
 
 
@@ -60,7 +62,7 @@ class TimelineAnalyzer:
     def analyze(self, artifact: EngineeringPlanningArtifact) -> SimulationTimeline:
         profile = artifact.execution_profile
         phases = tuple(t.title for t in artifact.tasks)
-        
+
         return SimulationTimeline(
             estimated_minutes=profile.total_engineering_time,
             critical_path_minutes=profile.critical_path_duration,
@@ -74,23 +76,25 @@ class CheckpointAnalyzer:
 
     def analyze(self, artifact: EngineeringPlanningArtifact) -> tuple[SimulationCheckpoint, ...]:
         checkpoints: list[SimulationCheckpoint] = []
-        
+
         # Always add a pre-execution checkpoint for dangerous ops
         dangerous_ops = [EngOpEnum.DELETE, EngOpEnum.UPGRADE, EngOpEnum.MOVE]
         if artifact.engineering_goal.operation in dangerous_ops:
-            checkpoints.append(SimulationCheckpoint(
-                name=f"Pre-{artifact.engineering_goal.operation.value}",
-                task_ids=(),
-                rollback_available=True
-            ))
+            checkpoints.append(
+                SimulationCheckpoint(
+                    name=f"Pre-{artifact.engineering_goal.operation.value}",
+                    task_ids=(),
+                    rollback_available=True,
+                )
+            )
 
         # Add a checkpoint after validation tasks
         for task in artifact.tasks:
             if "validate" in task.title.lower() or "test" in task.title.lower():
-                checkpoints.append(SimulationCheckpoint(
-                    name=f"After {task.title}",
-                    task_ids=(task.id,),
-                    rollback_available=True
-                ))
+                checkpoints.append(
+                    SimulationCheckpoint(
+                        name=f"After {task.title}", task_ids=(task.id,), rollback_available=True
+                    )
+                )
 
         return tuple(checkpoints)

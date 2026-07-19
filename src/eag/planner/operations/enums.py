@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class OperationCategory(StrEnum):
     """The category of an engineering operation."""
+
     CODE = "code"
     FILESYSTEM = "filesystem"
     REPOSITORY = "repository"
@@ -17,6 +18,7 @@ class OperationCategory(StrEnum):
 
 class OperationComplexity(StrEnum):
     """Complexity levels for an engineering operation."""
+
     TRIVIAL = "trivial"
     LOW = "low"
     MEDIUM = "medium"
@@ -26,6 +28,7 @@ class OperationComplexity(StrEnum):
 
 class OperationSafety(StrEnum):
     """Safety classification for an engineering operation."""
+
     SAFE = "safe"
     CAUTION = "caution"
     DANGEROUS = "dangerous"

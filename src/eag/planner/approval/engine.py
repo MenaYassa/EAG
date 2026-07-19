@@ -83,13 +83,13 @@ class ApprovalEngine:
                 summaries.append(finding.summary)
             if not finding.approved and not finding.requires_manual:
                 # Policy explicitly denied without manual review (e.g. auto-approve failed)
-                # This doesn't necessarily block if another policy approves, 
+                # This doesn't necessarily block if another policy approves,
                 # but for governance, we treat it as "not auto-approved"
                 approved = False
-            
+
             if level_order.get(finding.required_level, 0) > level_order.get(required_level, 0):
                 required_level = finding.required_level
-                
+
             for r in finding.reasons:
                 if r not in reasons:
                     reasons.append(r)

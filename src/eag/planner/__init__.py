@@ -1,16 +1,30 @@
-from eag.planner.enums import (
-    PlanningStrategy as PlanningStrategyType,  # enum (renamed to avoid clash)
-)
 """Engineering Planning Platform — domain vocabulary, models, errors, and events."""
 
+from eag.planner.approval import (
+    ApprovalDecision,
+    ApprovalEngine,
+    ApprovalFinding,
+    ApprovalLevel,
+    ApprovalPolicy,
+    ApprovalReason,
+    ApprovalRequest,
+    ApprovalResult,
+    ApprovalState,
+    AutomaticApprovalPolicy,
+    DangerousOperationPolicy,
+    OwnershipPolicy,
+    RiskApprovalPolicy,
+)
 from eag.planner.enums import (
     ExecutionMode,
     GoalType,
-    PlanState,
     PlannerRuntimeState,
-    PlanningStrategy,
+    PlanState,
     RiskLevel,
     TaskPriority,
+)
+from eag.planner.enums import (
+    PlanningStrategy as PlanningStrategyType,  # enum (renamed to avoid clash)
 )
 from eag.planner.errors import (
     ApprovalRequiredError,
@@ -96,21 +110,6 @@ from eag.planner.validation import (
     ValidationCategory,
     ValidationIssue,
     ValidationSeverity,
-)
-from eag.planner.approval import (
-    ApprovalDecision,
-    ApprovalEngine,
-    ApprovalFinding,
-    ApprovalLevel,
-    ApprovalPolicy,
-    ApprovalReason,
-    ApprovalRequest,
-    ApprovalResult,
-    ApprovalState,
-    AutomaticApprovalPolicy,
-    DangerousOperationPolicy,
-    OwnershipPolicy,
-    RiskApprovalPolicy,
 )
 
 __all__ = [
