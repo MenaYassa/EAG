@@ -5,15 +5,18 @@ from eag.source.metrics import AnalysisMetrics
 from eag.source.models import (
     AnalysisResult,
     Dependency,
+    DependencyKind,
     Documentation,
+    Language,
     ModuleIdentity,
     SourceFileIdentity,
     SourceLocation,
     Symbol,
     SymbolIdentity,
+    SymbolKind,
+    Visibility,
 )
 from eag.source.python.models import PythonClass, PythonFunction, PythonImport, PythonModule
-from eag.source.state import DependencyKind, SymbolKind, Visibility
 
 
 class PythonTranslator:
@@ -31,7 +34,7 @@ class PythonTranslator:
         identity = SourceFileIdentity(
             absolute_path=file_path.resolve(),
             repository_path=PurePosixPath(file_path.resolve().relative_to(repo_root.resolve())),
-            language="python",
+            language=Language.PYTHON,
             fingerprint=fingerprint,
         )
 

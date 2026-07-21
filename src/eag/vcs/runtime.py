@@ -106,7 +106,9 @@ class RepositoryRuntime:
             state=self.repository.state,
             provider=self.repository.provider,
             branch="HEAD" if is_detached else self._git_provider.current_branch(self.repository),
-            head=self._git_provider._run(["rev-parse", "HEAD"], cwd=self.repository.root, check=False),
+            head=self._git_provider._run(
+                ["rev-parse", "HEAD"], cwd=self.repository.root, check=False
+            ),
             is_detached=is_detached,
         )
 
@@ -121,7 +123,7 @@ class RepositoryRuntime:
     def explain(self) -> str:
         health = self.health()
         status = self.status()
-        
+
         # Use explicit Enums instead of strings to ensure accurate counting
         modified = sum(1 for s in status if s.status == FileStatus.MODIFIED)
         untracked = sum(1 for s in status if s.status == FileStatus.UNTRACKED)

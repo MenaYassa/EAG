@@ -14,7 +14,7 @@ from eag.explorer.models import (
     SymbolView,
 )
 from eag.index.models import RepositoryIndex
-from eag.source.state import SymbolKind
+from eag.source.models import SymbolKind
 
 
 class ExplorerRuntime:

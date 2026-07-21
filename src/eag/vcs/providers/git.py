@@ -23,7 +23,7 @@ class GitProvider:
                 check=check,
             )
             # FIX: Use rstrip to remove newlines but preserve leading spaces!
-            return result.stdout.rstrip("\r\n") 
+            return result.stdout.rstrip("\r\n")
         except subprocess.CalledProcessError as e:
             if check:
                 raise RepositoryError(f"Git command failed: {e.stderr.strip()}") from e

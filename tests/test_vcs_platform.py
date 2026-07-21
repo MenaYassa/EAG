@@ -5,13 +5,16 @@ from pathlib import Path
 import pytest
 
 from eag.events import EventBus
-from eag.vcs.errors import TransactionError, RepositoryValidationError as VCSValidationError
+from eag.vcs.enums import FileStatus, RepositoryState, TransactionState
+from eag.vcs.enums import RepositoryProviderType as VCSProvider
+from eag.vcs.errors import RepositoryValidationError as VCSValidationError
+from eag.vcs.errors import TransactionError
 from eag.vcs.events import CommitCreated, RepositoryOpened
-from eag.vcs.models import Commit, RepositoryHealth, RepositoryDescriptor as Repository
+from eag.vcs.models import Commit, RepositoryHealth
+from eag.vcs.models import RepositoryDescriptor as Repository
 from eag.vcs.providers.git import GitProvider
-from eag.vcs.transaction import TransactionManager
-from eag.vcs.enums import FileStatus, RepositoryState, TransactionState, RepositoryProviderType as VCSProvider
 from eag.vcs.runtime import RepositoryRuntime as VCSRuntime
+from eag.vcs.transaction import TransactionManager
 
 
 @pytest.fixture

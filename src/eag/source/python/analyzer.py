@@ -3,7 +3,7 @@ from pathlib import Path
 
 from eag.source.analyzer import AnalysisContext, SourceAnalyzer
 from eag.source.errors import AnalysisFailedError
-from eag.source.models import AnalysisResult
+from eag.source.models import AnalysisResult, Diagnostic, Language, SourceDocument
 from eag.source.python.extractors import (
     ClassExtractor,
     FunctionExtractor,
@@ -16,7 +16,7 @@ from eag.source.python.translator import PythonTranslator
 
 
 class PythonAnalyzer(SourceAnalyzer):
-    language = "python"
+    language = Language.PYTHON
     extensions = frozenset({".py"})
 
     def __init__(self) -> None:
@@ -30,6 +30,12 @@ class PythonAnalyzer(SourceAnalyzer):
 
     def supports(self, path: Path) -> bool:
         return path.suffix in self.extensions
+
+    def parse(self, path: Path, content: str) -> SourceDocument:
+        raise NotImplementedError("Parsing is handled by PythonSourceProvider.")
+
+    def validate(self, document: SourceDocument) -> tuple[Diagnostic, ...]:
+        raise NotImplementedError("Validation is handled by PythonSourceProvider.")
 
     def analyze(self, context: AnalysisContext) -> AnalysisResult:
         path = context.path

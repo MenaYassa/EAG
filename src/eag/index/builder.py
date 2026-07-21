@@ -13,8 +13,8 @@ from eag.source.models import (
     ModuleIdentity,
     SemanticRelationship,
     Symbol,
+    SymbolKind,
 )
-from eag.source.state import SymbolKind
 
 
 class RepositoryIndexBuilder:
@@ -67,16 +67,22 @@ class RepositoryIndexBuilder:
             raise IndexBuildError(f"Failed to build index: {e}") from e
 
     def _calculate_statistics(self) -> RepositoryIndexStatistics:
-        classes = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.CLASS)
-        interfaces = sum(
-            1 for s in self._symbols.values() if s.identity.kind == SymbolKind.INTERFACE
-        )
+        def _count(kind_name: str) -> int:
+            if not hasattr(SymbolKind, kind_name):
+                return 0
+            kind = getattr(SymbolKind, kind_name)
+            return sum(1 for s in self._symbols.values() if s.identity.kind == kind)
+
+        classes = _count("CLASS")
+        interfaces = _count("INTERFACE")
+        functions = _count("FUNCTION")
+        methods = _count("METHOD")
+        constants = _count("CONSTANT")
+
+        # Attribute-based counting stays the same
         protocols = sum(1 for s in self._symbols.values() if "is_protocol" in s.attributes)
         enums = sum(1 for s in self._symbols.values() if "is_enum" in s.attributes)
         dataclasses = sum(1 for s in self._symbols.values() if "is_dataclass" in s.attributes)
-        functions = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.FUNCTION)
-        methods = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.METHOD)
-        constants = sum(1 for s in self._symbols.values() if s.identity.kind == SymbolKind.CONSTANT)
 
         return RepositoryIndexStatistics(
             files=self._files,

@@ -1,5 +1,5 @@
 class SourceError(Exception):
-    """Base error for source intelligence operations."""
+    """Base error for all source intelligence failures."""
 
 
 class UnsupportedLanguageError(SourceError):
@@ -12,3 +12,11 @@ class AnalyzerNotFoundError(SourceError):
 
 class AnalysisFailedError(SourceError):
     """Raised when analysis fails."""
+
+
+class SourceParseError(SourceError):
+    """Raised when a source file cannot be parsed."""
+
+
+class SourceValidationError(SourceError):
+    """Raised when source validation fails."""

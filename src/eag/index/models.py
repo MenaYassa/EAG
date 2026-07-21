@@ -2,8 +2,9 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from eag.index.errors import SymbolNotFoundError
-from eag.source.models import Dependency, ModuleIdentity, SemanticRelationship, Symbol
-from eag.source.state import SymbolKind
+
+# Change line 6
+from eag.source.models import Dependency, ModuleIdentity, SemanticRelationship, Symbol, SymbolKind
 
 
 def _validate_non_negative_int(value: int, field_name: str) -> int:

@@ -278,10 +278,10 @@ class TestExplainability:
         f_path = temp_repo_root / "f.txt"
         f_path.write_text("initial")
         runtime.commit("Initial commit")
-        
+
         # 2. Modify the tracked file
         f_path.write_text("modified")
-        
+
         explanation = runtime.explain()
         assert "Modified files: 1" in explanation
 

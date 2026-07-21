@@ -20,7 +20,7 @@ from eag.graph.models import (
 )
 from eag.graph.state import GraphState, RelationshipType
 from eag.index.models import RepositoryIndex
-from eag.source.state import SemanticKind, SymbolKind
+from eag.source.models import SemanticKind, SymbolKind
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37,11 +37,6 @@ class GraphBuilder:
         self._index: RepositoryIndex | None = None
         self.reset()
 
-    # ============================================================================
-    # FIX: Added _short_name_index — maps bare names ("SourceRuntime") to their
-    # real structural GraphNode objects so semantic edges connect to the correct
-    # nodes instead of creating floating dependency nodes.
-    # ============================================================================
     def reset(self) -> None:
         self._nodes: dict[str, GraphNode] = {}
         self._edges: dict[tuple[str, str, RelationshipType], GraphEdge] = {}
@@ -94,10 +89,6 @@ class GraphBuilder:
                 self._event_bus.publish(GraphBuildFailed(error=str(e)))
             raise GraphBuildError(f"Graph build failed: {e}") from e
 
-    # ============================================================================
-    # FIX: Added _index_short_name(node) call so every structural node is
-    # registered in the short-name index at insertion time.
-    # ============================================================================
     def _add_node(self, node: GraphNode) -> None:
         if node.id in self._nodes:
             self._duplicates += 1
@@ -107,12 +98,6 @@ class GraphBuilder:
         if self._event_bus:
             self._event_bus.publish(GraphNodeCreated(node=node))
 
-    # ============================================================================
-    # FIX: New method — builds a reverse lookup from bare short names to real
-    # structural node objects.  NodeFactory already sets node.name to the last
-    # segment of the qualified_name, so this captures exactly the bare class /
-    # function / method names that the semantic extractor emits.
-    # ============================================================================
     def _index_short_name(self, node: GraphNode) -> None:
         """Map node short name to node object for semantic resolution fallback.
 
@@ -141,22 +126,27 @@ class GraphBuilder:
         for mod in self._index.modules:
             self._add_node(NodeFactory.module(mod.name))
 
+        # Safely determine available enum members
+        class_kinds = tuple(
+            getattr(SymbolKind, k)
+            for k in ("CLASS", "INTERFACE", "PROTOCOL", "ENUM", "DATACLASS")
+            if hasattr(SymbolKind, k)
+        )
+        func_kinds = tuple(
+            getattr(SymbolKind, k) for k in ("FUNCTION", "CONSTANT") if hasattr(SymbolKind, k)
+        )
+        method_kind = getattr(SymbolKind, "METHOD", None)
+
         for sym in self._index.symbols:
             kind = sym.identity.kind
             qname = sym.identity.qualified_name
             module = sym.identity.module
 
-            if kind in (
-                SymbolKind.CLASS,
-                SymbolKind.INTERFACE,
-                SymbolKind.PROTOCOL,
-                SymbolKind.ENUM,
-                SymbolKind.DATACLASS,
-            ):
+            if kind in class_kinds:
                 self._add_node(NodeFactory.class_(qname, module))
-            elif kind in (SymbolKind.FUNCTION, SymbolKind.CONSTANT):
+            elif kind in func_kinds:
                 self._add_node(NodeFactory.function(qname, module))
-            elif kind == SymbolKind.METHOD:
+            elif method_kind and kind == method_kind:
                 self._add_node(NodeFactory.method(qname, module))
 
         for dep in self._index.dependencies:
@@ -166,26 +156,30 @@ class GraphBuilder:
         if not self._index:
             return
 
+        class_kinds = tuple(
+            getattr(SymbolKind, k)
+            for k in ("CLASS", "INTERFACE", "PROTOCOL", "ENUM", "DATACLASS")
+            if hasattr(SymbolKind, k)
+        )
+        func_kinds = tuple(
+            getattr(SymbolKind, k) for k in ("FUNCTION", "CONSTANT") if hasattr(SymbolKind, k)
+        )
+        method_kind = getattr(SymbolKind, "METHOD", None)
+
         for sym in self._index.symbols:
             mod_id = f"module:{sym.identity.module}"
             kind = sym.identity.kind
             qname = sym.identity.qualified_name
 
-            if kind in (
-                SymbolKind.CLASS,
-                SymbolKind.INTERFACE,
-                SymbolKind.PROTOCOL,
-                SymbolKind.ENUM,
-                SymbolKind.DATACLASS,
-            ):
+            if kind in class_kinds:
                 cls_id = f"class:{qname}"
                 self._add_edge(EdgeFactory.contains(mod_id, cls_id))
 
-            elif kind in (SymbolKind.FUNCTION, SymbolKind.CONSTANT):
+            elif kind in func_kinds:
                 fn_id = f"function:{qname}"
                 self._add_edge(EdgeFactory.contains(mod_id, fn_id))
 
-            elif kind == SymbolKind.METHOD:
+            elif method_kind and kind == method_kind:
                 parts = qname.rsplit(".", 1)
                 if len(parts) == 2:
                     cls_qn = parts[0]
@@ -202,43 +196,21 @@ class GraphBuilder:
             dep_id = f"dependency:{dep.target}"
             self._add_edge(EdgeFactory.imports(mod_id, dep_id))
 
-    # ============================================================================
-    # FIX: Replaced the old six-lookup cascade with calls to the new
-    # _resolve_semantic_node() helper.  The old code could not match bare names
-    # like "SourceRuntime" to real nodes with IDs like
-    # "class:eag.runtime.SourceRuntime", causing it to create floating
-    # dependency nodes and break all traversal paths.
-    # ============================================================================
     def _connect_semantic(self) -> None:
-        """Wire semantic relationship edges to real structural graph nodes.
-
-        The semantic extractor produces relationship sources and targets as raw
-        string names pulled from the AST.  Sources are typically fully-qualified
-        (e.g. eag.kernel.Kernel) while targets are frequently bare class or
-        function names (e.g. SourceRuntime).
-
-        The previous implementation tried a fixed sequence of self._nodes
-        dict lookups using prefixed keys, but a bare name like SourceRuntime
-        never matches keys like class:SourceRuntime because the real node
-        ID is class:eag.runtime.SourceRuntime.  When all lookups failed the
-        code fell through to creating a floating dependency:SourceRuntime
-        node, leaving the real structural node completely isolated.
-
-        The fix introduces a multi-strategy resolver (_resolve_semantic_node)
-        that consults a short-name index built during node collection.  This
-        allows SourceRuntime to match class:eag.runtime.SourceRuntime
-        without the semantic extractor needing import-resolution capabilities.
-        """
         if not self._index:
             return
 
-        kind_map = {
-            SemanticKind.CALLS: RelationshipType.CALLS,
-            SemanticKind.INHERITS: RelationshipType.INHERITS,
-            SemanticKind.USES: RelationshipType.USES,
-            SemanticKind.PUBLISHES_EVENT: RelationshipType.PUBLISHES_EVENT,
-            SemanticKind.SUBSCRIBES_EVENT: RelationshipType.SUBSCRIBES_EVENT,
-        }
+        # Build the mapping safely based on what SemanticKind actually supports
+        kind_map = {}
+        for sem_name, rel_type in [
+            ("CALLS", RelationshipType.CALLS),
+            ("INHERITS", RelationshipType.INHERITS),
+            ("USES", RelationshipType.USES),
+            ("PUBLISHES_EVENT", RelationshipType.PUBLISHES_EVENT),
+            ("SUBSCRIBES_EVENT", RelationshipType.SUBSCRIBES_EVENT),
+        ]:
+            if hasattr(SemanticKind, sem_name):
+                kind_map[getattr(SemanticKind, sem_name)] = rel_type
 
         for rel in self._index.semantic_relationships:
             source_node = self._resolve_semantic_node(rel.source)
@@ -247,8 +219,6 @@ class GraphBuilder:
 
             target_node = self._resolve_semantic_node(rel.target)
 
-            # External fallback: if target is genuinely outside this codebase,
-            # create a dependency node so the edge is still preserved.
             if not target_node:
                 target_node = NodeFactory.dependency(rel.target)
                 self._add_node(target_node)
@@ -263,11 +233,6 @@ class GraphBuilder:
                     )
                 )
 
-    # ============================================================================
-    # FIX: New method — multi-strategy semantic name resolver.  This is the core
-    # of the fix.  It resolves a raw AST-extracted name to a real structural
-    # graph node through four cascading strategies.
-    # ============================================================================
     def _resolve_semantic_node(self, raw_name: str) -> GraphNode | None:
         """Resolve a raw semantic name to a real structural graph node.
 
@@ -287,34 +252,21 @@ class GraphBuilder:
         """
         short_name = raw_name.split(".")[-1]
 
-        # Strategy 1: Direct prefixed-ID lookup using the full raw name.
-        # Works when the semantic source is a fully-qualified name that
-        # exactly matches a structural node's qualified name.
         for prefix in ("class:", "function:", "method:"):
             node = self._nodes.get(f"{prefix}{raw_name}")
             if node:
                 return node
 
-        # Strategy 2: Prefixed-ID lookup using the short name only.
-        # Works when a node's qualified_name happens to be the bare name
-        # (e.g. top-level functions/constants with no module-component prefix
         # in the ID).
         for prefix in ("class:", "function:", "method:"):
             node = self._nodes.get(f"{prefix}{short_name}")
             if node:
                 return node
 
-        # Strategy 3: Short-name index fallback.
-        # This is the critical fix: when the semantic extractor produced a bare
-        # target like "SourceRuntime" and the real node ID is the fully-qualified
-        # "class:eag.runtime.SourceRuntime", the short-name index maps
-        # "SourceRuntime" -> that node object directly.
         candidates = self._short_name_index.get(short_name)
         if candidates:
             return candidates[0]
 
-        # Strategy 4: Raw string fallback (should rarely trigger, but kept
-        # for safety).
         node = self._nodes.get(raw_name)
         if node:
             return node
