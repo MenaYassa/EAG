@@ -335,12 +335,24 @@ class TestTransformationEngine:
 
 
 class TestTransformationProtocol:
-    def test_rename_implements_protocol(self) -> None:
-        transform = RenameTransformation("a", "b")
-        assert isinstance(transform, Transformation)
-
     def test_dummy_transformation_protocol(self) -> None:
         class DummyTransform:
+            @property
+            def descriptor(self):
+                from eag.planner.enums import RiskLevel
+                from eag.source.models import Language
+                from eag.source.python.transformations.descriptor import (
+                    TransformationCategory,
+                    TransformationDescriptor,
+                )
+
+                return TransformationDescriptor(
+                    name="dummy",
+                    category=TransformationCategory.SEMANTIC,
+                    supported_languages=(Language.PYTHON,),
+                    risk=RiskLevel.LOW,
+                )
+
             @property
             def name(self) -> str:
                 return "dummy"

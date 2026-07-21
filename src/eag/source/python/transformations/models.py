@@ -75,6 +75,7 @@ def apply_text_edits(content: str, edits: list["TextEdit"]) -> str:
 
     return "".join(result_lines)
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TextEdit:
     """A precise source code edit to be applied to a specific span."""
@@ -104,6 +105,7 @@ class TextEdit:
     def apply_to(self, content: str) -> str:
         """Apply this single edit to the given content."""
         return apply_text_edits(content, [self])
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TransformationContext:

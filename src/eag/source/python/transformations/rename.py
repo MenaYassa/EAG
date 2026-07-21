@@ -4,6 +4,11 @@ import ast
 from datetime import UTC, datetime
 
 from eag.planner.enums import RiskLevel
+from eag.source.models import Language
+from eag.source.python.transformations.descriptor import (
+    TransformationCategory,
+    TransformationDescriptor,
+)
 from eag.source.python.transformations.models import (
     SourceEdit,
     TextEdit,
@@ -25,11 +30,24 @@ class RenameTransformation:
         self._validator = TransformationValidator()
 
     @property
+    def descriptor(self) -> TransformationDescriptor:
+        return TransformationDescriptor(
+            name="rename_symbol",
+            category=TransformationCategory.SEMANTIC,
+            supported_languages=(Language.PYTHON,),
+            risk=RiskLevel.LOW,
+            produces_edits=("TextEdit", "SymbolEdit"),
+        )
+
+    @property
     def name(self) -> str:
         return "rename_symbol"
 
     def supports(self, context: TransformationContext) -> bool:
-        return context.document.language.value == "python"
+        # Combined approach: check both language value and descriptor
+        return context.document.language.value == "python" or context.document.language in getattr(
+            self, "_supported_languages", (Language.PYTHON,)
+        )
 
     def preview(self, context: TransformationContext) -> TransformationPreview:
         clean_target = (
@@ -37,7 +55,15 @@ class RenameTransformation:
             if self._target_symbol.startswith("module.")
             else self._target_symbol
         )
+        # Try both approaches for finding the symbol
         target_syms = [s for s in context.document.symbols if s.qualified_name == clean_target]
+        if not target_syms:
+            target_syms = [
+                s
+                for s in context.document.symbols
+                if s.name == self._target_symbol or s.qualified_name == self._target_symbol
+            ]
+
         target_sym = target_syms[0] if target_syms else None
 
         if not target_sym:
@@ -69,7 +95,11 @@ class RenameTransformation:
             if self._target_symbol.startswith("module.")
             else self._target_symbol
         )
-        found = any(s.qualified_name == clean_target for s in context.document.symbols)
+        # Enhanced symbol existence check
+        found = any(
+            s.qualified_name == clean_target or s.name == self._target_symbol
+            for s in context.document.symbols
+        )
 
         if not found:
             errors.append(f"Symbol '{self._target_symbol}' not found in source document.")
@@ -78,7 +108,11 @@ class RenameTransformation:
             new_clean = (
                 self._new_name[7:] if self._new_name.startswith("module.") else self._new_name
             )
-            collision = any(s.qualified_name == new_clean for s in context.document.symbols)
+            # Enhanced collision check
+            collision = any(
+                s.qualified_name == new_clean or s.name == self._new_name
+                for s in context.document.symbols
+            )
             if collision:
                 errors.append(f"Symbol '{self._new_name}' already exists in source document.")
 
@@ -92,7 +126,11 @@ class RenameTransformation:
         )
         new_clean = self._new_name[7:] if self._new_name.startswith("module.") else self._new_name
 
+        # Enhanced symbol lookup
         target_syms = [s for s in context.document.symbols if s.qualified_name == clean_target]
+        if not target_syms:
+            target_syms = [s for s in context.document.symbols if s.name == self._target_symbol]
+
         target_qname = target_syms[0].qualified_name if target_syms else clean_target
         known_qnames = {s.qualified_name for s in context.document.symbols}
 
@@ -124,9 +162,11 @@ class RenameTransformation:
 
         has_refs = bool(locations)
 
-        # 1. Idempotency Check: Pre-empt failures if transformation is already complete
+        # Idempotency Check: Pre-empt failures if transformation is already complete
         if not target_syms and not has_refs:
             new_syms = [s for s in context.document.symbols if s.qualified_name == new_clean]
+            if not new_syms:
+                new_syms = [s for s in context.document.symbols if s.name == self._new_name]
             new_qname = new_syms[0].qualified_name if new_syms else new_clean
             has_new_refs = any(
                 r.target == new_qname or r.target.endswith(f".{new_qname}")
@@ -141,7 +181,7 @@ class RenameTransformation:
                     summary=f"No changes needed for '{self._target_symbol}'.",
                 )
 
-        # 2. Validation Check
+        # Validation Check
         val_errors = list(self.validate(context))
         if has_refs:
             # If references are found across files, don't fail just because definition is missing
@@ -154,7 +194,7 @@ class RenameTransformation:
                 summary="Validation failed: " + "; ".join(val_errors),
             )
 
-        # 3. Application
+        # Application
         try:
             tree = ast.parse(context.content)
             visitor = RenameVisitor(

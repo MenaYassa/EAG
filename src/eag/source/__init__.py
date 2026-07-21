@@ -16,7 +16,6 @@ from eag.source.events import (
     SourceEvent,
     SourceParsed,
 )
-from eag.source.python.transformations.errors import TransactionError
 from eag.source.metrics import AnalysisMetrics
 from eag.source.models import (
     AnalysisDiagnostic,
@@ -49,20 +48,30 @@ from eag.source.protocol import SourceProvider
 from eag.source.python import (
     CompositeEdit,
     ConflictDetector,
+    DiffEngine,
     Edit,
     EditEngine,
     EditTransaction,
     EditType,
+    GenerateSymbolTransformation,
     ImportEdit,
+    MoveSymbolTransformation,
+    OrganizeImportsTransformation,
     PythonSourceProvider,
     RenameTransformation,
     RenameVisitor,
+    SafeDeleteTransformation,
+    SafeReplaceTransformation,
+    StructuredDiff,
     SymbolEdit,
     TextEdit,
     TransactionError,
     Transformation,
     TransformationBatch,
+    TransformationCatalog,
+    TransformationCategory,
     TransformationContext,
+    TransformationDescriptor,
     TransformationEngine,
     TransformationPreview,
     TransformationRegistry,
@@ -70,6 +79,7 @@ from eag.source.python import (
     TransformationValidator,
     apply_text_edits,
 )
+from eag.source.python.transformations.errors import TransactionError
 from eag.source.python.transformations.models import SourceEdit
 from eag.source.registry import SourceRegistry
 from eag.source.runtime import SourceRuntime
@@ -83,6 +93,7 @@ __all__ = [
     "SemanticKind",
     "SymbolKind",
     "SymbolVisibility",
+    "TransformationCategory",
     "Visibility",
     # Errors
     "AnalysisFailedError",
@@ -135,13 +146,22 @@ __all__ = [
     "SourceRuntime",
     # Transformations
     "ConflictDetector",
+    "DiffEngine",
     "EditEngine",
     "EditTransaction",
+    "GenerateSymbolTransformation",
+    "MoveSymbolTransformation",
+    "OrganizeImportsTransformation",
     "RenameTransformation",
     "RenameVisitor",
+    "SafeDeleteTransformation",
+    "SafeReplaceTransformation",
+    "StructuredDiff",
     "Transformation",
     "TransformationBatch",
+    "TransformationCatalog",
     "TransformationContext",
+    "TransformationDescriptor",
     "TransformationEngine",
     "TransformationPreview",
     "TransformationRegistry",

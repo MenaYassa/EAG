@@ -2,6 +2,7 @@
 
 from typing import Protocol, runtime_checkable
 
+from eag.source.python.transformations.descriptor import TransformationDescriptor
 from eag.source.python.transformations.models import (
     TransformationContext,
     TransformationPreview,
@@ -12,6 +13,9 @@ from eag.source.python.transformations.models import (
 @runtime_checkable
 class Transformation(Protocol):
     """The contract for a source code transformation."""
+
+    @property
+    def descriptor(self) -> TransformationDescriptor: ...
 
     @property
     def name(self) -> str: ...

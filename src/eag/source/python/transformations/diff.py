@@ -1,12 +1,14 @@
 """Structured Diff Engine for EAG transformations."""
 
 from dataclasses import dataclass
-from eag.source.python.transformations.edits import Edit, TextEdit
+
+from eag.source.python.transformations.edits import TextEdit
 
 
 @dataclass(frozen=True)
 class StructuredDiff:
     """A structured diff for a single file."""
+
     file: str
     changes: tuple[str, ...]
 
