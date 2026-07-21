@@ -8,6 +8,7 @@ from typing import Any
 
 from eag.planner.enums import RiskLevel
 from eag.source.models import Diagnostic, SourceDocument
+from eag.source.python.transformations.edits import TextEdit  # Re-export for compatibility
 
 
 def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:
@@ -33,49 +34,46 @@ def apply_text_edits(content: str, edits: list["TextEdit"]) -> str:
     result_lines = list(lines)
 
     for edit in sorted_edits:
-        # Convert 0-based line/col to 0-based indices
         start_line = edit.start_line - 1
         end_line = edit.end_line - 1
+
+        # Handle deletion of an entire single line (e.g. from col 0 to end of text)
+        if start_line == end_line and edit.new_text == "" and edit.start_col == 0:
+            # If deleting the whole line including its content, remove the line entirely including its trailing newline if present
+            if start_line < len(result_lines):
+                result_lines.pop(start_line)
+            continue
 
         # Handle edits within a single line
         if start_line == end_line:
             line = result_lines[start_line]
-            # Convert column to character index (0-based)
             start_idx = edit.start_col
             end_idx = edit.end_col
             new_line = line[:start_idx] + edit.new_text + line[end_idx:]
             result_lines[start_line] = new_line
         else:
-            # Multi-line edit
-            # Get the start of the first line up to the start column
+            # Multi-line edit logic...
             first_line = result_lines[start_line]
             start_part = first_line[: edit.start_col]
 
-            # Get the end of the last line from the end column
             last_line = result_lines[end_line]
             end_part = last_line[edit.end_col :]
 
-            # Replace the range with the new text
-            # Split new_text by lines to handle multi-line replacements
             new_text_lines = edit.new_text.splitlines(keepends=True)
 
-            # Build the new lines
             if new_text_lines:
                 new_lines = [start_part + new_text_lines[0] if new_text_lines else start_part]
                 new_lines.extend(new_text_lines[1:-1] if len(new_text_lines) > 1 else [])
                 if len(new_text_lines) > 1:
                     new_lines.append(new_text_lines[-1] + end_part)
                 else:
-                    # If only one line, it already includes start_part
                     new_lines[-1] = new_lines[-1].rstrip("\n") + end_part
             else:
                 new_lines = [start_part + end_part]
 
-            # Replace the range of lines
             result_lines = result_lines[:start_line] + new_lines + result_lines[end_line + 1 :]
 
     return "".join(result_lines)
-
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TextEdit:
@@ -106,7 +104,6 @@ class TextEdit:
     def apply_to(self, content: str) -> str:
         """Apply this single edit to the given content."""
         return apply_text_edits(content, [self])
-
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TransformationContext:

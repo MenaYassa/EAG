@@ -2,11 +2,20 @@
 
 from eag.source.python.provider import PythonSourceProvider
 from eag.source.python.transformations import (
+    CompositeEdit,
+    ConflictDetector,
+    Edit,
+    EditEngine,
+    EditTransaction,
+    EditType,
+    ImportEdit,
     RenameTransformation,
     RenameVisitor,
     SourceEdit,
+    SymbolEdit,
     TextEdit,
     Transformation,
+    TransformationBatch,
     TransformationContext,
     TransformationEngine,
     TransformationPreview,
@@ -14,12 +23,13 @@ from eag.source.python.transformations import (
     TransformationResult,
     TransformationValidator,
     apply_text_edits,
+    DiffEngine,
+    StructuredDiff,
 )
+from eag.source.python.transformations.errors import TransactionError
 
 __all__ = [
     "PythonSourceProvider",
-    "SourceEdit",
-    "TextEdit",
     "Transformation",
     "TransformationContext",
     "TransformationEngine",
@@ -29,5 +39,19 @@ __all__ = [
     "TransformationValidator",
     "RenameTransformation",
     "RenameVisitor",
+    "Edit",
+    "EditType",
+    "TextEdit",
+    "SymbolEdit",
+    "ImportEdit",
+    "CompositeEdit",
+    "SourceEdit",
+    "ConflictDetector",
+    "EditEngine",
+    "TransformationBatch",
+    "EditTransaction",
+    "TransactionError",
     "apply_text_edits",
+    "DiffEngine",
+    "StructuredDiff",
 ]

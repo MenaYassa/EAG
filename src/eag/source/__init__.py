@@ -16,8 +16,7 @@ from eag.source.events import (
     SourceEvent,
     SourceParsed,
 )
-
-# Fix: Import AnalysisMetrics from metrics instead of models
+from eag.source.python.transformations.errors import TransactionError
 from eag.source.metrics import AnalysisMetrics
 from eag.source.models import (
     AnalysisDiagnostic,
@@ -48,22 +47,30 @@ from eag.source.models import (
 )
 from eag.source.protocol import SourceProvider
 from eag.source.python import (
+    CompositeEdit,
+    ConflictDetector,
+    Edit,
+    EditEngine,
+    EditTransaction,
+    EditType,
+    ImportEdit,
     PythonSourceProvider,
     RenameTransformation,
     RenameVisitor,
+    SymbolEdit,
+    TextEdit,
+    TransactionError,
     Transformation,
+    TransformationBatch,
+    TransformationContext,
     TransformationEngine,
+    TransformationPreview,
     TransformationRegistry,
+    TransformationResult,
     TransformationValidator,
     apply_text_edits,
 )
-from eag.source.python.transformations.models import (
-    SourceEdit,
-    TextEdit,
-    TransformationContext,
-    TransformationPreview,
-    TransformationResult,
-)
+from eag.source.python.transformations.models import SourceEdit
 from eag.source.registry import SourceRegistry
 from eag.source.runtime import SourceRuntime
 
@@ -71,6 +78,7 @@ __all__ = [
     # Enums
     "DependencyKind",
     "DiagnosticSeverity",
+    "EditType",
     "Language",
     "SemanticKind",
     "SymbolKind",
@@ -82,6 +90,7 @@ __all__ = [
     "SourceError",
     "SourceParseError",
     "SourceValidationError",
+    "TransactionError",
     "UnsupportedLanguageError",
     # Models (Primitives & Identity)
     "Documentation",
@@ -106,6 +115,13 @@ __all__ = [
     "SourceDocument",
     "SourceHealth",
     "SourceMetrics",
+    # Edits
+    "Edit",
+    "TextEdit",
+    "SymbolEdit",
+    "ImportEdit",
+    "CompositeEdit",
+    "SourceEdit",
     # Events
     "SourceAnalysisCompleted",
     "SourceAnalysisFailed",
@@ -118,9 +134,13 @@ __all__ = [
     "SourceRegistry",
     "SourceRuntime",
     # Transformations
+    "ConflictDetector",
+    "EditEngine",
+    "EditTransaction",
     "RenameTransformation",
     "RenameVisitor",
     "Transformation",
+    "TransformationBatch",
     "TransformationContext",
     "TransformationEngine",
     "TransformationPreview",
@@ -128,6 +148,4 @@ __all__ = [
     "TransformationResult",
     "TransformationValidator",
     "apply_text_edits",
-    "SourceEdit",
-    "TextEdit",
 ]
