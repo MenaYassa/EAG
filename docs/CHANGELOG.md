@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 * * *
 
+## v0.7.0 — Planner Engine
+
+### Added
+
+*   Planner Runtime
+
+*   Goal decomposition and analysis
+
+*   Execution plan generation
+
+*   Plan Simulator for dry-run capabilities (simulate without side effects)
+
+*   Plan validation engine
+
+*   Human Approval engine and workflow
+
+*   Planner CLI integration
+
+*   Strategy registry (e.g., SequentialStrategy)
+
+
+### Changed
+
+*   Updated `EventBus` to support planner-related events (`PlanningStarted`, `PlanGenerated`, etc.)
+
+*   EAG CLI enhanced with `planner` capabilities
+
+
+### Notes
+
+This release completes the Planner Engine. EAG can now decompose goals, simulate changes without side effects, run validation, request human approval for risky operations, and generate structured execution plans.
+
+* * *
+
 ## v0.5 — Engineering Graph Platform
 
 ### Added

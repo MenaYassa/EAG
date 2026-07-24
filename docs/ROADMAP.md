@@ -97,11 +97,7 @@
 *   Pathfinding algorithm
     
 
-* * *
-
-## Upcoming Sprints
-
-### Sprint 5 — Planner Engine 🔜
+### Sprint 5 — Planner Engine ✅
 
 *   Goal decomposition
     
@@ -118,9 +114,11 @@
 *   Planner CLI integration
     
 
-**Target Version:** v0.7
+* * *
 
-### Sprint 6 — Chief Engineer
+## Upcoming Sprints
+
+### Sprint 6 — Chief Engineer 🔜
 
 *   LiteLLM integration
     
@@ -165,8 +163,8 @@
 | v0.3 | Safety & Execution | ✅ Complete |
 | v0.4 | Repository & Source Intelligence | ✅ Complete |
 | v0.5 | Engineering Graph Platform | ✅ Complete |
-| v0.7 | Planner Engine | 🔜 Sprint 5 |
-| v0.9 | Chief Engineer | Sprint 6 |
+| v0.7 | Planner Engine | ✅ Complete |
+| v0.9 | Chief Engineer | 🔜 Sprint 6 |
 | v1.0 | Autonomous Engineering Platform | Sprint 7 |
 
 * * *
@@ -198,7 +196,7 @@ v0.2 Kernel & Plugins       █████████████████�
 v0.3 Safety & Execution     ████████████████████ 100%
 v0.4 Repo & Source          ████████████████████ 100%
 v0.5 Engineering Graph      ████████████████████ 100%
-v0.7 Planner                ░░░░░░░░░░░░░░░░░░░░   0%
+v0.7 Planner                ████████████████████ 100%
 v0.9 Chief                  ░░░░░░░░░░░░░░░░░░░░   0%
 v1.0 Autonomous             ░░░░░░░░░░░░░░░░░░░░   0%
 ```
