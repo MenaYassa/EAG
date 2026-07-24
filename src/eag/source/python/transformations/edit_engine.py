@@ -1,6 +1,6 @@
 """Edit Engine for EAG transformations."""
 
-from eag.source.python.transformations.edits import TextEdit
+from eag.source.python.transformations.models import TextEdit
 from eag.source.python.transformations.text_applier import apply_text_edits
 
 

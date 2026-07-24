@@ -16,7 +16,7 @@ class TransactionState(StrEnum):
 class EditTransaction:
     """Manages atomic edit operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._state = TransactionState.READY
         self._edits: list[Edit] = []
 

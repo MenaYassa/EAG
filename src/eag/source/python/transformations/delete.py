@@ -151,10 +151,10 @@ class SafeDeleteTransformation:
         try:
             tree = ast.parse(context.content)
             # Find the node to delete
-            node_to_delete = None
+            node_to_delete: ast.AST | None = None
             for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    if node.name == target_sym.name:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
+                        and node.name == target_sym.name:
                         node_to_delete = node
                         break
 
@@ -177,8 +177,8 @@ class SafeDeleteTransformation:
                 )
 
             # Get the line range for this node
-            start_line = node_to_delete.lineno - 1  # Convert to 0-indexed
-            end_line = getattr(node_to_delete, "end_lineno", node_to_delete.lineno)
+            start_line = getattr(node_to_delete, 'lineno', 1) - 1  # Convert to 0-indexed
+            end_line = getattr(node_to_delete, "end_lineno", getattr(node_to_delete, 'lineno', 1))
 
             # Remove the node by deleting lines
             lines = context.content.splitlines(keepends=True)
@@ -197,7 +197,8 @@ class SafeDeleteTransformation:
                     # Keep the first line but replace the rest with pass
                     if start_line < len(lines):
                         lines[start_line] = (
-                            f"{lines[start_line].split(':')[0]}:{lines[start_line].split(':')[1] if ':' in lines[start_line] else ''}\n"
+                            f"{lines[start_line].split(':')[0]}:"
+            f"{lines[start_line].split(':')[1] if ':' in lines[start_line] else ''}\n"
                         )
                         lines[start_line + 1] = "    pass\n"
                         # Remove the rest
