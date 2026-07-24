@@ -79,7 +79,6 @@ from eag.source.python import (
     TransformationValidator,
     apply_text_edits,
 )
-from eag.source.python.transformations.errors import TransactionError
 from eag.source.python.transformations.models import SourceEdit
 from eag.source.registry import SourceRegistry
 from eag.source.runtime import SourceRuntime

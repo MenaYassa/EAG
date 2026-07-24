@@ -8,7 +8,6 @@ from typing import Any
 
 from eag.planner.enums import RiskLevel
 from eag.source.models import Diagnostic, SourceDocument
-from eag.source.python.transformations.edits import TextEdit  # Re-export for compatibility
 
 
 def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

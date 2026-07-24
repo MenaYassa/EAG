@@ -56,7 +56,7 @@ class TransformationCatalog:
                 raise ValueError(f"Descriptor is None for {class_name}")
 
         except Exception as e:
-            raise ValueError(f"Could not get descriptor for {class_name}: {e}")
+            raise ValueError(f"Could not get descriptor for {class_name}: {e}") from e
 
         # Ensure descriptor has a name
         if not hasattr(descriptor, "name"):

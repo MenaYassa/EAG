@@ -3,6 +3,7 @@
 import ast
 import keyword
 from datetime import UTC, datetime
+
 from eag.planner.enums import RiskLevel
 from eag.source.models import Language
 from eag.source.python.transformations.descriptor import (
@@ -40,11 +41,11 @@ class GenerateSymbolTransformation:
 
     def supports(self, context: TransformationContext) -> bool:
         # Check if document has language attribute
-        if not hasattr(context.document, 'language'):
+        if not hasattr(context.document, "language"):
             return False
-        
+
         # Check if language is Python
-        if hasattr(context.document.language, 'value'):
+        if hasattr(context.document.language, "value"):
             return context.document.language.value == "python"
         return context.document.language in self.descriptor.supported_languages
 
@@ -62,7 +63,9 @@ class GenerateSymbolTransformation:
         if not self._symbol_name.isidentifier():
             errors.append(f"'{self._symbol_name}' is not a valid identifier.")
         elif keyword.iskeyword(self._symbol_name):
-            errors.append(f"'{self._symbol_name}' is not a valid identifier (it is a Python keyword).")
+            errors.append(
+                f"'{self._symbol_name}' is not a valid identifier (it is a Python keyword)."
+            )
         if self._kind not in ("function", "class", "async_function"):
             errors.append(f"Unsupported symbol kind: '{self._kind}'.")
         return tuple(errors)

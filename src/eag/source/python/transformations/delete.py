@@ -41,11 +41,11 @@ class SafeDeleteTransformation:
 
     def supports(self, context: TransformationContext) -> bool:
         # Check if document has language attribute
-        if not hasattr(context.document, 'language'):
+        if not hasattr(context.document, "language"):
             return False
-        
+
         # Check if language is Python
-        if hasattr(context.document.language, 'value'):
+        if hasattr(context.document.language, "value"):
             return context.document.language.value == "python"
         return context.document.language in self.descriptor.supported_languages
 
@@ -65,18 +65,24 @@ class SafeDeleteTransformation:
                 risk=RiskLevel.HIGH,
                 summary="Preview failed: symbol missing.",
             )
-        
-        ref_count = sum(1 for ref in context.document.references 
-                       if ref.target == target_sym.qualified_name or ref.target == target_sym.name)
-        
+
+        ref_count = sum(
+            1
+            for ref in context.document.references
+            if ref.target == target_sym.qualified_name or ref.target == target_sym.name
+        )
+
         # Always return HIGH risk for deletion (matches descriptor)
         return TransformationPreview(
             transformation_name=self.name,
             affected_files=(str(context.document.path),),
             affected_symbols=(target_sym.qualified_name,),
-            warnings=(f"Symbol '{self._target_symbol}' has {ref_count} references.",) if ref_count else (),
+            warnings=(f"Symbol '{self._target_symbol}' has {ref_count} references.",)
+            if ref_count
+            else (),
             risk=RiskLevel.HIGH,
-            summary=f"Delete '{self._target_symbol}'" + (f" ({ref_count} references)" if ref_count else ""),
+            summary=f"Delete '{self._target_symbol}'"
+            + (f" ({ref_count} references)" if ref_count else ""),
         )
 
     def validate(self, context: TransformationContext) -> tuple[str, ...]:

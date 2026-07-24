@@ -56,17 +56,17 @@ class TestEditModels:
         edit = TextEdit(
             file=Path("test.py"), start_line=1, start_col=1, end_line=1, end_col=2, new_text="a"
         )
-        with pytest.raises(Exception):
+        with pytest.raises(Exception): # noqa: B017
             edit.new_text = "b"  # type: ignore[misc]
 
     def test_symbol_edit_immutable(self) -> None:
         edit = SymbolEdit(file=Path("test.py"), symbol_id="foo", old_name="foo", new_name="bar")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception): # noqa: B017
             edit.new_name = "baz"  # type: ignore[misc]
 
     def test_import_edit_immutable(self) -> None:
         edit = ImportEdit(file=Path("test.py"), module="utils", old_import="foo", new_import="bar")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception): # noqa: B017
             edit.module = "os"  # type: ignore[misc]
 
     def test_composite_edit_immutable(self) -> None:
@@ -74,7 +74,7 @@ class TestEditModels:
             file=Path("test.py"), start_line=1, start_col=1, end_line=1, end_col=2, new_text="a"
         )
         comp = CompositeEdit(file=Path("test.py"), edits=(t_edit,))
-        with pytest.raises(Exception):
+        with pytest.raises(Exception): # noqa: B017
             comp.edits = ()  # type: ignore[misc]
 
     def test_edit_invalid_file_type(self) -> None:

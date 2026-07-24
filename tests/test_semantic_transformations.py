@@ -1,9 +1,9 @@
 """Comprehensive tests for the Semantic Transformation Library (Sprint 6.5E)."""
 
-import pytest
-from pathlib import Path
-from typing import Any
 from dataclasses import replace
+from pathlib import Path
+
+import pytest
 
 from eag.planner.enums import RiskLevel
 from eag.source.models import Language
@@ -26,9 +26,11 @@ from eag.source.runtime import SourceRuntime
 def runtime() -> SourceRuntime:
     return SourceRuntime()
 
+
 def make_context(runtime: SourceRuntime, code: str, path: str = "test.py") -> TransformationContext:
     doc = runtime.parse(Path(path), code)
     return TransformationContext(document=doc, content=code)
+
 
 def make_unsupported_context(runtime: SourceRuntime, code: str = "x = 1") -> TransformationContext:
     doc = runtime.parse(Path("test.py"), code)
@@ -39,10 +41,11 @@ def make_unsupported_context(runtime: SourceRuntime, code: str = "x = 1") -> Tra
 
 # --- Descriptor & Catalog Tests (15) ---
 
+
 class TestDescriptorsAndCatalog:
     def test_descriptor_immutable(self) -> None:
         desc = TransformationDescriptor(name="test", category=TransformationCategory.SEMANTIC)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception): # noqa: B017
             desc.name = "other"  # type: ignore[misc]
 
     def test_descriptor_invalid_name(self) -> None:
@@ -54,7 +57,11 @@ class TestDescriptorsAndCatalog:
             TransformationDescriptor(name="test", category="bad")  # type: ignore[arg-type]
 
     def test_descriptor_supports_language(self) -> None:
-        desc = TransformationDescriptor(name="test", category=TransformationCategory.SEMANTIC, supported_languages=(Language.PYTHON,))
+        desc = TransformationDescriptor(
+            name="test",
+            category=TransformationCategory.SEMANTIC,
+            supported_languages=(Language.PYTHON,),
+        )
         assert desc.supports_language(Language.PYTHON)
         assert not desc.supports_language(Language.UNKNOWN)
 
@@ -119,6 +126,7 @@ class TestDescriptorsAndCatalog:
 
 
 # --- Move Symbol Tests (25) ---
+
 
 class TestMoveSymbol:
     def test_move_validation_empty_dest(self, runtime: SourceRuntime) -> None:
@@ -288,6 +296,7 @@ class TestMoveSymbol:
 
 # --- Safe Delete Tests (20) ---
 
+
 class TestSafeDelete:
     def test_delete_referenced_rejected(self, runtime: SourceRuntime) -> None:
         code = "def foo():\n    pass\n\ndef bar():\n    foo()\n"
@@ -407,6 +416,7 @@ class TestSafeDelete:
 
     def test_delete_undo_missing_metadata(self, runtime: SourceRuntime) -> None:
         from eag.source.python.transformations.models import TransformationResult
+
         ctx = make_context(runtime, "pass\n")
         t = SafeDeleteTransformation("foo")
         fake_result = TransformationResult(success=True, transformation_name="safe_delete")
@@ -423,6 +433,7 @@ class TestSafeDelete:
 
 
 # --- Organize Imports Tests (20) ---
+
 
 class TestOrganizeImports:
     def test_organize_no_imports(self, runtime: SourceRuntime) -> None:
@@ -563,6 +574,7 @@ class TestOrganizeImports:
 
 # --- Safe Replace Tests (20) ---
 
+
 class TestSafeReplace:
     def test_replace_invalid_target(self, runtime: SourceRuntime) -> None:
         ctx = make_context(runtime, "x = 1\n")
@@ -609,7 +621,7 @@ class TestSafeReplace:
         result = t.apply(ctx)
         assert result.success is True
         assert "Replaced 2 occurrences" in result.summary
-        assert "x = 2\ny = 2\n" == result.edits[0].new_content
+        assert result.edits[0].new_content == "x = 2\ny = 2\n"
 
     def test_replace_statement(self, runtime: SourceRuntime) -> None:
         code = "x = 1\n"
@@ -679,6 +691,7 @@ class TestSafeReplace:
 
     def test_replace_undo_missing_metadata(self, runtime: SourceRuntime) -> None:
         from eag.source.python.transformations.models import TransformationResult
+
         ctx = make_context(runtime, "pass\n")
         t = SafeReplaceTransformation("1", "2")
         fake_result = TransformationResult(success=True, transformation_name="safe_replace")
@@ -697,6 +710,7 @@ class TestSafeReplace:
 
 
 # --- Generate Symbol Tests (20) ---
+
 
 class TestGenerateSymbol:
     def test_generate_invalid_name(self, runtime: SourceRuntime) -> None:
@@ -798,6 +812,7 @@ class TestGenerateSymbol:
 
     def test_generate_undo_missing_metadata(self, runtime: SourceRuntime) -> None:
         from eag.source.python.transformations.models import TransformationResult
+
         ctx = make_context(runtime, "pass\n")
         t = GenerateSymbolTransformation("foo", "function")
         fake_result = TransformationResult(success=True, transformation_name="generate_symbol")
