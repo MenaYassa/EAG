@@ -9,9 +9,9 @@ from eag.source.python.transformations.descriptor import (
     TransformationCategory,
     TransformationDescriptor,
 )
+from eag.source.python.transformations.edits import TextEdit
 from eag.source.python.transformations.models import (
     SourceEdit,
-    TextEdit,
     TransformationContext,
     TransformationPreview,
     TransformationResult,
@@ -102,7 +102,7 @@ class RenameTransformation:
         )
 
         if not found:
-            errors.append(f"Symbol '{self._target_symbol}' not found in source document.")
+            errors.append(f"Symbol '{self._target_symbol}' not found in source document")
 
         if self._target_symbol != self._new_name:
             new_clean = (

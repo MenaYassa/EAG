@@ -23,15 +23,18 @@ explainable.
 
 ## Current Status
 
-**Version:** 0.5 — Engineering Graph Platform
+**Version:** 0.8 — Engineering Platform
 | Milestone | Status |
 | --- | --- |
 | Sprint 0 — Foundation | ✅ Complete |
-| Sprint 1 — Kernel & Plugin Platform | ✅ Complete |
-| Sprint 2 — Execution Platform | ✅ Complete |
-| Sprint 3 — Safety & Engineering Runtime | ✅ Complete |
-| Sprint 4 — Engineering Knowledge Platform | ✅ Complete |
-| Sprint 5 — Planner Engine | 🔜 Next |
+| Sprint 1 — Kernel Platform | ✅ Complete |
+| Sprint 2 — Runtime Platform | ✅ Complete |
+| Sprint 3 — Safety & Repository Platform | ✅ Complete |
+| Sprint 4 — Source Intelligence Platform | ✅ Complete |
+| Sprint 5 — Planner Platform | ✅ Complete |
+| Sprint 6 — Engineering Platform | ✅ Complete |
+| Sprint 7 — Chief Engineer | 🚧 In Progress |
+| Sprint 8 — Workers | 🔜 Next |
 
 ### Implemented Capabilities
 
@@ -51,12 +54,12 @@ explainable.
     
 *   **Engineering Graph** — Directed graph of engineering relationships with impact analysis, explainability, and pathfinding
     
+*   **Planner Engine** — Goal decomposition, planning models, execution plans, validation, approval, and dry run
+
 
 ### Upcoming
 
-*   **Planner Engine** — Goal decomposition, planning models, execution plans, validation, approval, and dry run
-    
-*   **Chief Engineer** — Model routing, tool selection, multi-model coordination
+*   **Chief Engineer** — Model routing, tool selection, multi-model coordination (In Progress)
     
 *   **Workers** — Parallel execution, collaboration, and multi-agent task completion
     
@@ -146,8 +149,6 @@ is what makes EAG safe, explainable, and sustainable.
 
 ## Planned Features
 
-*   **Planner Engine** — Goal decomposition, planning models, dry-run, and validation
-    
 *   **Chief Engineer** — Model-agnostic routing, tool selection, and coordination
     
 *   **Worker Coordination** — Parallel execution and multi-agent collaboration
@@ -231,8 +232,7 @@ MIT
 
 ## Project Status
 
-EAG is under active development. The platform has completed four sprints  
-and is preparing for Sprint 5 — the Planner Engine, which will add goal  
-decomposition, planning models, execution plans, validation, approval  
-flows, and dry-run capabilities.
+EAG is under active development. The platform has completed five sprints
+and is preparing for Sprint 6 — the Chief Engineer, which will add model-agnostic
+routing, tool selection, and multi-model coordination.
 For the complete development plan, see [ROADMAP.md](docs/ROADMAP.md).

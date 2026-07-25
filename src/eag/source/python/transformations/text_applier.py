@@ -1,6 +1,6 @@
 """Text Edit application engine for EAG."""
 
-from eag.source.python.transformations.models import TextEdit
+from eag.source.python.transformations.edits import TextEdit
 
 
 def apply_text_edits(content: str, edits: list[TextEdit]) -> str:

@@ -8,7 +8,6 @@ from typing import Any
 
 from eag.planner.enums import RiskLevel
 from eag.source.models import Diagnostic, SourceDocument
-from eag.source.python.transformations.edits import TextEdit  # Re-export for compatibility
 
 
 def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:
@@ -39,7 +38,8 @@ def apply_text_edits(content: str, edits: list["TextEdit"]) -> str:
 
         # Handle deletion of an entire single line (e.g. from col 0 to end of text)
         if start_line == end_line and edit.new_text == "" and edit.start_col == 0:
-            # If deleting the whole line including its content, remove the line entirely including its trailing newline if present
+            # If deleting the whole line including its content, remove the line
+            # entirely including its trailing newline if present
             if start_line < len(result_lines):
                 result_lines.pop(start_line)
             continue

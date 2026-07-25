@@ -7,7 +7,7 @@ from eag.source.python.transformations.protocol import Transformation
 class TransformationCatalog:
     """Catalog of registered transformations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._transformations: dict[str, type[Transformation]] = {}
         self._descriptors: dict[str, TransformationDescriptor] = {}
 
@@ -30,25 +30,25 @@ class TransformationCatalog:
                 # Try to create instance with minimal parameters
                 try:
                     # Try to instantiate without parameters
-                    instance = transformation_class()
+                    instance = transformation_class(context=None)  # type: ignore
                 except TypeError:
                     # Try with empty strings for common parameters
                     try:
-                        instance = transformation_class("", "")
+                        instance = transformation_class(context=None)  # type: ignore
                     except TypeError:
                         # Try with default parameters
-                        instance = transformation_class()
+                        instance = transformation_class(context=None)  # type: ignore
 
                 descriptor = instance.descriptor
             elif callable(descriptor):
                 # If it's a method, call it
                 try:
-                    instance = transformation_class()
+                    instance = transformation_class(context=None)  # type: ignore
                 except TypeError:
                     try:
-                        instance = transformation_class("", "")
+                        instance = transformation_class(context=None)  # type: ignore
                     except TypeError:
-                        instance = transformation_class()
+                        instance = transformation_class(context=None)  # type: ignore
                 descriptor = descriptor(instance)
 
             # If descriptor is None, create a default one
@@ -56,7 +56,7 @@ class TransformationCatalog:
                 raise ValueError(f"Descriptor is None for {class_name}")
 
         except Exception as e:
-            raise ValueError(f"Could not get descriptor for {class_name}: {e}")
+            raise ValueError(f"Could not get descriptor for {class_name}: {e}") from e
 
         # Ensure descriptor has a name
         if not hasattr(descriptor, "name"):

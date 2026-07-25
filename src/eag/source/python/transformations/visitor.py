@@ -3,7 +3,7 @@
 import ast
 
 from eag.source.models import SourceDocument
-from eag.source.python.transformations.models import TextEdit
+from eag.source.python.transformations.edits import TextEdit
 
 
 class RenameVisitor(ast.NodeVisitor):

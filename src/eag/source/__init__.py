@@ -1,6 +1,8 @@
 """Source Intelligence Platform for EAG."""
 
 from eag.source.analyzer import AnalysisContext
+from eag.source.benchmark import BenchmarkResult, BenchmarkRunner
+from eag.source.cache import SemanticCache
 from eag.source.errors import (
     AnalysisFailedError,
     AnalyzerNotFoundError,
@@ -16,6 +18,7 @@ from eag.source.events import (
     SourceEvent,
     SourceParsed,
 )
+from eag.source.incremental import ChangeSet, IncrementalIndexer, IndexDelta
 from eag.source.metrics import AnalysisMetrics
 from eag.source.models import (
     AnalysisDiagnostic,
@@ -79,10 +82,11 @@ from eag.source.python import (
     TransformationValidator,
     apply_text_edits,
 )
-from eag.source.python.transformations.errors import TransactionError
 from eag.source.python.transformations.models import SourceEdit
+from eag.source.recovery import RecoveryCoordinator
 from eag.source.registry import SourceRegistry
 from eag.source.runtime import SourceRuntime
+from eag.source.scheduler import ScheduledTask, TransformationScheduler
 
 __all__ = [
     # Enums
@@ -168,4 +172,13 @@ __all__ = [
     "TransformationResult",
     "TransformationValidator",
     "apply_text_edits",
+    "SemanticCache",
+    "ChangeSet",
+    "IndexDelta",
+    "IncrementalIndexer",
+    "RecoveryCoordinator",
+    "ScheduledTask",
+    "TransformationScheduler",
+    "BenchmarkResult",
+    "BenchmarkRunner",
 ]

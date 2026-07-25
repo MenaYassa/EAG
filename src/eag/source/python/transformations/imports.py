@@ -114,7 +114,8 @@ class OrganizeImportsTransformation:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     check_name = alias.asname or alias.name.split(".")[0]
-                    if check_name in used_names:
+                    # ADD THIS: Fallback to keeping it if no references were resolved at all
+                    if not used_names or check_name in used_names:
                         imp_str = f"import {alias.name}"
                         if alias.asname:
                             imp_str += f" as {alias.asname}"
@@ -123,7 +124,8 @@ class OrganizeImportsTransformation:
                 module = node.module or ""
                 for alias in node.names:
                     check_name = alias.asname or alias.name
-                    if check_name in used_names:
+                    # ADD THIS: Fallback to keeping it if no references were resolved at all
+                    if not used_names or check_name in used_names:
                         imp_str = f"from {module} import {alias.name}"
                         if alias.asname:
                             imp_str += f" as {alias.asname}"
@@ -134,7 +136,6 @@ class OrganizeImportsTransformation:
 
         # Reconstruct file
         new_content = "".join(lines[:start_line]) + "".join(new_imports) + "".join(lines[end_line:])
-
         ast.parse(new_content)
 
         edit = SourceEdit(path=context.document.path, new_content=new_content)

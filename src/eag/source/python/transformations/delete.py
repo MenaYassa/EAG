@@ -41,11 +41,11 @@ class SafeDeleteTransformation:
 
     def supports(self, context: TransformationContext) -> bool:
         # Check if document has language attribute
-        if not hasattr(context.document, 'language'):
+        if not hasattr(context.document, "language"):
             return False
-        
+
         # Check if language is Python
-        if hasattr(context.document.language, 'value'):
+        if hasattr(context.document.language, "value"):
             return context.document.language.value == "python"
         return context.document.language in self.descriptor.supported_languages
 
@@ -65,18 +65,24 @@ class SafeDeleteTransformation:
                 risk=RiskLevel.HIGH,
                 summary="Preview failed: symbol missing.",
             )
-        
-        ref_count = sum(1 for ref in context.document.references 
-                       if ref.target == target_sym.qualified_name or ref.target == target_sym.name)
-        
+
+        ref_count = sum(
+            1
+            for ref in context.document.references
+            if ref.target == target_sym.qualified_name or ref.target == target_sym.name
+        )
+
         # Always return HIGH risk for deletion (matches descriptor)
         return TransformationPreview(
             transformation_name=self.name,
             affected_files=(str(context.document.path),),
             affected_symbols=(target_sym.qualified_name,),
-            warnings=(f"Symbol '{self._target_symbol}' has {ref_count} references.",) if ref_count else (),
+            warnings=(f"Symbol '{self._target_symbol}' has {ref_count} references.",)
+            if ref_count
+            else (),
             risk=RiskLevel.HIGH,
-            summary=f"Delete '{self._target_symbol}'" + (f" ({ref_count} references)" if ref_count else ""),
+            summary=f"Delete '{self._target_symbol}'"
+            + (f" ({ref_count} references)" if ref_count else ""),
         )
 
     def validate(self, context: TransformationContext) -> tuple[str, ...]:
@@ -145,12 +151,14 @@ class SafeDeleteTransformation:
         try:
             tree = ast.parse(context.content)
             # Find the node to delete
-            node_to_delete = None
+            node_to_delete: ast.AST | None = None
             for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    if node.name == target_sym.name:
-                        node_to_delete = node
-                        break
+                if (
+                    isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                    and node.name == target_sym.name
+                ):
+                    node_to_delete = node
+                    break
 
             if node_to_delete is None:
                 # Try to find as a variable assignment
@@ -171,8 +179,8 @@ class SafeDeleteTransformation:
                 )
 
             # Get the line range for this node
-            start_line = node_to_delete.lineno - 1  # Convert to 0-indexed
-            end_line = getattr(node_to_delete, "end_lineno", node_to_delete.lineno)
+            start_line = getattr(node_to_delete, "lineno", 1) - 1  # Convert to 0-indexed
+            end_line = getattr(node_to_delete, "end_lineno", getattr(node_to_delete, "lineno", 1))
 
             # Remove the node by deleting lines
             lines = context.content.splitlines(keepends=True)
@@ -191,7 +199,8 @@ class SafeDeleteTransformation:
                     # Keep the first line but replace the rest with pass
                     if start_line < len(lines):
                         lines[start_line] = (
-                            f"{lines[start_line].split(':')[0]}:{lines[start_line].split(':')[1] if ':' in lines[start_line] else ''}\n"
+                            f"{lines[start_line].split(':')[0]}:"
+                            f"{lines[start_line].split(':')[1] if ':' in lines[start_line] else ''}\n"  # noqa: E501
                         )
                         lines[start_line + 1] = "    pass\n"
                         # Remove the rest
