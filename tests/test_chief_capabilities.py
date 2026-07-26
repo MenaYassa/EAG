@@ -1,8 +1,9 @@
 """Comprehensive tests for the Chief Engineer Capability Discovery (Sprint 7.2 Hardened)."""
 
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
+
+import pytest
 
 from eag.chief.capabilities import (
     Capability,
@@ -19,29 +20,27 @@ from eag.chief.capabilities import (
     DuplicateCapability,
     Recommender,
 )
-from eag.chief.capabilities.matcher import CapabilityMatcher
-from eag.chief.capabilities.ranker import CapabilityRanker
+from eag.chief.capabilities.enums import CapabilityStatus
+from eag.chief.capabilities.errors import CapabilityNotFound
 from eag.chief.capabilities.events import (
     CapabilityMatched,
     CapabilityRanked,
     RecommendationProduced,
 )
-
+from eag.chief.capabilities.matcher import CapabilityMatcher
 from eag.chief.capabilities.models import CapabilityRecommendation
-
-
-from eag.events import EventBus
-
-from eag.chief.capabilities.enums import CapabilityStatus
-from eag.chief.goals.models import EngineeringGoal
+from eag.chief.capabilities.ranker import CapabilityRanker
 from eag.chief.goals.enums import GoalIntent
-from eag.registry.errors import CapabilityNotFoundError
-from eag.chief.capabilities.errors import CapabilityNotFound
+from eag.chief.goals.models import EngineeringGoal
+from eag.events import EventBus
 
 # --- Dummy Capabilities for Testing ---
 
+
 class BaseCapability:
-    def __init__(self, metadata: CapabilityMetadata, supports_result: bool = True, score_val: float = 1.0):
+    def __init__(
+        self, metadata: CapabilityMetadata, supports_result: bool = True, score_val: float = 1.0
+    ):
         self._metadata = metadata
         self._supports_result = supports_result
         self._score_val = score_val
@@ -61,10 +60,10 @@ class BaseCapability:
 
 
 def make_metadata(
-    id: str, 
+    id: str,
     name: str = None,
     requires_llm: bool = False,
-    lang: tuple[str, ...] = ("python",), 
+    lang: tuple[str, ...] = ("python",),
     risk: CapabilityRisk = CapabilityRisk.LOW,
     cost: CapabilityCost = CapabilityCost.LOW,
     status: CapabilityStatus = CapabilityStatus.STABLE,
@@ -72,7 +71,7 @@ def make_metadata(
     deps: tuple[str, ...] = (),
     tags: tuple[str, ...] = (),
     latency: float = 0.0,
-    token_cost: float = 0.0
+    token_cost: float = 0.0,
 ) -> CapabilityMetadata:
     return CapabilityMetadata(
         id=id,
@@ -86,33 +85,69 @@ def make_metadata(
         dependencies=deps,
         tags=tags,
         latency_ms=latency,
-        token_cost=token_cost
+        token_cost=token_cost,
     )
 
 
 @pytest.fixture
 def registry() -> CapabilityRegistry:
     reg = CapabilityRegistry()
-    reg.register(BaseCapability(make_metadata("rename_symbol", risk=CapabilityRisk.LOW, cost=CapabilityCost.TRIVIAL, tags=("refactor",))))
-    reg.register(BaseCapability(make_metadata("generate_app", risk=CapabilityRisk.HIGH, cost=CapabilityCost.HIGH, requires_llm=True, tags=("build",))))
-    reg.register(BaseCapability(make_metadata("fix_bug", risk=CapabilityRisk.MEDIUM, cost=CapabilityCost.MEDIUM, tags=("bug",))))
+    reg.register(
+        BaseCapability(
+            make_metadata(
+                "rename_symbol",
+                risk=CapabilityRisk.LOW,
+                cost=CapabilityCost.TRIVIAL,
+                tags=("refactor",),
+            )
+        )
+    )
+    reg.register(
+        BaseCapability(
+            make_metadata(
+                "generate_app",
+                risk=CapabilityRisk.HIGH,
+                cost=CapabilityCost.HIGH,
+                requires_llm=True,
+                tags=("build",),
+            )
+        )
+    )
+    reg.register(
+        BaseCapability(
+            make_metadata(
+                "fix_bug", risk=CapabilityRisk.MEDIUM, cost=CapabilityCost.MEDIUM, tags=("bug",)
+            )
+        )
+    )
     return reg
+
 
 @pytest.fixture
 def event_bus() -> EventBus:
     return MockEventBus()
 
+
 @pytest.fixture
 def runtime(registry: CapabilityRegistry, event_bus: EventBus) -> CapabilityRuntime:
     return CapabilityRuntime(registry=registry, event_bus=event_bus)
 
-def make_goal(text: str, intent: GoalIntent = GoalIntent.UNKNOWN, lang: str = None) -> EngineeringGoal:
-    from eag.chief.goals.models import ChiefGoal, GoalAnalysis, GoalCategory, GoalComplexity, Requirement
+
+def make_goal(
+    text: str, intent: GoalIntent = GoalIntent.UNKNOWN, lang: str = None
+) -> EngineeringGoal:
+    from eag.chief.goals.models import (
+        ChiefGoal,
+        GoalCategory,
+        GoalComplexity,
+        Requirement,
+    )
+
     g = ChiefGoal(raw_text=text)
     reqs = ()
     if lang:
         reqs = (Requirement(key="language", value=lang),)
-        
+
     return EngineeringGoal(
         original_goal=g,
         canonical_text=text.lower(),
@@ -122,22 +157,25 @@ def make_goal(text: str, intent: GoalIntent = GoalIntent.UNKNOWN, lang: str = No
         complexity=GoalComplexity.SMALL,
         confidence=1.0,
         is_ambiguous=False,
-        requirements=reqs
+        requirements=reqs,
     )
+
 
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
 
 
 # --- Model Tests (30) ---
 
+
 class TestCapabilityModels:
     def test_metadata_immutable(self) -> None:
         m = make_metadata("test")
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             m.id = "new"  # type: ignore[misc]
 
     def test_metadata_invalid_id(self) -> None:
@@ -177,23 +215,23 @@ class TestCapabilityModels:
     def test_match_immutable(self) -> None:
         cap = BaseCapability(make_metadata("test"))
         m = CapabilityMatch(capability=cap, score=1.0)
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             m.score = 0.5  # type: ignore[misc]
 
     def test_recommendation_immutable(self) -> None:
         rec = CapabilityRecommendation(winner=None, explanation="None")
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             rec.confidence = 1.0  # type: ignore[misc]
 
     def test_metrics_immutable(self) -> None:
         m = CapabilityMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             m.registry_size = 10  # type: ignore[misc]
 
     def test_analysis_immutable(self) -> None:
         goal = make_goal("test")
         a = CapabilityAnalysis(goal=goal)
-        with pytest.raises(Exception):
+        with pytest.raises((AttributeError, TypeError)):
             a.state = CapabilityRuntimeState.FAILED  # type: ignore[misc]
 
     def test_metadata_tags(self) -> None:
@@ -264,6 +302,7 @@ class TestCapabilityModels:
 
     def test_requirement_values(self) -> None:
         from eag.chief.capabilities.enums import CapabilityRequirement
+
         assert CapabilityRequirement.SOURCE_INDEXED == "source_indexed"
 
     def test_metadata_version(self) -> None:
@@ -272,6 +311,7 @@ class TestCapabilityModels:
 
 
 # --- Registry Tests (30) ---
+
 
 class TestCapabilityRegistry:
     def test_register(self, registry: CapabilityRegistry) -> None:
@@ -390,12 +430,13 @@ class TestCapabilityRegistry:
     def test_search_sorts_deterministically(self, registry: CapabilityRegistry) -> None:
         # Add a cap that might mess up ordering if not sorted
         registry.register(BaseCapability(make_metadata("aaa_cap", tags=("test",))))
-        results = registry.search("test") # None match "test" tag except aaa_cap
+        results = registry.search("test")  # None match "test" tag except aaa_cap
         # Wait, generate_app has no tags, fix_bug has "bug", rename has "refactor"
         # Let's just search for something that matches multiple
         registry.register(BaseCapability(make_metadata("zzz_cap", tags=("python",))))
         registry.register(BaseCapability(make_metadata("mmm_cap", tags=("python",))))
-        # Actually, all caps support python by default in make_metadata, but search doesn't check language
+        # Actually, all caps support python by default in make_metadata,
+        # but search doesn't check language
         # Let's add a common tag
         registry.register(BaseCapability(make_metadata("zzz_tag", tags=("common",))))
         registry.register(BaseCapability(make_metadata("aaa_tag", tags=("common",))))
@@ -425,6 +466,7 @@ class TestCapabilityRegistry:
 
 # --- Matcher Tests (35) ---
 
+
 class TestCapabilityMatcher:
     def test_match_returns_list(self, registry: CapabilityRegistry) -> None:
         matcher = CapabilityMatcher(registry)
@@ -441,14 +483,22 @@ class TestCapabilityMatcher:
 
     def test_match_filters_deprecated(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         assert len(matcher.match(goal)) == 0
 
     def test_match_keeps_experimental(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.EXPERIMENTAL), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.EXPERIMENTAL), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         assert len(matcher.match(goal)) == 1
@@ -554,8 +604,16 @@ class TestCapabilityMatcher:
 
     def test_match_filters_deprecated_keeps_stable(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True))
-        reg.register(BaseCapability(make_metadata("c2", status=CapabilityStatus.STABLE), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True
+            )
+        )
+        reg.register(
+            BaseCapability(
+                make_metadata("c2", status=CapabilityStatus.STABLE), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         matches = matcher.match(goal)
@@ -581,7 +639,7 @@ class TestCapabilityMatcher:
 
     def test_match_reason_parts_empty_if_no_match(self, registry: CapabilityRegistry) -> None:
         matcher = CapabilityMatcher(registry)
-        goal = make_goal("test", lang="java") # No caps support java
+        goal = make_goal("test", lang="java")  # No caps support java
         matches = matcher.match(goal)
         assert len(matches) == 0
 
@@ -595,23 +653,43 @@ class TestCapabilityMatcher:
 
     def test_match_all_deprecated(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.DEPRECATED), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         assert len(matcher.match(goal)) == 0
 
     def test_match_all_experimental(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.EXPERIMENTAL), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.EXPERIMENTAL), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         assert len(matcher.match(goal)) == 1
 
     def test_match_mixed_status(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.STABLE), supports_result=True))
-        reg.register(BaseCapability(make_metadata("c2", status=CapabilityStatus.EXPERIMENTAL), supports_result=True))
-        reg.register(BaseCapability(make_metadata("c3", status=CapabilityStatus.DEPRECATED), supports_result=True))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", status=CapabilityStatus.STABLE), supports_result=True
+            )
+        )
+        reg.register(
+            BaseCapability(
+                make_metadata("c2", status=CapabilityStatus.EXPERIMENTAL), supports_result=True
+            )
+        )
+        reg.register(
+            BaseCapability(
+                make_metadata("c3", status=CapabilityStatus.DEPRECATED), supports_result=True
+            )
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test")
         assert len(matcher.match(goal)) == 2
@@ -655,14 +733,18 @@ class TestCapabilityMatcher:
 
     def test_match_language_typescript(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", lang=("typescript",)), supports_result=True))
+        reg.register(
+            BaseCapability(make_metadata("c1", lang=("typescript",)), supports_result=True)
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test", lang="typescript")
         assert len(matcher.match(goal)) == 1
 
     def test_match_language_mismatch(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", lang=("typescript",)), supports_result=True))
+        reg.register(
+            BaseCapability(make_metadata("c1", lang=("typescript",)), supports_result=True)
+        )
         matcher = CapabilityMatcher(reg)
         goal = make_goal("test", lang="python")
         assert len(matcher.match(goal)) == 0
@@ -675,6 +757,7 @@ class TestCapabilityMatcher:
 
 
 # --- Ranker Tests (25) ---
+
 
 class TestCapabilityRanker:
     def test_rank_sorts_by_score(self) -> None:
@@ -716,7 +799,9 @@ class TestCapabilityRanker:
         assert len(ranked) == 1
 
     def test_rank_penalty_does_not_go_negative(self) -> None:
-        cap = BaseCapability(make_metadata("c1", cost=CapabilityCost.HIGH, risk=CapabilityRisk.HIGH))
+        cap = BaseCapability(
+            make_metadata("c1", cost=CapabilityCost.HIGH, risk=CapabilityRisk.HIGH)
+        )
         m = CapabilityMatch(capability=cap, score=0.1)
         ranker = CapabilityRanker()
         ranked = ranker.rank([m])
@@ -788,7 +873,9 @@ class TestCapabilityRanker:
         assert len(ranked) == 2
 
     def test_rank_high_risk_high_cost(self) -> None:
-        cap = BaseCapability(make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.HIGH))
+        cap = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.HIGH)
+        )
         m = CapabilityMatch(capability=cap, score=1.0)
         ranker = CapabilityRanker()
         ranked = ranker.rank([m])
@@ -796,7 +883,9 @@ class TestCapabilityRanker:
         assert ranked[0].score == pytest.approx(0.6)
 
     def test_rank_medium_risk_medium_cost(self) -> None:
-        cap = BaseCapability(make_metadata("c1", risk=CapabilityRisk.MEDIUM, cost=CapabilityCost.MEDIUM))
+        cap = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.MEDIUM, cost=CapabilityCost.MEDIUM)
+        )
         m = CapabilityMatch(capability=cap, score=1.0)
         ranker = CapabilityRanker()
         ranked = ranker.rank([m])
@@ -804,15 +893,21 @@ class TestCapabilityRanker:
         assert ranked[0].score == 0.8
 
     def test_rank_no_penalty(self) -> None:
-        cap = BaseCapability(make_metadata("c1", risk=CapabilityRisk.NONE, cost=CapabilityCost.TRIVIAL))
+        cap = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.NONE, cost=CapabilityCost.TRIVIAL)
+        )
         m = CapabilityMatch(capability=cap, score=1.0)
         ranker = CapabilityRanker()
         ranked = ranker.rank([m])
         assert ranked[0].score == 1.0
 
     def test_rank_penalty_order(self) -> None:
-        cap1 = BaseCapability(make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.LOW))
-        cap2 = BaseCapability(make_metadata("c2", risk=CapabilityRisk.LOW, cost=CapabilityCost.HIGH))
+        cap1 = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.LOW)
+        )
+        cap2 = BaseCapability(
+            make_metadata("c2", risk=CapabilityRisk.LOW, cost=CapabilityCost.HIGH)
+        )
         m1 = CapabilityMatch(capability=cap1, score=1.0)
         m2 = CapabilityMatch(capability=cap2, score=1.0)
         ranker = CapabilityRanker()
@@ -821,7 +916,9 @@ class TestCapabilityRanker:
         assert ranked[0].capability.metadata.id == "c1"
 
     def test_rank_negative_score_clamped(self) -> None:
-        cap = BaseCapability(make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.HIGH))
+        cap = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.HIGH, cost=CapabilityCost.HIGH)
+        )
         m = CapabilityMatch(capability=cap, score=0.1)
         ranker = CapabilityRanker()
         ranked = ranker.rank([m])
@@ -889,6 +986,7 @@ class TestCapabilityRanker:
 
 # --- Recommender Tests (25) ---
 
+
 class TestRecommender:
     def test_recommend_winner(self) -> None:
         cap = BaseCapability(make_metadata("c1"))
@@ -952,7 +1050,9 @@ class TestRecommender:
 
     def test_recommend_explanation_contains_reasons(self) -> None:
         cap = BaseCapability(make_metadata("c1"))
-        m = CapabilityMatch(capability=cap, score=1.0, reason_parts=("Intent matched", "Language supported"))
+        m = CapabilityMatch(
+            capability=cap, score=1.0, reason_parts=("Intent matched", "Language supported")
+        )
         rec = Recommender()
         r = rec.recommend([m])
         assert "Intent matched" in r.explanation
@@ -996,7 +1096,9 @@ class TestRecommender:
         assert "medium risk" in r.warnings[0]
 
     def test_recommend_warning_multiple(self) -> None:
-        cap = BaseCapability(make_metadata("c1", risk=CapabilityRisk.HIGH, requires_llm=True, deps=("d1",)))
+        cap = BaseCapability(
+            make_metadata("c1", risk=CapabilityRisk.HIGH, requires_llm=True, deps=("d1",))
+        )
         m = CapabilityMatch(capability=cap, score=1.0)
         rec = Recommender()
         r = rec.recommend([m])
@@ -1073,6 +1175,7 @@ class TestRecommender:
 
 # --- Runtime Tests (45) ---
 
+
 class TestCapabilityRuntime:
     def test_runtime_analyze_build(self, runtime: CapabilityRuntime) -> None:
         goal = make_goal("Build an app", GoalIntent.BUILD)
@@ -1112,11 +1215,13 @@ class TestCapabilityRuntime:
         assert analysis.metrics.candidates_count == 3
         assert analysis.metrics.matching_time_ms > 0
 
-    def test_runtime_events_published(self, runtime: CapabilityRuntime, event_bus: MockEventBus) -> None:
+    def test_runtime_events_published(
+        self, runtime: CapabilityRuntime, event_bus: MockEventBus
+    ) -> None:
         goal = make_goal("Build app", GoalIntent.BUILD)
         runtime.analyze(goal)
         assert len(event_bus.published_events) > 0
-        
+
         event_types = [type(e) for e in event_bus.published_events]
         assert CapabilityMatched in event_types
         assert CapabilityRanked in event_types
@@ -1153,8 +1258,17 @@ class TestCapabilityRuntime:
         # Rename wins (low risk), but if GenerateApp won, it would have warnings.
         # Let's force GenerateApp to win by giving it a higher score.
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("generate_app", risk=CapabilityRisk.HIGH, requires_llm=True, deps=("models",)), score_val=1.0))
-        reg.register(BaseCapability(make_metadata("rename_symbol", risk=CapabilityRisk.LOW), score_val=0.5))
+        reg.register(
+            BaseCapability(
+                make_metadata(
+                    "generate_app", risk=CapabilityRisk.HIGH, requires_llm=True, deps=("models",)
+                ),
+                score_val=1.0,
+            )
+        )
+        reg.register(
+            BaseCapability(make_metadata("rename_symbol", risk=CapabilityRisk.LOW), score_val=0.5)
+        )
         rt = CapabilityRuntime(registry=reg, event_bus=MockEventBus())
         analysis = rt.analyze(goal)
         assert len(analysis.recommendation.warnings) == 3  # risk, llm, deps
@@ -1170,8 +1284,12 @@ class TestCapabilityRuntime:
 
     def test_runtime_filters_deprecated(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", status=CapabilityStatus.DEPRECATED), score_val=1.0))
-        reg.register(BaseCapability(make_metadata("c2", status=CapabilityStatus.STABLE), score_val=0.5))
+        reg.register(
+            BaseCapability(make_metadata("c1", status=CapabilityStatus.DEPRECATED), score_val=1.0)
+        )
+        reg.register(
+            BaseCapability(make_metadata("c2", status=CapabilityStatus.STABLE), score_val=0.5)
+        )
         rt = CapabilityRuntime(registry=reg, event_bus=MockEventBus())
         goal = make_goal("test")
         analysis = rt.analyze(goal)
@@ -1205,10 +1323,10 @@ class TestCapabilityRuntime:
 
     def test_runtime_determinism(self, runtime: CapabilityRuntime) -> None:
         goal = make_goal("Build an app", GoalIntent.BUILD)
-        
+
         analysis1 = runtime.analyze(goal)
         analysis2 = runtime.analyze(goal)
-        
+
         # Compare everything EXCEPT the metrics which contain timestamps
         assert analysis1.recommendation == analysis2.recommendation
         assert analysis1.candidates == analysis2.candidates
@@ -1245,7 +1363,9 @@ class TestCapabilityRuntime:
         analysis = runtime.analyze(goal)
         assert analysis.goal == goal
 
-    def test_runtime_registry_size_matches(self, runtime: CapabilityRuntime, registry: CapabilityRegistry) -> None:
+    def test_runtime_registry_size_matches(
+        self, runtime: CapabilityRuntime, registry: CapabilityRegistry
+    ) -> None:
         goal = make_goal("test")
         analysis = runtime.analyze(goal)
         assert analysis.metrics.registry_size == len(registry.list())
@@ -1255,15 +1375,21 @@ class TestCapabilityRuntime:
         analysis = runtime.analyze(goal)
         assert analysis.state == CapabilityRuntimeState.COMPLETE
 
-    def test_runtime_initial_state_ready(self, registry: CapabilityRegistry, event_bus: MockEventBus) -> None:
+    def test_runtime_initial_state_ready(
+        self, registry: CapabilityRegistry, event_bus: MockEventBus
+    ) -> None:
         rt = CapabilityRuntime(registry=registry, event_bus=event_bus)
         assert rt.state == CapabilityRuntimeState.READY
 
-    def test_runtime_state_matching_during_execution(self, registry: CapabilityRegistry, event_bus: MockEventBus) -> None:
+    def test_runtime_state_matching_during_execution(
+        self, registry: CapabilityRegistry, event_bus: MockEventBus
+    ) -> None:
         # Cannot easily test intermediate states without async/mocking, but enum exists
         assert CapabilityRuntimeState.MATCHING == "matching"
 
-    def test_runtime_state_ranking_during_execution(self, registry: CapabilityRegistry, event_bus: MockEventBus) -> None:
+    def test_runtime_state_ranking_during_execution(
+        self, registry: CapabilityRegistry, event_bus: MockEventBus
+    ) -> None:
         assert CapabilityRuntimeState.RANKING == "ranking"
 
     def test_runtime_all_caps_match(self) -> None:
@@ -1329,7 +1455,11 @@ class TestCapabilityRuntime:
 
     def test_runtime_no_warnings(self) -> None:
         reg = CapabilityRegistry()
-        reg.register(BaseCapability(make_metadata("c1", risk=CapabilityRisk.LOW, cost=CapabilityCost.LOW), score_val=1.0))
+        reg.register(
+            BaseCapability(
+                make_metadata("c1", risk=CapabilityRisk.LOW, cost=CapabilityCost.LOW), score_val=1.0
+            )
+        )
         rt = CapabilityRuntime(registry=reg, event_bus=MockEventBus())
         goal = make_goal("test")
         analysis = rt.analyze(goal)

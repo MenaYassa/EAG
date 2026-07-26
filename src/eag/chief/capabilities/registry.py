@@ -32,7 +32,8 @@ class CapabilityRegistry:
     def list_active(self) -> tuple[Capability, ...]:
         """List only enabled and non-deprecated capabilities."""
         return tuple(
-            c for c in self.list() 
+            c
+            for c in self.list()
             if c.metadata.enabled and c.metadata.status != CapabilityStatus.DEPRECATED
         )
 
@@ -40,9 +41,10 @@ class CapabilityRegistry:
         """Search capabilities by name, id, or tag. Returns deterministic order."""
         query = query.lower()
         matches = [
-            c for c in self._capabilities.values()
-            if query in c.metadata.name.lower() 
-            or query in c.metadata.id.lower() 
+            c
+            for c in self._capabilities.values()
+            if query in c.metadata.name.lower()
+            or query in c.metadata.id.lower()
             or any(query in t.lower() for t in c.metadata.tags)
         ]
         return tuple(sorted(matches, key=lambda c: c.metadata.id))

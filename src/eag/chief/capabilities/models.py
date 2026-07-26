@@ -4,7 +4,7 @@ import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from eag.chief.capabilities.enums import (
     CapabilityCategory,
@@ -16,6 +16,8 @@ from eag.chief.capabilities.enums import (
 )
 from eag.chief.goals.models import EngineeringGoal
 
+T = TypeVar("T")
+
 
 def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
@@ -26,6 +28,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityMetadata:
     """The 'business card' for a capability."""
+
     id: str
     name: str
     description: str = ""
@@ -38,7 +41,7 @@ class CapabilityMetadata:
     estimated_cost: CapabilityCost = CapabilityCost.LOW
     estimated_risk: CapabilityRisk = CapabilityRisk.LOW
     tags: tuple[str, ...] = ()
-    
+
     # Hardening additions
     dependencies: tuple[str, ...] = ()
     status: CapabilityStatus = CapabilityStatus.STABLE
@@ -59,9 +62,10 @@ class CapabilityMetadata:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "CapabilityMetadata":
         """Deserialize metadata from a dictionary."""
-        def parse_enum(val, enum_cls):
+
+        def parse_enum(val: Any, enum_cls: Any) -> Any:
             return enum_cls(val) if isinstance(val, str) else val
-        
+
         return cls(
             id=data.get("id", ""),
             name=data.get("name", ""),
@@ -79,26 +83,28 @@ class CapabilityMetadata:
             status=parse_enum(data.get("status", "stable"), CapabilityStatus),
             enabled=data.get("enabled", True),
             latency_ms=data.get("latency_ms", 0.0),
-            token_cost=data.get("token_cost", 0.0)
+            token_cost=data.get("token_cost", 0.0),
         )
 
 
 @runtime_checkable
 class Capability(Protocol):
     """The contract for an engineering capability."""
+
     @property
     def metadata(self) -> CapabilityMetadata: ...
-    
+
     def supports(self, goal: EngineeringGoal) -> bool: ...
-    
+
     def score(self, goal: EngineeringGoal) -> float: ...
-    
+
     def requirements(self) -> tuple[CapabilityRequirement, ...]: ...
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityMatch:
     """A capability that matched a goal, along with its score."""
+
     capability: Capability
     score: float
     reason: str = ""
@@ -110,6 +116,7 @@ class CapabilityMatch:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityRecommendation:
     """The final recommendation produced by the runtime."""
+
     winner: CapabilityMatch | None
     alternatives: tuple[CapabilityMatch, ...] = ()
     confidence: float = 0.0
@@ -121,6 +128,7 @@ class CapabilityRecommendation:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityMetrics:
     """Metrics collected during capability analysis."""
+
     registry_size: int = 0
     matching_time_ms: float = 0.0
     ranking_time_ms: float = 0.0
@@ -133,6 +141,7 @@ class CapabilityMetrics:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityAnalysis:
     """The final artifact produced by the CapabilityRuntime."""
+
     goal: EngineeringGoal
     candidates: tuple[CapabilityMatch, ...] = ()
     recommendation: CapabilityRecommendation | None = None

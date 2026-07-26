@@ -1,6 +1,6 @@
 """Capability matcher for EAG Chief Engineer."""
 
-from eag.chief.capabilities.models import Capability, CapabilityMatch
+from eag.chief.capabilities.models import CapabilityMatch
 from eag.chief.capabilities.registry import CapabilityRegistry
 from eag.chief.goals.models import EngineeringGoal
 
@@ -24,27 +24,33 @@ class CapabilityMatcher:
     def match(self, goal: EngineeringGoal) -> list[CapabilityMatch]:
         matches: list[CapabilityMatch] = []
         goal_langs = self._get_goal_languages(goal)
-        
+
         for cap in self._registry.list_active():
             reasons: list[str] = []
-            
+
             # 1. Language Compatibility Check
             if cap.metadata.supported_languages:
-                if goal_langs and not any(lang in cap.metadata.supported_languages for lang in goal_langs):
+                if goal_langs and not any(
+                    lang in cap.metadata.supported_languages for lang in goal_langs
+                ):
                     continue  # Incompatible language
-                reasons.append(f"Language supported ({', '.join(cap.metadata.supported_languages)})")
-            
+                reasons.append(
+                    f"Language supported ({', '.join(cap.metadata.supported_languages)})"
+                )
+
             # 2. Custom Capability Support Logic
             if not cap.supports(goal):
                 continue
             reasons.append("Intent matched")
-            
+
             score = cap.score(goal)
-            matches.append(CapabilityMatch(
-                capability=cap,
-                score=score,
-                reason=f"Matched: {cap.metadata.name}",
-                reason_parts=tuple(reasons)
-            ))
-            
+            matches.append(
+                CapabilityMatch(
+                    capability=cap,
+                    score=score,
+                    reason=f"Matched: {cap.metadata.name}",
+                    reason_parts=tuple(reasons),
+                )
+            )
+
         return matches
