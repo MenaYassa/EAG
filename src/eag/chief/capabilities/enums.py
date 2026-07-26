@@ -5,7 +5,6 @@ from enum import StrEnum
 
 class CapabilityCategory(StrEnum):
     """The category of a capability."""
-
     TRANSFORMATION = "transformation"
     GENERATION = "generation"
     ANALYSIS = "analysis"
@@ -16,7 +15,6 @@ class CapabilityCategory(StrEnum):
 
 class CapabilityCost(StrEnum):
     """The estimated computational/resource cost of a capability."""
-
     TRIVIAL = "trivial"
     LOW = "low"
     MEDIUM = "medium"
@@ -25,16 +23,21 @@ class CapabilityCost(StrEnum):
 
 class CapabilityRisk(StrEnum):
     """The estimated risk level of a capability."""
-
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
+class CapabilityStatus(StrEnum):
+    """The lifecycle status of a capability."""
+    STABLE = "stable"
+    EXPERIMENTAL = "experimental"
+    DEPRECATED = "deprecated"
+
+
 class CapabilityRequirement(StrEnum):
     """Platform requirements for a capability to execute."""
-
     WORKSPACE_READY = "workspace_ready"
     REPOSITORY_READY = "repository_ready"
     SOURCE_INDEXED = "source_indexed"
@@ -44,7 +47,6 @@ class CapabilityRequirement(StrEnum):
 
 class CapabilityRuntimeState(StrEnum):
     """Lifecycle state of the capability runtime."""
-
     UNINITIALIZED = "uninitialized"
     READY = "ready"
     MATCHING = "matching"

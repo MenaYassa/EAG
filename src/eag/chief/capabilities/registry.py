@@ -1,5 +1,6 @@
 """Capability registry for EAG Chief Engineer."""
 
+from eag.chief.capabilities.enums import CapabilityStatus
 from eag.chief.capabilities.errors import CapabilityNotFound, DuplicateCapability
 from eag.chief.capabilities.models import Capability
 
@@ -25,14 +26,23 @@ class CapabilityRegistry:
         return self._capabilities[cap_id]
 
     def list(self) -> tuple[Capability, ...]:
-        return tuple(self._capabilities.values())
+        """List all registered capabilities, sorted by ID for determinism."""
+        return tuple(sorted(self._capabilities.values(), key=lambda c: c.metadata.id))
+
+    def list_active(self) -> tuple[Capability, ...]:
+        """List only enabled and non-deprecated capabilities."""
+        return tuple(
+            c for c in self.list() 
+            if c.metadata.enabled and c.metadata.status != CapabilityStatus.DEPRECATED
+        )
 
     def search(self, query: str) -> tuple[Capability, ...]:
+        """Search capabilities by name, id, or tag. Returns deterministic order."""
         query = query.lower()
-        return tuple(
-            c
-            for c in self._capabilities.values()
-            if query in c.metadata.name.lower()
-            or query in c.metadata.id.lower()
-            or any(query in t for t in c.metadata.tags)
-        )
+        matches = [
+            c for c in self._capabilities.values()
+            if query in c.metadata.name.lower() 
+            or query in c.metadata.id.lower() 
+            or any(query in t.lower() for t in c.metadata.tags)
+        ]
+        return tuple(sorted(matches, key=lambda c: c.metadata.id))
