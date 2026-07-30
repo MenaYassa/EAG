@@ -1,7 +1,9 @@
 """Tests for the LiteLLM Provider Integration (Sprint 7.3D)."""
+
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Add this import to check if litellm is installed
 try:
@@ -9,15 +11,13 @@ try:
 except ImportError:
     litellm = None
 
-from eag.chief.intelligence import AICapabilities, AITraits, ModelProfile
 from eag.chief.intelligence.execution import (
     ExecutionContext,
     ExecutionOptions,
-    ExecutionResult,
+    ExecutionRuntime,
     ExecutionState,
     ProviderHealthStatus,
     ProviderRegistry,
-    ExecutionRuntime,
 )
 from eag.chief.intelligence.execution.errors import ExecutionFailedError
 from eag.chief.intelligence.execution.providers import LiteLLMProvider
@@ -27,18 +27,22 @@ from eag.chief.intelligence.execution.providers import LiteLLMProvider
 def provider() -> LiteLLMProvider:
     return LiteLLMProvider(api_key="test_key")
 
+
 @pytest.fixture
 def registry(provider: LiteLLMProvider) -> ProviderRegistry:
     reg = ProviderRegistry()
     reg.register(provider)
     return reg
 
+
 @pytest.fixture
 def runtime(registry: ProviderRegistry) -> ExecutionRuntime:
     return ExecutionRuntime(registry=registry)
 
+
 def make_context(provider_id: str = "litellm", model_id: str = "gpt-4o") -> ExecutionContext:
     return ExecutionContext(prompt="Hello", model_id=model_id, provider_id=provider_id)
+
 
 def mock_litellm_response():
     """Creates a mock response mimicking litellm.completion output."""
@@ -79,44 +83,46 @@ class TestLiteLLMProvider:
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_execute_success(self, mock_litellm, provider: LiteLLMProvider) -> None:
         mock_litellm.completion.return_value = mock_litellm_response()
-        
+
         ctx = make_context()
         result = provider.execute(ctx)
-        
+
         assert result.success is True
         assert result.content == "Hi there!"
         assert result.state == ExecutionState.SUCCESS
         assert result.usage.total_tokens == 8
         assert result.provider_id == "litellm"
         assert result.model_id == "gpt-4o"
-        
+
         # Verify litellm was called correctly
         mock_litellm.completion.assert_called_once_with(
             model="gpt-4o",
             messages=[{"role": "user", "content": "Hello"}],
             temperature=0.7,
             max_tokens=1000,
-            api_key="test_key"
+            api_key="test_key",
         )
 
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_execute_failure_raises(self, mock_litellm, provider: LiteLLMProvider) -> None:
         mock_litellm.completion.side_effect = Exception("API Error")
-        
+
         ctx = make_context()
         with pytest.raises(ExecutionFailedError) as exc_info:
             provider.execute(ctx)
-            
+
         assert "API Error" in str(exc_info.value)
 
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_execute_passes_options(self, mock_litellm, provider: LiteLLMProvider) -> None:
         mock_litellm.completion.return_value = mock_litellm_response()
-        
+
         opts = ExecutionOptions(temperature=0.1, max_tokens=50)
-        ctx = ExecutionContext(prompt="Test", model_id="gpt-4o", provider_id="litellm", options=opts)
+        ctx = ExecutionContext(
+            prompt="Test", model_id="gpt-4o", provider_id="litellm", options=opts
+        )
         provider.execute(ctx)
-        
+
         _, kwargs = mock_litellm.completion.call_args
         assert kwargs["temperature"] == 0.1
         assert kwargs["max_tokens"] == 50
@@ -124,10 +130,10 @@ class TestLiteLLMProvider:
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_runtime_integration_success(self, mock_litellm, runtime: ExecutionRuntime) -> None:
         mock_litellm.completion.return_value = mock_litellm_response()
-        
+
         ctx = make_context()
         result = runtime.execute(ctx)
-        
+
         assert result.success is True
         assert result.content == "Hi there!"
         assert len(result.trace.events) > 0
@@ -135,10 +141,10 @@ class TestLiteLLMProvider:
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_runtime_integration_failure(self, mock_litellm, runtime: ExecutionRuntime) -> None:
         mock_litellm.completion.side_effect = Exception("API Error")
-        
+
         ctx = make_context()
         result = runtime.execute(ctx)
-        
+
         # Runtime catches the exception and returns a failed result
         assert result.success is False
         assert result.state == ExecutionState.FAILED
@@ -154,7 +160,7 @@ class TestLiteLLMProvider:
     def test_real_litellm_integration(self) -> None:
         if litellm is None:
             pytest.fail("litellm package is not installed. Please run `uv add litellm`.")
-        
+
         # Pull secrets from the environment
         api_key = os.getenv("LITELLM_TEST_API_KEY")
         api_base = os.getenv("LITELLM_TEST_API_BASE")
@@ -162,22 +168,19 @@ class TestLiteLLMProvider:
         # Gracefully skip if credentials aren't present (e.g., in CI/CD pipelines)
         if not api_key or not api_base:
             pytest.skip("Integration credentials not found in environment. Skipping.")
-            
-        provider = LiteLLMProvider(
-            api_key=api_key,
-            api_base=api_base
-        )
-        
+
+        provider = LiteLLMProvider(api_key=api_key, api_base=api_base)
+
         ctx = ExecutionContext(
             prompt="Say 'Hello EAG!' and nothing else.",
             model_id="z-ai/glm-5.2",
             provider_id="litellm",
-            options=ExecutionOptions(max_tokens=50, temperature=1.0)
+            options=ExecutionOptions(max_tokens=50, temperature=1.0),
         )
-        
+
         # We let the test fail loudly to see the exact API error
         result = provider.execute(ctx)
-        
+
         assert result.success is True
         assert "Hello EAG!" in result.content
         assert result.usage.total_tokens > 0

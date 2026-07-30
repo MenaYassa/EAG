@@ -15,19 +15,21 @@ from eag.chief.intelligence.scorer import TraitScorer
 class ModelSelector:
     """Selects the best AI model for a given execution request."""
 
-    def __init__(self, matcher: RequirementMatcher | None = None, scorer: TraitScorer | None = None) -> None:
+    def __init__(
+        self, matcher: RequirementMatcher | None = None, scorer: TraitScorer | None = None
+    ) -> None:
         self._matcher = matcher or RequirementMatcher()
         self._scorer = scorer or TraitScorer()
 
     def select(
-        self, 
-        request: ExecutionRequest, 
-        models: tuple[ModelProfile, ...], 
-        providers: tuple[ProviderProfile, ...]
+        self,
+        request: ExecutionRequest,
+        models: tuple[ModelProfile, ...],
+        providers: tuple[ProviderProfile, ...],
     ) -> SelectionDecision:
         candidates: list[tuple[float, ModelProfile, any, any]] = []
         rejections: list[str] = []
-        
+
         provider_map = {p.id: p for p in providers if p.status == "online"}
 
         for model in models:
@@ -46,7 +48,9 @@ class ModelSelector:
             candidates.append((score_breakdown.total, model, match_result, score_breakdown))
 
         if not candidates:
-            raise NoMatchingModelError("No suitable AI models found matching the requirements.", reasons=rejections)
+            raise NoMatchingModelError(
+                "No suitable AI models found matching the requirements.", reasons=rejections
+            )
 
         # Sort by score descending, then by model ID for deterministic tie-breaking
         candidates.sort(key=lambda x: (-x[0], x[1].id))
@@ -65,5 +69,5 @@ class ModelSelector:
             reasons=tuple(reasons),
             alternatives=alternatives,
             match_result=best_match,
-            score_breakdown=best_breakdown
+            score_breakdown=best_breakdown,
         )

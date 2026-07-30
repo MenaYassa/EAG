@@ -26,6 +26,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "types-click>=7.1.8",
+    "pytest-dotenv>=0.5.2",
 ]
 
 [tool.hatch.build.targets.wheel]

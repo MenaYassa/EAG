@@ -27,3 +27,19 @@ class RetryExceededError(ExecutionError):
 
 class ProviderNotFoundError(ExecutionError):
     """Raised when a specific provider is not found."""
+
+
+class DiscoveryFailedError(ExecutionError):
+    """Raised when model discovery fails."""
+
+
+class PricingUnavailableError(ExecutionError):
+    """Raised when pricing information is unavailable."""
+
+
+class StreamingError(ExecutionError):
+    """Raised when streaming fails."""
+
+
+class FallbackFailedError(ExecutionError):
+    """Raised when all fallback providers fail."""

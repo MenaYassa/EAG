@@ -4,7 +4,8 @@ from enum import StrEnum
 
 
 class AIReasoningLevel(StrEnum):
-    """ graded characteristic for reasoning."""
+    """graded characteristic for reasoning."""
+
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
@@ -13,7 +14,8 @@ class AIReasoningLevel(StrEnum):
 
 
 class AISpeed(StrEnum):
-    """ graded characteristic for speed."""
+    """graded characteristic for speed."""
+
     SLOW = "slow"
     MEDIUM = "medium"
     FAST = "fast"
@@ -21,7 +23,8 @@ class AISpeed(StrEnum):
 
 
 class AICost(StrEnum):
-    """ graded characteristic for cost."""
+    """graded characteristic for cost."""
+
     VERY_LOW = "very_low"
     LOW = "low"
     MEDIUM = "medium"
@@ -30,7 +33,8 @@ class AICost(StrEnum):
 
 
 class AIContextSize(StrEnum):
-    """ graded characteristic for context size."""
+    """graded characteristic for context size."""
+
     SMALL = "small"
     MEDIUM = "medium"
     LARGE = "large"
@@ -39,6 +43,7 @@ class AIContextSize(StrEnum):
 
 class ModelStatus(StrEnum):
     """Lifecycle status of an AI model."""
+
     AVAILABLE = "available"
     DISABLED = "disabled"
     DEPRECATED = "deprecated"
@@ -47,6 +52,7 @@ class ModelStatus(StrEnum):
 
 class ProviderStatus(StrEnum):
     """Lifecycle status of an AI provider."""
+
     ONLINE = "online"
     DEGRADED = "degraded"
     OFFLINE = "offline"
@@ -55,6 +61,7 @@ class ProviderStatus(StrEnum):
 
 class RoutingPolicy(StrEnum):
     """Policies for selecting AI models."""
+
     LOW_COST = "low_cost"
     BALANCED = "balanced"
     HIGH_QUALITY = "high_quality"
@@ -66,6 +73,7 @@ class RoutingPolicy(StrEnum):
 
 class SelectionReason(StrEnum):
     """Reasons for selecting a specific model."""
+
     EXACT_MATCH = "exact_match"
     FALLBACK = "fallback"
     POLICY_MATCH = "policy_match"
@@ -77,6 +85,7 @@ class SelectionReason(StrEnum):
 
 class RuntimeState(StrEnum):
     """Lifecycle state of the intelligence runtime."""
+
     UNINITIALIZED = "uninitialized"
     READY = "ready"
     SELECTING = "selecting"

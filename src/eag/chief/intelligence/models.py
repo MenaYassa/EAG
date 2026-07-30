@@ -7,8 +7,8 @@ from typing import Any
 
 from eag.chief.intelligence.capabilities import AICapabilities
 from eag.chief.intelligence.enums import (
-    AICost,
     AIContextSize,
+    AICost,
     AIReasoningLevel,
     AISpeed,
     ModelStatus,
@@ -28,6 +28,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ProviderProfile:
     """Metadata representing an AI provider."""
+
     id: str
     name: str
     status: ProviderStatus = ProviderStatus.ONLINE
@@ -47,6 +48,7 @@ class ProviderProfile:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelProfile:
     """Metadata representing an AI model."""
+
     id: str
     provider_id: str
     name: str
@@ -73,6 +75,7 @@ class ModelProfile:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AIRequirements:
     """Desired AI characteristics for a specific task."""
+
     minimum_reasoning: AIReasoningLevel = AIReasoningLevel.LOW
     minimum_context: AIContextSize = AIContextSize.MEDIUM
     requires_structured_output: bool = False
@@ -85,6 +88,7 @@ class AIRequirements:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ExecutionRequest:
     """The structured request sent to the intelligence runtime."""
+
     capability: str
     requirements: AIRequirements
     policy: RoutingPolicy = RoutingPolicy.BALANCED
@@ -98,11 +102,14 @@ class ExecutionRequest:
         if not isinstance(self.policy, RoutingPolicy):
             raise TypeError("policy must be RoutingPolicy")
 
+
 # Append to src/eag/chief/intelligence/models.py
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MatchResult:
     """The explainable result of matching requirements against a model."""
+
     compatible: bool
     matched: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
@@ -112,6 +119,7 @@ class MatchResult:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ScoreBreakdown:
     """Detailed breakdown of a model's score."""
+
     total: float
     reasoning: float = 0.0
     context: float = 0.0
@@ -119,11 +127,11 @@ class ScoreBreakdown:
     speed: float = 0.0
     cost: float = 0.0
 
-  
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SelectionDecision:
     """The explainable output of the model selector."""
+
     model: ModelProfile
     provider: ProviderProfile
     confidence: float
@@ -140,4 +148,3 @@ class SelectionDecision:
             raise TypeError("provider must be ProviderProfile")
         if not (0.0 <= self.confidence <= 1.0):
             raise ValueError("confidence must be between 0.0 and 1.0")
-

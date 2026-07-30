@@ -36,24 +36,30 @@ class RequirementMatcher:
             rejected.append("cost_too_high")
 
         if rejected:
-            return MatchResult(compatible=False, matched=tuple(), warnings=tuple(), rejected=tuple(rejected))
+            return MatchResult(
+                compatible=False, matched=tuple(), warnings=tuple(), rejected=tuple(rejected)
+            )
 
         # 4. Soft Trait Checks (Warnings)
         if model.traits.speed != requirements.preferred_speed:
             warnings.append(f"speed_{model.traits.speed.value}")
 
         # 5. Matched Traits
-        req_reasoning_idx = self._get_idx(self._REASONING_ORDER, requirements.minimum_reasoning.value)
+        req_reasoning_idx = self._get_idx(
+            self._REASONING_ORDER, requirements.minimum_reasoning.value
+        )
         model_reasoning_idx = self._get_idx(self._REASONING_ORDER, model.traits.reasoning.value)
         if model_reasoning_idx >= req_reasoning_idx:
             matched.append("reasoning")
-        
+
         if model.capabilities.supports_code:
             matched.append("coding")
         if model_ctx_idx >= req_ctx_idx:
             matched.append("context")
 
-        return MatchResult(compatible=True, matched=tuple(matched), warnings=tuple(warnings), rejected=tuple())
+        return MatchResult(
+            compatible=True, matched=tuple(matched), warnings=tuple(warnings), rejected=tuple()
+        )
 
     def _get_idx(self, order_list: list[str], value: str) -> int:
         try:

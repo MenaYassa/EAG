@@ -24,8 +24,10 @@ class RoutingPolicyError(IntelligenceError):
 class SelectionError(IntelligenceError):
     """Raised when model selection fails."""
 
+
 class NoMatchingModelError(IntelligenceError):
-  """Raised when no available model satisfies the requirements."""
-  def __init__(self, message: str, reasons: list[str] | None = None) -> None:
-      super().__init__(message)
-      self.reasons = reasons or []
+    """Raised when no available model satisfies the requirements."""
+
+    def __init__(self, message: str, reasons: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.reasons = reasons or []

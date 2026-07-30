@@ -1,10 +1,11 @@
 """Comprehensive tests for the AI Intelligence Domain (Sprint 7.3A)."""
 
 import pytest
+
 from eag.chief.intelligence import (
     AICapabilities,
-    AICost,
     AIContextSize,
+    AICost,
     AIReasoningLevel,
     AIRequirements,
     AISpeed,
@@ -15,6 +16,7 @@ from eag.chief.intelligence import (
     IntelligenceRuntime,
     ModelNotFoundError,
     ModelProfile,
+    ModelStatus,
     NoMatchingModelError,
     ProviderError,
     ProviderProfile,
@@ -24,12 +26,11 @@ from eag.chief.intelligence import (
     RuntimeState,
     SelectionDecision,
     SelectionReason,
-    ModelStatus,
 )
 from eag.chief.intelligence.errors import ProviderNotFoundError, SelectionError
 
-
 # --- Enum Tests (15) ---
+
 
 class TestEnums:
     def test_reasoning_level_values(self) -> None:
@@ -95,6 +96,7 @@ class TestEnums:
 
 # --- Traits & Capabilities Tests (25) ---
 
+
 class TestTraitsAndCapabilities:
     def test_traits_immutable(self) -> None:
         t = AITraits(reasoning=AIReasoningLevel.HIGH)
@@ -121,16 +123,12 @@ class TestTraitsAndCapabilities:
             reasoning=AIReasoningLevel.EXTREME,
             coding=AIReasoningLevel.EXTREME,
             context=AIContextSize.HUGE,
-            speed=AISpeed.FAST
+            speed=AISpeed.FAST,
         )
         assert t.reasoning == AIReasoningLevel.EXTREME
 
     def test_capabilities_creation(self) -> None:
-        c = AICapabilities(
-            supports_code=True,
-            supports_images=True,
-            supports_function_calls=True
-        )
+        c = AICapabilities(supports_code=True, supports_images=True, supports_function_calls=True)
         assert c.supports_code is True
 
     def test_traits_equality(self) -> None:
@@ -154,6 +152,7 @@ class TestTraitsAndCapabilities:
 
 
 # --- Model Tests (40) ---
+
 
 class TestIntelligenceModels:
     def test_provider_profile_immutable(self) -> None:
@@ -274,7 +273,9 @@ class TestIntelligenceModels:
     def test_model_profile_metadata(self) -> None:
         t = AITraits()
         c = AICapabilities()
-        m = ModelProfile(id="m", provider_id="p", name="M", traits=t, capabilities=c, metadata={"key": "value"})
+        m = ModelProfile(
+            id="m", provider_id="p", name="M", traits=t, capabilities=c, metadata={"key": "value"}
+        )
         assert m.metadata["key"] == "value"
 
     def test_provider_profile_invalid_metadata(self) -> None:
@@ -285,7 +286,9 @@ class TestIntelligenceModels:
         t = AITraits()
         c = AICapabilities()
         with pytest.raises(TypeError):
-            ModelProfile(id="m", provider_id="p", name="M", traits=t, capabilities=c, metadata="bad")  # type: ignore[arg-type]
+            ModelProfile(
+                id="m", provider_id="p", name="M", traits=t, capabilities=c, metadata="bad"
+            )  # type: ignore[arg-type]
 
     def test_execution_request_policy(self) -> None:
         r = AIRequirements()
@@ -299,6 +302,7 @@ class TestIntelligenceModels:
 
 
 # --- Validation & State Tests (20) ---
+
 
 class TestValidationAndState:
     def test_model_not_found_error(self) -> None:
@@ -402,6 +406,7 @@ class TestValidationAndState:
 
 
 # --- Serialization & Determinism Tests (10) ---
+
 
 class TestSerializationAndDeterminism:
     def test_traits_determinism(self) -> None:

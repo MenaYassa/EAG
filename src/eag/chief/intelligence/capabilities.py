@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AICapabilities:
     """Describes what a model can do (binary capabilities)."""
+
     supports_text: bool = True
     supports_code: bool = False
     supports_images: bool = False

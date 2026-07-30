@@ -12,6 +12,7 @@ from eag.chief.intelligence.enums import (
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AITraits:
     """Describes how well a model behaves across graded characteristics."""
+
     reasoning: AIReasoningLevel = AIReasoningLevel.MEDIUM
     coding: AIReasoningLevel = AIReasoningLevel.MEDIUM
     vision: AIReasoningLevel = AIReasoningLevel.NONE

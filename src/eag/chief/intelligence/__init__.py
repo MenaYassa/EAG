@@ -2,8 +2,8 @@
 
 from eag.chief.intelligence.capabilities import AICapabilities
 from eag.chief.intelligence.enums import (
-    AICost,
     AIContextSize,
+    AICost,
     AIReasoningLevel,
     AISpeed,
     ModelStatus,
@@ -32,16 +32,16 @@ from eag.chief.intelligence.events import (
 )
 from eag.chief.intelligence.matcher import RequirementMatcher
 from eag.chief.intelligence.metrics import IntelligenceMetrics
+from eag.chief.intelligence.model_registry import ModelRegistry
 from eag.chief.intelligence.models import (
     AIRequirements,
     ExecutionRequest,
+    MatchResult,
     ModelProfile,
     ProviderProfile,
+    ScoreBreakdown,
     SelectionDecision,
-MatchResult,
-ScoreBreakdown,
 )
-from eag.chief.intelligence.model_registry import ModelRegistry
 from eag.chief.intelligence.provider_registry import ProviderRegistry
 from eag.chief.intelligence.runtime import IntelligenceRuntime
 from eag.chief.intelligence.scorer import TraitScorer
@@ -85,8 +85,8 @@ __all__ = [
     "ModelProfile",
     "ProviderProfile",
     "SelectionDecision",
-  "MatchResult",
-  "ScoreBreakdown",
+    "MatchResult",
+    "ScoreBreakdown",
     # Components
     "RequirementMatcher",
     "ModelRegistry",

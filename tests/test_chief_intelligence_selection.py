@@ -1,13 +1,14 @@
 """Comprehensive tests for the AI Intelligence Selection Engine (Sprint 7.3B Hardened)."""
 
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
 
+import pytest
+
 from eag.chief.intelligence import (
     AICapabilities,
-    AICost,
     AIContextSize,
+    AICost,
     AIReasoningLevel,
     AIRequirements,
     AISpeed,
@@ -17,7 +18,6 @@ from eag.chief.intelligence import (
     MatchResult,
     ModelProfile,
     ModelRegistry,
-    ModelSelector,
     NoMatchingModelError,
     ProviderNotFoundError,
     ProviderProfile,
@@ -31,24 +31,32 @@ from eag.chief.intelligence import (
     TraitScorer,
 )
 from eag.chief.intelligence.events import SelectionCompleted, SelectionStarted
-from eag.events import EventBus
-
 
 # --- Fixtures & Helpers ---
 
-def make_traits(reasoning=AIReasoningLevel.HIGH, ctx=AIContextSize.LARGE, speed=AISpeed.FAST) -> AITraits:
+
+def make_traits(
+    reasoning=AIReasoningLevel.HIGH, ctx=AIContextSize.LARGE, speed=AISpeed.FAST
+) -> AITraits:
     return AITraits(reasoning=reasoning, context=ctx, speed=speed, coding=AIReasoningLevel.HIGH)
 
+
 def make_caps(code=True, json=True, tools=True, stream=True) -> AICapabilities:
-    return AICapabilities(supports_code=code, supports_json_schema=json, supports_function_calls=tools, supports_streaming=stream)
+    return AICapabilities(
+        supports_code=code,
+        supports_json_schema=json,
+        supports_function_calls=tools,
+        supports_streaming=stream,
+    )
+
 
 # Replace your current make_model function with this:
 def make_model(
-    id: str = "model-1", 
-    provider: str = "provider-1", 
+    id: str = "model-1",
+    provider: str = "provider-1",
     name: str | None = None,  # <-- Add name parameter
-    cost: AICost = AICost.MEDIUM, 
-    traits=None, 
+    cost: AICost = AICost.MEDIUM,
+    traits=None,
     caps=None,
     status: str = "available",
     **kwargs,
@@ -56,7 +64,9 @@ def make_model(
     return ModelProfile(
         id=id,
         provider_id=provider,
-        name=name if name is not None else id.replace("-", " ").title(),  # <-- Use explicit name if provided
+        name=name
+        if name is not None
+        else id.replace("-", " ").title(),  # <-- Use explicit name if provided
         traits=traits or make_traits(),
         capabilities=caps or make_caps(),
         estimated_cost=cost,
@@ -68,42 +78,56 @@ def make_model(
 def make_provider(id="provider-1", status=ProviderStatus.ONLINE) -> ProviderProfile:
     return ProviderProfile(id=id, name=id.replace("-", " ").title(), status=status)
 
+
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
+
 
 @pytest.fixture
 def event_bus() -> MockEventBus:
     return MockEventBus()
 
+
 @pytest.fixture
 def runtime(event_bus: MockEventBus) -> IntelligenceRuntime:
     rt = IntelligenceRuntime(event_bus=event_bus)
-    
+
     rt.providers.register(make_provider(id="p1"))
     rt.providers.register(make_provider(id="p2", status=ProviderStatus.OFFLINE))
-    
+
     rt.models.register(make_model(id="m1", provider="p1", cost=AICost.LOW))
-    rt.models.register(make_model(id="m2", provider="p1", cost=AICost.HIGH, traits=make_traits(reasoning=AIReasoningLevel.EXTREME)))
-    rt.models.register(make_model(id="m3", provider="p1", cost=AICost.MEDIUM, caps=make_caps(json=False)))
+    rt.models.register(
+        make_model(
+            id="m2",
+            provider="p1",
+            cost=AICost.HIGH,
+            traits=make_traits(reasoning=AIReasoningLevel.EXTREME),
+        )
+    )
+    rt.models.register(
+        make_model(id="m3", provider="p1", cost=AICost.MEDIUM, caps=make_caps(json=False))
+    )
     rt.models.register(make_model(id="m4", provider="p2", cost=AICost.LOW))
     rt.models.register(make_model(id="m5", provider="p1", cost=AICost.LOW, status="deprecated"))
-    
+
     rt.initialize()
     return rt
 
+
 def make_request(
-    cap="test", 
-    reasoning=AIReasoningLevel.MEDIUM, 
-    ctx=AIContextSize.MEDIUM, 
-    json=True, 
-    tools=False, 
-    stream=False, 
+    cap="test",
+    reasoning=AIReasoningLevel.MEDIUM,
+    ctx=AIContextSize.MEDIUM,
+    json=True,
+    tools=False,
+    stream=False,
     max_cost=AICost.HIGH,
     speed=AISpeed.MEDIUM,
-    policy=RoutingPolicy.BALANCED
+    policy=RoutingPolicy.BALANCED,
 ) -> ExecutionRequest:
     return ExecutionRequest(
         capability=cap,
@@ -114,13 +138,14 @@ def make_request(
             requires_tool_calling=tools,
             requires_streaming=stream,
             maximum_cost=max_cost,
-            preferred_speed=speed
+            preferred_speed=speed,
         ),
-        policy=policy
+        policy=policy,
     )
 
 
 # --- Provider Registry Tests (15) ---
+
 
 class TestProviderRegistry:
     def test_register(self) -> None:
@@ -180,6 +205,7 @@ class TestProviderRegistry:
 
 
 # --- Model Registry Tests (20) ---
+
 
 class TestModelRegistry:
     def test_register(self) -> None:
@@ -241,6 +267,7 @@ class TestModelRegistry:
 
 
 # --- Matcher Tests (35) ---
+
 
 class TestRequirementMatcher:
     def test_hard_fail_json(self) -> None:
@@ -348,6 +375,7 @@ class TestRequirementMatcher:
 
 # --- Scorer Tests (25) ---
 
+
 class TestTraitScorer:
     def test_score_returns_breakdown(self) -> None:
         scorer = TraitScorer()
@@ -368,15 +396,25 @@ class TestTraitScorer:
         req = make_request()
         model = make_model()
         breakdown = scorer.score(req.requirements, model, req.policy)
-        total = breakdown.reasoning + breakdown.context + breakdown.coding + breakdown.speed + breakdown.cost
+        total = (
+            breakdown.reasoning
+            + breakdown.context
+            + breakdown.coding
+            + breakdown.speed
+            + breakdown.cost
+        )
         assert abs(breakdown.total - total) < 0.001  # Handle float imprecision
 
     def test_high_quality_policy_prefers_reasoning(self) -> None:
         scorer = TraitScorer()
         req = make_request(policy=RoutingPolicy.HIGH_QUALITY)
-        model_high_reason = make_model(traits=make_traits(reasoning=AIReasoningLevel.EXTREME, speed=AISpeed.SLOW))
-        model_fast = make_model(traits=make_traits(reasoning=AIReasoningLevel.MEDIUM, speed=AISpeed.REALTIME))
-        
+        model_high_reason = make_model(
+            traits=make_traits(reasoning=AIReasoningLevel.EXTREME, speed=AISpeed.SLOW)
+        )
+        model_fast = make_model(
+            traits=make_traits(reasoning=AIReasoningLevel.MEDIUM, speed=AISpeed.REALTIME)
+        )
+
         score1 = scorer.score(req.requirements, model_high_reason, req.policy).total
         score2 = scorer.score(req.requirements, model_fast, req.policy).total
         assert score1 > score2
@@ -384,9 +422,13 @@ class TestTraitScorer:
     def test_fastest_policy_prefers_speed(self) -> None:
         scorer = TraitScorer()
         req = make_request(policy=RoutingPolicy.FASTEST)
-        model_fast = make_model(traits=make_traits(reasoning=AIReasoningLevel.LOW, speed=AISpeed.REALTIME))
-        model_smart = make_model(traits=make_traits(reasoning=AIReasoningLevel.EXTREME, speed=AISpeed.SLOW))
-        
+        model_fast = make_model(
+            traits=make_traits(reasoning=AIReasoningLevel.LOW, speed=AISpeed.REALTIME)
+        )
+        model_smart = make_model(
+            traits=make_traits(reasoning=AIReasoningLevel.EXTREME, speed=AISpeed.SLOW)
+        )
+
         score1 = scorer.score(req.requirements, model_fast, req.policy).total
         score2 = scorer.score(req.requirements, model_smart, req.policy).total
         assert score1 > score2
@@ -404,13 +446,14 @@ class TestTraitScorer:
         req = make_request(policy=RoutingPolicy.LOW_COST)
         model_low_cost = make_model(cost=AICost.VERY_LOW)
         model_high_cost = make_model(cost=AICost.HIGH)
-        
+
         score1 = scorer.score(req.requirements, model_low_cost, req.policy).total
         score2 = scorer.score(req.requirements, model_high_cost, req.policy).total
         assert score1 > score2
 
 
 # --- Selector & Runtime Tests (40) ---
+
 
 class TestModelSelectorAndRuntime:
     def test_runtime_initial_state(self, event_bus: MockEventBus) -> None:
@@ -471,7 +514,7 @@ class TestModelSelectorAndRuntime:
         rt.models.register(make_model(id="zzz", provider="p1"))
         rt.models.register(make_model(id="aaa", provider="p1"))
         rt.initialize()
-        
+
         req = make_request()
         decision = rt.select_model(req)
         assert decision.model.id == "aaa"
@@ -517,7 +560,7 @@ class TestModelSelectorAndRuntime:
         rt.providers.register(make_provider(id="p1"))
         rt.models.register(make_model(id="m1", provider="p1", caps=make_caps(json=False)))
         rt.initialize()
-        
+
         req = make_request(json=True)
         with pytest.raises(NoMatchingModelError) as exc_info:
             rt.select_model(req)
@@ -526,19 +569,30 @@ class TestModelSelectorAndRuntime:
     def test_policy_conflict_cost_wins(self, event_bus: MockEventBus) -> None:
         rt = IntelligenceRuntime(event_bus=event_bus)
         rt.providers.register(make_provider(id="p1"))
-        rt.models.register(make_model(id="m1", provider="p1", cost=AICost.HIGH, traits=make_traits(reasoning=AIReasoningLevel.EXTREME)))
+        rt.models.register(
+            make_model(
+                id="m1",
+                provider="p1",
+                cost=AICost.HIGH,
+                traits=make_traits(reasoning=AIReasoningLevel.EXTREME),
+            )
+        )
         rt.initialize()
-        
+
         req = make_request(policy=RoutingPolicy.HIGH_QUALITY, max_cost=AICost.LOW)
         with pytest.raises(NoMatchingModelError):
             rt.select_model(req)
 
-    def test_selection_started_event_published(self, runtime: IntelligenceRuntime, event_bus: MockEventBus) -> None:
+    def test_selection_started_event_published(
+        self, runtime: IntelligenceRuntime, event_bus: MockEventBus
+    ) -> None:
         req = make_request()
         runtime.select_model(req)
         assert any(isinstance(e, SelectionStarted) for e in event_bus.published_events)
 
-    def test_selection_completed_event_published(self, runtime: IntelligenceRuntime, event_bus: MockEventBus) -> None:
+    def test_selection_completed_event_published(
+        self, runtime: IntelligenceRuntime, event_bus: MockEventBus
+    ) -> None:
         req = make_request()
         runtime.select_model(req)
         assert any(isinstance(e, SelectionCompleted) for e in event_bus.published_events)
@@ -575,14 +629,17 @@ class TestModelSelectorAndRuntime:
         for i in range(100):
             rt.models.register(make_model(id=f"m_{i}", provider="p1", cost=AICost.LOW))
         rt.initialize()
-        
+
         req = make_request()
         import time
+
         start = time.monotonic()
         decision = rt.select_model(req)
         end = time.monotonic()
-        
-        assert decision.success if hasattr(decision, 'success') else True # Decision doesn't have success, just checking it returns
+
+        assert (
+            decision.success if hasattr(decision, "success") else True
+        )  # Decision doesn't have success, just checking it returns
         assert (end - start) < 0.1  # 100ms limit
 
     def test_provider_consistency_delayed_binding(self, event_bus: MockEventBus) -> None:
@@ -590,7 +647,7 @@ class TestModelSelectorAndRuntime:
         # Register model before provider exists
         rt.models.register(make_model(id="m1", provider="missing_p"))
         rt.initialize()
-        
+
         req = make_request()
         with pytest.raises(NoMatchingModelError) as exc_info:
             rt.select_model(req)
@@ -601,7 +658,7 @@ class TestModelSelectorAndRuntime:
         rt.providers.register(make_provider(id="p1"))
         rt.models.register(make_model(id="m1", provider="p1", status="experimental"))
         rt.initialize()
-        
+
         req = make_request()
         with pytest.raises(NoMatchingModelError):
             rt.select_model(req)
