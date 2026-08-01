@@ -1,0 +1,12 @@
+id: B001
+name: Python CLI Calculator
+difficulty: easy
+category: project_generation
+goal: >
+  Build a modern Python CLI calculator.
+success_criteria:
+  - Tests pass
+  - Git initialized
+  - README exists
+  - CLI works
+  - Project installs

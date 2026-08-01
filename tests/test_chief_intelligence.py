@@ -1,7 +1,7 @@
 """Comprehensive tests for the AI Intelligence Domain (Sprint 7.3A)."""
 
 import pytest
-
+from unittest.mock import MagicMock
 from eag.chief.intelligence import (
     AICapabilities,
     AIContextSize,
@@ -338,16 +338,16 @@ class TestValidationAndState:
         assert issubclass(SelectionError, IntelligenceError)
 
     def test_runtime_initial_state(self) -> None:
-        rt = IntelligenceRuntime()
+        rt = IntelligenceRuntime(event_bus=MagicMock())
         assert rt.state == RuntimeState.UNINITIALIZED
 
     def test_runtime_initialize(self) -> None:
-        rt = IntelligenceRuntime()
+        rt = IntelligenceRuntime(event_bus=MagicMock())
         rt.initialize()
         assert rt.state == RuntimeState.READY
 
     def test_runtime_metrics_defaults(self) -> None:
-        rt = IntelligenceRuntime()
+        rt = IntelligenceRuntime(event_bus=MagicMock())
         assert rt.metrics.registered_models == 0
         assert rt.metrics.average_confidence == 0.0
 

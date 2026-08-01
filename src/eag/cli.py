@@ -949,3 +949,55 @@ def path(start: str, end: str) -> None:
         click.echo(formatter.format_path(report))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
+
+# Add to src/eag/cli.py
+
+@app.command()
+def benchmark(
+    benchmark_id: str = typer.Argument("B001", help="The ID of the benchmark to run."),
+) -> None:
+    """Run an engineering benchmark."""
+    from eag.benchmark import BenchmarkRegistry, BenchmarkRunner
+    from eag.benchmark.chief_executor import ChiefBenchmarkExecutor
+
+    # 1. Initialize Registry
+    registry = BenchmarkRegistry()
+    
+    # 2. Load Benchmark (normally loaded from YAML, hardcoded for now)
+    from eag.benchmark import Benchmark, BenchmarkCategory, BenchmarkDifficulty
+    b001 = Benchmark(
+        id="B001",
+        name="Python CLI Calculator",
+        difficulty=BenchmarkDifficulty.EASY,
+        category=BenchmarkCategory.PROJECT_GENERATION,
+        goal="Build a modern Python CLI calculator with add, subtract, multiply, divide."
+    )
+    registry.register(b001)
+    
+    # 3. Initialize Runner with Chief Executor
+    runner = BenchmarkRunner(executor=ChiefBenchmarkExecutor())
+    
+    # 4. Run Benchmark
+    typer.echo(f"Starting benchmark {benchmark_id}...")
+    benchmark = registry.find(benchmark_id)
+    run, report = runner.run(benchmark)
+    
+    # 5. Print Report
+    typer.echo("\nBenchmark Report")
+    typer.echo("────────────────────────────────")
+    typer.echo(f"Run ID: {run.run_id}")
+    typer.echo(f"State: {run.state.value.upper()}")
+    typer.echo(f"Duration: {report.duration_ms:.2f} ms")
+    typer.echo(f"Outcome: {report.outcome.value.upper()}")
+    typer.echo(f"Overall Score: {report.score.overall}/100 ({report.score.level.value})")
+    typer.echo("\nScores:")
+    typer.echo(f"  Planning:       {report.score.planning}")
+    typer.echo(f"  Execution:      {report.score.execution}")
+    typer.echo(f"  Architecture:   {report.score.architecture}")
+    typer.echo(f"  Tests:          {report.score.tests}")
+    typer.echo(f"  Documentation:  {report.score.documentation}")
+    
+    if report.recommendations:
+        typer.echo("\nRecommendations:")
+        for rec in report.recommendations:
+            typer.echo(f"  - {rec}")
