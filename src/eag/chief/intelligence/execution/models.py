@@ -154,14 +154,16 @@ class RetryDecision:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FallbackReport:
     """Report detailing a fallback execution."""
+
     primary_provider: str
     fallback_provider: str
     success: bool
     attempts: int = 1
-    
+
     @property
     def fallback_used(self) -> bool:
         return self.primary_provider != self.fallback_provider
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelPricing:

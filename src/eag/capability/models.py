@@ -3,7 +3,6 @@
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
@@ -25,6 +24,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityMetadata:
     """The 'business card' for a capability."""
+
     id: str
     name: str
     kind: CapabilityKind = CapabilityKind.UNKNOWN
@@ -42,6 +42,7 @@ class CapabilityMetadata:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityRequest:
     """A request to execute a capability."""
+
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     capability_id: str
     goal_text: str = ""
@@ -54,6 +55,7 @@ class CapabilityRequest:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityContext:
     """Context provided to a capability during execution."""
+
     workspace_path: Path
     repository_path: Path | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict, hash=False)
@@ -65,6 +67,7 @@ class CapabilityContext:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityResult:
     """The immutable result of a capability execution."""
+
     request_id: str
     capability_id: str
     outcome: CapabilityOutcome
@@ -86,6 +89,7 @@ class CapabilityResult:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityEstimate:
     """Estimate of cost and duration for a capability."""
+
     capability_id: str
     estimated_duration_ms: float = 0.0
     estimated_cost: float = 0.0
@@ -95,6 +99,7 @@ class CapabilityEstimate:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityHealth:
     """Health status of a capability."""
+
     capability_id: str
     status: CapabilityStatus = CapabilityStatus.READY
     message: str = ""
@@ -103,13 +108,16 @@ class CapabilityHealth:
 @runtime_checkable
 class Capability(Protocol):
     """The contract for an engineering capability."""
+
     @property
     def metadata(self) -> CapabilityMetadata: ...
-    
+
     def supports(self, request: CapabilityRequest) -> bool: ...
-    
+
     def estimate(self, request: CapabilityRequest) -> CapabilityEstimate: ...
-    
-    def execute(self, request: CapabilityRequest, context: CapabilityContext) -> CapabilityResult: ...
-    
+
+    def execute(
+        self, request: CapabilityRequest, context: CapabilityContext
+    ) -> CapabilityResult: ...
+
     def health(self) -> CapabilityHealth: ...

@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class CapabilityKind(StrEnum):
     """The kind of engineering capability."""
+
     DISCOVERY = "discovery"
     WORKSPACE = "workspace"
     REPOSITORY = "repository"
@@ -18,6 +19,7 @@ class CapabilityKind(StrEnum):
 
 class CapabilityStatus(StrEnum):
     """Health status of a capability."""
+
     READY = "ready"
     DEGRADED = "degraded"
     FAILED = "failed"
@@ -26,6 +28,7 @@ class CapabilityStatus(StrEnum):
 
 class CapabilityOutcome(StrEnum):
     """The outcome of a capability execution."""
+
     SUCCESS = "success"
     FAILURE = "failure"
     SKIPPED = "skipped"
@@ -34,6 +37,7 @@ class CapabilityOutcome(StrEnum):
 
 class CapabilityState(StrEnum):
     """Lifecycle state of a capability execution."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"

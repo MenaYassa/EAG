@@ -12,7 +12,7 @@ class TaskScheduler:
         """Returns steps ready to execute, sorted by dependencies."""
         completed = completed_steps or set()
         ready: list[PlanStep] = []
-        
+
         for step in plan.steps:
             if step.step_id in completed:
                 continue
@@ -21,10 +21,10 @@ class TaskScheduler:
             # Check if all dependencies are completed
             if all(dep in completed for dep in step.dependencies):
                 ready.append(step)
-                
+
         if not ready and not all(s.step_id in completed for s in plan.steps):
             raise SchedulingError("Deadlock: no steps ready but plan not complete.")
-            
+
         return ready
 
     def get_next_step(self, plan: Plan, completed_steps: set[str] | None = None) -> PlanStep | None:

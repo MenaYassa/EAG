@@ -1,6 +1,5 @@
 """Run history for EAG Chief Runtime."""
 
-from collections.abc import Mapping
 from eag.chief.runtime.models import ChiefRun, RunResult
 
 

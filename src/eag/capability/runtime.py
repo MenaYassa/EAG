@@ -1,6 +1,7 @@
 """Capability runtime for EAG."""
 
 import time
+
 from eag.capability.enums import CapabilityOutcome, CapabilityState
 from eag.capability.models import (
     CapabilityContext,
@@ -23,11 +24,11 @@ class CapabilityRuntime:
     def execute(self, request: CapabilityRequest, context: CapabilityContext) -> CapabilityResult:
         """Executes a capability request."""
         start_time = time.monotonic()
-        
+
         try:
             capability = self._registry.find(request.capability_id)
             result = capability.execute(request, context)
-            
+
             duration = (time.monotonic() - start_time) * 1000
             # Enrich with actual duration if not set
             if result.duration_ms == 0.0:
@@ -40,10 +41,10 @@ class CapabilityRuntime:
                     artifacts=result.artifacts,
                     error=result.error,
                     duration_ms=duration,
-                    metadata=result.metadata
+                    metadata=result.metadata,
                 )
             return result
-            
+
         except Exception as e:
             duration = (time.monotonic() - start_time) * 1000
             return CapabilityResult(
@@ -52,5 +53,5 @@ class CapabilityRuntime:
                 outcome=CapabilityOutcome.FAILURE,
                 state=CapabilityState.FAILED,
                 error=str(e),
-                duration_ms=duration
+                duration_ms=duration,
             )

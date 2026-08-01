@@ -25,6 +25,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RunContext:
     """Context for a Chief run."""
+
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     goal_text: str
     priority: str = "NORMAL"
@@ -39,6 +40,7 @@ class RunContext:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PlanStep:
     """A single step in an execution plan."""
+
     step_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str = ""
@@ -56,6 +58,7 @@ class PlanStep:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Plan:
     """An execution plan produced by the planner."""
+
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     steps: tuple[PlanStep, ...] = ()
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -68,6 +71,7 @@ class Plan:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class StepResult:
     """The result of executing a single plan step."""
+
     step_id: str
     success: bool
     output: str = ""
@@ -84,6 +88,7 @@ class StepResult:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RunResult:
     """The final result of a Chief run."""
+
     run_id: str
     outcome: RunOutcome
     plan: Plan | None = None
@@ -95,6 +100,7 @@ class RunResult:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RunMetrics:
     """Metrics collected during a run."""
+
     planning_time_ms: float = 0.0
     execution_time_ms: float = 0.0
     validation_time_ms: float = 0.0
@@ -108,6 +114,7 @@ class RunMetrics:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RunCheckpoint:
     """A checkpoint for rollback."""
+
     checkpoint_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     step_id: str
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -120,6 +127,7 @@ class RunCheckpoint:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ChiefRun:
     """The complete history of a Chief run."""
+
     context: RunContext
     state: RunState = RunState.CREATED
     phase: RunPhase = RunPhase.INITIALIZATION
@@ -140,16 +148,19 @@ class ChiefRun:
 @runtime_checkable
 class Executor(Protocol):
     """Protocol for executing a plan step."""
+
     def execute_step(self, step: PlanStep, run: ChiefRun) -> StepResult: ...
 
 
 @runtime_checkable
 class Validator(Protocol):
     """Protocol for validating step results."""
+
     def validate(self, step: PlanStep, result: StepResult, run: ChiefRun) -> ValidationDecision: ...
 
 
 @runtime_checkable
 class Planner(Protocol):
     """Protocol for creating execution plans."""
+
     def create_plan(self, context: RunContext) -> Plan: ...

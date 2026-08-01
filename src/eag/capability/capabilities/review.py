@@ -1,8 +1,12 @@
 """Review capability for EAG."""
 
-from pathlib import Path
 
-from eag.capability.enums import CapabilityKind, CapabilityOutcome, CapabilityState, CapabilityStatus
+from eag.capability.enums import (
+    CapabilityKind,
+    CapabilityOutcome,
+    CapabilityState,
+    CapabilityStatus,
+)
 from eag.capability.models import (
     CapabilityContext,
     CapabilityEstimate,
@@ -17,7 +21,7 @@ from eag.review.runtime import ReviewRuntime
 
 class ReviewCapability:
     """Capability for reviewing engineering work."""
-    
+
     def __init__(self, review_runtime: ReviewRuntime) -> None:
         self._runtime = review_runtime
 
@@ -27,7 +31,7 @@ class ReviewCapability:
             id="review",
             name="Engineering Review",
             kind=CapabilityKind.REVIEW,
-            description="Analyze workspace and generate a review report."
+            description="Analyze workspace and generate a review report.",
         )
 
     def supports(self, request: CapabilityRequest) -> bool:
@@ -42,17 +46,20 @@ class ReviewCapability:
         review_ctx = ReviewContext(
             workspace_path=context.workspace_path,
             execution_success=request.parameters.get("execution_success", True),
-            metadata=request.parameters.get("review_metadata", {})
+            metadata=request.parameters.get("review_metadata", {}),
         )
-        
+
         report = self._runtime.review(review_ctx)
-        
+
         return CapabilityResult(
-            request_id=request.request_id, capability_id="review",
-            outcome=CapabilityOutcome.SUCCESS if report.decision == "approved" else CapabilityOutcome.FAILURE,
+            request_id=request.request_id,
+            capability_id="review",
+            outcome=CapabilityOutcome.SUCCESS
+            if report.decision == "approved"
+            else CapabilityOutcome.FAILURE,
             state=CapabilityState.COMPLETED,
             output=report.summary,
-            metadata={"decision": report.decision.value, "score": report.overall_score}
+            metadata={"decision": report.decision.value, "score": report.overall_score},
         )
 
     def health(self) -> CapabilityHealth:

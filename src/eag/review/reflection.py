@@ -8,13 +8,17 @@ class ReflectionEngine:
     """Generates engineering reflections based on review reports."""
 
     def reflect(self, report: ReviewReport) -> Reflection:
-        critical_issues = [i for f in report.findings for i in f.issues if i.severity == Severity.CRITICAL]
+        critical_issues = [
+            i for f in report.findings for i in f.issues if i.severity == Severity.CRITICAL
+        ]
         errors = [i for f in report.findings for i in f.issues if i.severity == Severity.ERROR]
         warnings = [i for f in report.findings for i in f.issues if i.severity == Severity.WARNING]
 
         if critical_issues:
             root_cause = "Critical failures detected during execution or analysis."
-            reasoning = "The implementation contains critical flaws that prevent it from functioning."
+            reasoning = (
+                "The implementation contains critical flaws that prevent it from functioning."
+            )
             actions = ("Fix critical errors", "Re-run execution", "Re-review")
             confidence = 0.99
         elif report.decision == ReviewDecision.CHANGES_REQUESTED:
@@ -37,5 +41,5 @@ class ReflectionEngine:
             root_cause=root_cause,
             reasoning=reasoning,
             confidence=confidence,
-            recommended_actions=actions
+            recommended_actions=actions,
         )

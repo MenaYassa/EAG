@@ -3,7 +3,6 @@
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
@@ -47,6 +46,7 @@ def _validate_score(value: int) -> int:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewIssue:
     """An immutable representation of an issue found during review."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     category: IssueCategory
     severity: Severity
@@ -70,6 +70,7 @@ class ReviewIssue:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewSuggestion:
     """An actionable suggestion generated during review."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     priority: SuggestionPriority
     message: str
@@ -87,6 +88,7 @@ class ReviewSuggestion:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewFinding:
     """A grouped set of issues and suggestions forming a specific finding."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     summary: str = ""
@@ -106,6 +108,7 @@ class ReviewFinding:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Reflection:
     """EAG's internal reasoning about the review results."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     root_cause: str
     reasoning: str
@@ -113,7 +116,9 @@ class Reflection:
     recommended_actions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "root_cause", _validate_non_empty_str(self.root_cause, "root_cause"))
+        object.__setattr__(
+            self, "root_cause", _validate_non_empty_str(self.root_cause, "root_cause")
+        )
         object.__setattr__(self, "reasoning", _validate_non_empty_str(self.reasoning, "reasoning"))
         object.__setattr__(self, "confidence", _validate_confidence(self.confidence))
         if not isinstance(self.recommended_actions, tuple):
@@ -123,6 +128,7 @@ class Reflection:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewMetrics:
     """Metrics collected during the review process."""
+
     issues_found: int = 0
     warnings: int = 0
     errors: int = 0
@@ -143,6 +149,7 @@ class ReviewMetrics:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewReport:
     """The final, immutable artifact produced by the Review Runtime."""
+
     review_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     decision: ReviewDecision
     overall_score: int
@@ -167,6 +174,7 @@ class ReviewReport:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReviewContext:
     """Context provided to analyzers during a review."""
+
     workspace_path: Path
     execution_success: bool = True
     artifacts: tuple[str, ...] = ()
@@ -181,4 +189,5 @@ class ReviewContext:
 @runtime_checkable
 class ReviewAnalyzer(Protocol):
     """The contract for a review analyzer."""
+
     def analyze(self, context: ReviewContext) -> tuple[ReviewIssue, ...]: ...

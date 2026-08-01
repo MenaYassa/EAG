@@ -21,10 +21,10 @@ from eag.benchmark.models import (
     BenchmarkEvaluator,
     BenchmarkExecutor,
     BenchmarkReport,
+    BenchmarkReporter,
     BenchmarkResult,
     BenchmarkRun,
     BenchmarkScore,
-    BenchmarkReporter,
     CapabilityProfile,
 )
 from eag.benchmark.registry import BenchmarkRegistry

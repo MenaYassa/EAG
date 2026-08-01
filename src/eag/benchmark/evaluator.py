@@ -3,9 +3,10 @@
 from eag.benchmark.enums import ScoreLevel
 from eag.benchmark.models import BenchmarkResult, BenchmarkScore
 
+
 class DefaultEvaluator:
     """Evaluates benchmark results and produces a score."""
-    
+
     def evaluate(self, result: BenchmarkResult) -> BenchmarkScore:
         if not result.success:
             return BenchmarkScore(
@@ -17,9 +18,9 @@ class DefaultEvaluator:
                 documentation=0,
                 recovery=0,
                 overall=0,
-                level=ScoreLevel.FAILING
+                level=ScoreLevel.FAILING,
             )
-            
+
         planning = 100
         execution = 100
         recovery = 100
@@ -33,14 +34,19 @@ class DefaultEvaluator:
         tests_score = parse_score("tests_pass")
         docs_score = parse_score("readme_exists")
         arch_score = parse_score("valid_structure")
-        
+
         overall = (planning + execution + recovery + tests_score + docs_score + arch_score) // 6
-        
-        level = ScoreLevel.EXCELLENT if overall >= 90 else \
-                ScoreLevel.GOOD if overall >= 75 else \
-                ScoreLevel.FAIR if overall > 50 else \
-                ScoreLevel.POOR
-                
+
+        level = (
+            ScoreLevel.EXCELLENT
+            if overall >= 90
+            else ScoreLevel.GOOD
+            if overall >= 75
+            else ScoreLevel.FAIR
+            if overall > 50
+            else ScoreLevel.POOR
+        )
+
         return BenchmarkScore(
             run_id=result.run_id,
             planning=planning,
@@ -50,5 +56,5 @@ class DefaultEvaluator:
             documentation=docs_score,
             recovery=recovery,
             overall=overall,
-            level=level
+            level=level,
         )

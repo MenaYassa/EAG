@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class RunState(StrEnum):
     """Lifecycle state of a Chief run."""
+
     CREATED = "created"
     RECEIVED = "received"
     ANALYZING = "analyzing"
@@ -33,8 +34,21 @@ class RunState(StrEnum):
             RunState.ANALYZING: {RunState.PLANNING, RunState.FAILED, RunState.CANCELLED},
             RunState.PLANNING: {RunState.READY, RunState.FAILED, RunState.CANCELLED},
             RunState.READY: {RunState.EXECUTING, RunState.CANCELLED},
-            RunState.EXECUTING: {RunState.VALIDATING, RunState.COMPLETED, RunState.FAILED, RunState.PAUSED, RunState.CANCELLED, RunState.ROLLING_BACK}, # Added COMPLETED here
-            RunState.VALIDATING: {RunState.EXECUTING, RunState.COMPLETED, RunState.FAILED, RunState.ROLLING_BACK, RunState.CANCELLED},
+            RunState.EXECUTING: {
+                RunState.VALIDATING,
+                RunState.COMPLETED,
+                RunState.FAILED,
+                RunState.PAUSED,
+                RunState.CANCELLED,
+                RunState.ROLLING_BACK,
+            },  # Added COMPLETED here
+            RunState.VALIDATING: {
+                RunState.EXECUTING,
+                RunState.COMPLETED,
+                RunState.FAILED,
+                RunState.ROLLING_BACK,
+                RunState.CANCELLED,
+            },
             RunState.PAUSED: {RunState.EXECUTING, RunState.CANCELLED},
             RunState.ROLLING_BACK: {RunState.FAILED, RunState.COMPLETED},
         }
@@ -43,6 +57,7 @@ class RunState(StrEnum):
 
 class RunPhase(StrEnum):
     """The current phase of a run."""
+
     INITIALIZATION = "initialization"
     ANALYSIS = "analysis"
     PLANNING = "planning"
@@ -53,6 +68,7 @@ class RunPhase(StrEnum):
 
 class RunOutcome(StrEnum):
     """The final outcome of a run."""
+
     SUCCESS = "success"
     FAILURE = "failure"
     CANCELLED = "cancelled"
@@ -61,6 +77,7 @@ class RunOutcome(StrEnum):
 
 class ValidationDecision(StrEnum):
     """Decisions the validator can make after an execution."""
+
     CONTINUE = "continue"
     RETRY = "retry"
     ROLLBACK = "rollback"
@@ -70,6 +87,7 @@ class ValidationDecision(StrEnum):
 
 class StepState(StrEnum):
     """Lifecycle state of a plan step."""
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"

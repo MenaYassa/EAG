@@ -1,15 +1,13 @@
 """Comprehensive tests for the Chief Capability Platform (Sprint 7.6)."""
 
-import pytest
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
+
+import pytest
 
 from eag.capability import (
     Capability,
     CapabilityContext,
-    CapabilityError,
-    CapabilityExecutionError,
     CapabilityKind,
     CapabilityMetadata,
     CapabilityNotFoundError,
@@ -26,70 +24,75 @@ from eag.capability import (
     TransformationCapability,
     WorkspaceCapability,
 )
-from eag.events import EventBus
-from eag.workspace.runtime import WorkspaceRuntime
-from eag.vcs.runtime import RepositoryRuntime
-from eag.source.runtime import SourceRuntime
-from eag.review.runtime import ReviewRuntime
-from eag.review.registry import AnalyzerRegistry
-
 
 # --- Mocks & Fixtures ---
+
 
 @dataclass
 class MockWorkspaceRuntime:
     writes: dict[Path, str] = field(default_factory=dict)
+
     def write(self, path: Path, content: str) -> None:
         self.writes[path] = content
+
     def read(self, path: Path) -> str:
         return self.writes.get(path, "")
+
 
 @dataclass
 class MockVCSRuntime:
     commits: list[str] = field(default_factory=list)
+
     def commit(self, message: str) -> str:
         self.commits.append(message)
         return "mock_commit_hash"
 
+
 @dataclass
 class MockSourceRuntime:
     def parse(self, path: Path, content: str):
-        from eag.source.models import SourceDocument, Language
+        from eag.source.models import Language, SourceDocument
+
         return SourceDocument(path=path, language=Language.PYTHON, checksum="mock")
+
 
 @dataclass
 class MockReviewRuntime:
     def review(self, context):
-        from eag.review.models import ReviewReport, ReviewMetrics
         from eag.review.enums import ReviewDecision
+        from eag.review.models import ReviewMetrics, ReviewReport
+
         return ReviewReport(
-            decision=ReviewDecision.APPROVED,
-            overall_score=100,
-            metrics=ReviewMetrics()
+            decision=ReviewDecision.APPROVED, overall_score=100, metrics=ReviewMetrics()
         )
+
 
 @pytest.fixture
 def workspace_runtime() -> MockWorkspaceRuntime:
     return MockWorkspaceRuntime()
 
+
 @pytest.fixture
 def vcs_runtime() -> MockVCSRuntime:
     return MockVCSRuntime()
+
 
 @pytest.fixture
 def source_runtime() -> MockSourceRuntime:
     return MockSourceRuntime()
 
+
 @pytest.fixture
 def review_runtime() -> MockReviewRuntime:
     return MockReviewRuntime()
+
 
 @pytest.fixture
 def registry(
     workspace_runtime: MockWorkspaceRuntime,
     vcs_runtime: MockVCSRuntime,
     source_runtime: MockSourceRuntime,
-    review_runtime: MockReviewRuntime
+    review_runtime: MockReviewRuntime,
 ) -> CapabilityRegistry:
     reg = CapabilityRegistry()
     reg.register(WorkspaceCapability(workspace_runtime))
@@ -98,9 +101,11 @@ def registry(
     reg.register(ReviewCapability(review_runtime))
     return reg
 
+
 @pytest.fixture
 def runtime(registry: CapabilityRegistry) -> CapabilityRuntime:
     return CapabilityRuntime(registry=registry)
+
 
 @pytest.fixture
 def context(tmp_path: Path) -> CapabilityContext:
@@ -109,10 +114,11 @@ def context(tmp_path: Path) -> CapabilityContext:
 
 # --- Model & Enum Tests (20) ---
 
+
 class TestCapabilityModels:
     def test_metadata_immutable(self) -> None:
         m = CapabilityMetadata(id="test", name="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             m.id = "new"  # type: ignore[misc]
 
     def test_metadata_invalid_id(self) -> None:
@@ -121,17 +127,22 @@ class TestCapabilityModels:
 
     def test_request_immutable(self) -> None:
         r = CapabilityRequest(capability_id="test")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.capability_id = "new"  # type: ignore[misc]
 
     def test_result_immutable(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED)
-        with pytest.raises(Exception):
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.SUCCESS,
+            state=CapabilityState.COMPLETED,
+        )
+        with pytest.raises(Exception, match=""):
             r.outcome = CapabilityOutcome.FAILURE  # type: ignore[misc]
 
     def test_context_immutable(self) -> None:
         c = CapabilityContext(workspace_path=Path("/tmp"))
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             c.workspace_path = Path("/")  # type: ignore[misc]
 
     def test_kind_values(self) -> None:
@@ -151,11 +162,21 @@ class TestCapabilityModels:
         assert CapabilityStatus.DISABLED == "disabled"
 
     def test_result_success_property(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED)
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.SUCCESS,
+            state=CapabilityState.COMPLETED,
+        )
         assert r.success is True
 
     def test_result_failure_property(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.FAILURE, state=CapabilityState.FAILED)
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.FAILURE,
+            state=CapabilityState.FAILED,
+        )
         assert r.success is False
 
     def test_metadata_defaults(self) -> None:
@@ -174,7 +195,12 @@ class TestCapabilityModels:
         assert c.metadata == {}
 
     def test_result_defaults(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED)
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.SUCCESS,
+            state=CapabilityState.COMPLETED,
+        )
         assert r.output == ""
         assert r.error is None
         assert r.duration_ms == 0.0
@@ -192,15 +218,28 @@ class TestCapabilityModels:
         assert c.metadata["k"] == "v"
 
     def test_result_metadata(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED, metadata={"k": "v"})
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.SUCCESS,
+            state=CapabilityState.COMPLETED,
+            metadata={"k": "v"},
+        )
         assert r.metadata["k"] == "v"
 
     def test_result_artifacts(self) -> None:
-        r = CapabilityResult(request_id="r", capability_id="c", outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED, artifacts=("file.txt",))
+        r = CapabilityResult(
+            request_id="r",
+            capability_id="c",
+            outcome=CapabilityOutcome.SUCCESS,
+            state=CapabilityState.COMPLETED,
+            artifacts=("file.txt",),
+        )
         assert "file.txt" in r.artifacts
 
 
 # --- Registry Tests (10) ---
+
 
 class TestCapabilityRegistry:
     def test_register(self, registry: CapabilityRegistry) -> None:
@@ -249,6 +288,7 @@ class TestCapabilityRegistry:
 
 # --- Workspace Capability Tests (10) ---
 
+
 class TestWorkspaceCapability:
     def test_metadata(self, workspace_runtime: MockWorkspaceRuntime) -> None:
         cap = WorkspaceCapability(workspace_runtime)
@@ -265,40 +305,47 @@ class TestWorkspaceCapability:
         req = CapabilityRequest(capability_id="other")
         assert cap.supports(req) is False
 
-    def test_execute_write(self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext) -> None:
+    def test_execute_write(
+        self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext
+    ) -> None:
         cap = WorkspaceCapability(workspace_runtime)
         req = CapabilityRequest(
             capability_id="workspace",
-            parameters={"operation": "write", "path": "test.txt", "content": "Hello"}
+            parameters={"operation": "write", "path": "test.txt", "content": "Hello"},
         )
         result = cap.execute(req, context)
         assert result.success is True
         assert workspace_runtime.writes[Path("test.txt")] == "Hello"
 
-    def test_execute_read(self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext) -> None:
+    def test_execute_read(
+        self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext
+    ) -> None:
         workspace_runtime.writes[Path("test.txt")] = "Hello"
         cap = WorkspaceCapability(workspace_runtime)
         req = CapabilityRequest(
-            capability_id="workspace",
-            parameters={"operation": "read", "path": "test.txt"}
+            capability_id="workspace", parameters={"operation": "read", "path": "test.txt"}
         )
         result = cap.execute(req, context)
         assert result.success is True
         assert result.output == "Hello"
 
-    def test_execute_missing_path(self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext) -> None:
+    def test_execute_missing_path(
+        self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext
+    ) -> None:
         cap = WorkspaceCapability(workspace_runtime)
         req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write"})
         result = cap.execute(req, context)
         assert result.success is False
         assert "Missing 'path'" in result.error
 
-    def test_execute_unsupported_op(self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext) -> None:
+    def test_execute_unsupported_op(
+        self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext
+    ) -> None:
         cap = WorkspaceCapability(workspace_runtime)
         req = CapabilityRequest(
             request_id="test_req_1",
             capability_id="workspace",
-            parameters={"operation": "delete", "path": "dummy.txt"}
+            parameters={"operation": "delete", "path": "dummy.txt"},
         )
         result = cap.execute(req, context)
         assert result is not None
@@ -322,11 +369,12 @@ class TestWorkspaceCapability:
 
 # --- Runtime Tests (15) ---
 
+
 class TestCapabilityRuntime:
     def test_execute_success(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
         req = CapabilityRequest(
             capability_id="workspace",
-            parameters={"operation": "write", "path": "test.txt", "content": "Hi"}
+            parameters={"operation": "write", "path": "test.txt", "content": "Hi"},
         )
         result = runtime.execute(req, context)
         assert result.success is True
@@ -335,22 +383,25 @@ class TestCapabilityRuntime:
     def test_execute_failure(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
         req = CapabilityRequest(
             capability_id="workspace",
-            parameters={"operation": "write"} # Missing path
+            parameters={"operation": "write"},  # Missing path
         )
         result = runtime.execute(req, context)
         assert result.success is False
         assert "Missing 'path'" in result.error
 
-    def test_execute_capability_not_found(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_capability_not_found(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         req = CapabilityRequest(capability_id="missing")
         result = runtime.execute(req, context)
         assert result.success is False
         assert "not found" in result.error
 
-    def test_execute_repository_commit(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_repository_commit(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         req = CapabilityRequest(
-            capability_id="repository",
-            parameters={"operation": "commit", "message": "Test commit"}
+            capability_id="repository", parameters={"operation": "commit", "message": "Test commit"}
         )
         result = runtime.execute(req, context)
         assert result.success is True
@@ -369,52 +420,84 @@ class TestCapabilityRuntime:
         rt = CapabilityRuntime()
         assert len(rt.registry.list()) == 0
 
-    def test_execute_preserves_request_id(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_preserves_request_id(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         req = CapabilityRequest(
             capability_id="workspace",
             parameters={"operation": "write", "path": "t.txt", "content": "1"},
-            request_id="custom_id"
+            request_id="custom_id",
         )
         result = runtime.execute(req, context)
         assert result.request_id == "custom_id"
 
-    def test_execute_preserves_capability_id(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write", "path": "t.txt", "content": "1"})
+    def test_execute_preserves_capability_id(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
+        req = CapabilityRequest(
+            capability_id="workspace",
+            parameters={"operation": "write", "path": "t.txt", "content": "1"},
+        )
         result = runtime.execute(req, context)
         assert result.capability_id == "workspace"
 
-    def test_execute_duration_measured(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write", "path": "t.txt", "content": "1"})
+    def test_execute_duration_measured(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
+        req = CapabilityRequest(
+            capability_id="workspace",
+            parameters={"operation": "write", "path": "t.txt", "content": "1"},
+        )
         result = runtime.execute(req, context)
         assert result.duration_ms >= 0.0
 
-    def test_execute_state_completed(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write", "path": "t.txt", "content": "1"})
+    def test_execute_state_completed(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
+        req = CapabilityRequest(
+            capability_id="workspace",
+            parameters={"operation": "write", "path": "t.txt", "content": "1"},
+        )
         result = runtime.execute(req, context)
         assert result.state == CapabilityState.COMPLETED
 
-    def test_execute_state_failed(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_state_failed(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write"})
         result = runtime.execute(req, context)
         assert result.state == CapabilityState.FAILED
 
-    def test_execute_outcome_success(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write", "path": "t.txt", "content": "1"})
+    def test_execute_outcome_success(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
+        req = CapabilityRequest(
+            capability_id="workspace",
+            parameters={"operation": "write", "path": "t.txt", "content": "1"},
+        )
         result = runtime.execute(req, context)
         assert result.outcome == CapabilityOutcome.SUCCESS
 
-    def test_execute_outcome_failure(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_outcome_failure(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write"})
         result = runtime.execute(req, context)
         assert result.outcome == CapabilityOutcome.FAILURE
 
-    def test_execute_artifacts_empty(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "write", "path": "t.txt", "content": "1"})
+    def test_execute_artifacts_empty(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
+        req = CapabilityRequest(
+            capability_id="workspace",
+            parameters={"operation": "write", "path": "t.txt", "content": "1"},
+        )
         result = runtime.execute(req, context)
         assert result.artifacts == ()
 
 
 # --- Composite Capability Tests (10) ---
+
 
 class TestCompositeCapability:
     def test_metadata(self, runtime: CapabilityRuntime) -> None:
@@ -433,10 +516,16 @@ class TestCompositeCapability:
             capability_id="composite",
             parameters={
                 "workflow": [
-                    {"capability_id": "workspace", "parameters": {"operation": "write", "path": "t.txt", "content": "1"}},
-                    {"capability_id": "repository", "parameters": {"operation": "commit", "message": "Init"}}
+                    {
+                        "capability_id": "workspace",
+                        "parameters": {"operation": "write", "path": "t.txt", "content": "1"},
+                    },
+                    {
+                        "capability_id": "repository",
+                        "parameters": {"operation": "commit", "message": "Init"},
+                    },
                 ]
-            }
+            },
         )
         result = cap.execute(req, context)
         assert result.success is True
@@ -447,16 +536,21 @@ class TestCompositeCapability:
             capability_id="composite",
             parameters={
                 "workflow": [
-                    {"capability_id": "workspace", "parameters": {"operation": "write"}}, # Missing path
-                    {"capability_id": "repository", "parameters": {"operation": "commit"}}
+                    {
+                        "capability_id": "workspace",
+                        "parameters": {"operation": "write"},
+                    },  # Missing path
+                    {"capability_id": "repository", "parameters": {"operation": "commit"}},
                 ]
-            }
+            },
         )
         result = cap.execute(req, context)
         assert result.success is False
         assert "Workflow failed" in result.error
 
-    def test_execute_empty_workflow(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_empty_workflow(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         cap = CompositeCapability(runtime)
         req = CapabilityRequest(capability_id="composite", parameters={"workflow": []})
         result = cap.execute(req, context)
@@ -471,25 +565,30 @@ class TestCompositeCapability:
         cap = CompositeCapability(runtime)
         assert isinstance(cap, Capability)
 
-    def test_execute_preserves_request_id(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_preserves_request_id(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         cap = CompositeCapability(runtime)
         req = CapabilityRequest(
-            capability_id="composite",
-            parameters={"workflow": []},
-            request_id="custom_id"
+            capability_id="composite", parameters={"workflow": []}, request_id="custom_id"
         )
         result = cap.execute(req, context)
         assert result.request_id == "custom_id"
 
-    def test_execute_metadata_contains_results(self, runtime: CapabilityRuntime, context: CapabilityContext) -> None:
+    def test_execute_metadata_contains_results(
+        self, runtime: CapabilityRuntime, context: CapabilityContext
+    ) -> None:
         cap = CompositeCapability(runtime)
         req = CapabilityRequest(
             capability_id="composite",
             parameters={
                 "workflow": [
-                    {"capability_id": "workspace", "parameters": {"operation": "write", "path": "t.txt", "content": "1"}}
+                    {
+                        "capability_id": "workspace",
+                        "parameters": {"operation": "write", "path": "t.txt", "content": "1"},
+                    }
                 ]
-            }
+            },
         )
         result = cap.execute(req, context)
         assert "results" in result.metadata

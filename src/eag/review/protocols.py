@@ -8,5 +8,5 @@ from eag.review.models import ReviewIssue
 @runtime_checkable
 class ReviewAnalyzer(Protocol):
     """The contract for a review analyzer."""
-    def analyze(self, context: any) -> tuple[ReviewIssue, ...]:
-        ...
+
+    def analyze(self, context: any) -> tuple[ReviewIssue, ...]: ...
