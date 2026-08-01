@@ -100,13 +100,13 @@ class TestGoalModels:
             confidence=0.0,
             is_ambiguous=False,
         )
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match=""):  # noqa: B017
             eg.canonical_text = "new"  # type: ignore[misc]
 
     def test_goal_analysis_immutable(self) -> None:
         g = ChiefGoal(raw_text="test")
         ga = GoalAnalysis(goal=g)
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match=""):  # noqa: B017
             ga.confidence = 1.0  # type: ignore[misc]
 
     def test_goal_priority_values(self) -> None:

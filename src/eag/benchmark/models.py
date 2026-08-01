@@ -26,6 +26,7 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Benchmark:
     """Immutable specification of a benchmark."""
+
     id: str
     name: str
     description: str = ""
@@ -47,6 +48,7 @@ class Benchmark:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BenchmarkRun:
     """Tracks the execution state of a benchmark."""
+
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     benchmark_id: str
     state: BenchmarkState = BenchmarkState.CREATED
@@ -59,6 +61,7 @@ class BenchmarkRun:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BenchmarkResult:
     """The raw outcome of running a benchmark."""
+
     run_id: str
     benchmark_id: str
     success: bool
@@ -74,6 +77,7 @@ class BenchmarkResult:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BenchmarkScore:
     """Individual scores for a benchmark run."""
+
     run_id: str
     planning: int = 0
     execution: int = 0
@@ -85,7 +89,15 @@ class BenchmarkScore:
     level: ScoreLevel = ScoreLevel.FAILING
 
     def __post_init__(self) -> None:
-        for field_name in ["planning", "execution", "architecture", "tests", "documentation", "recovery", "overall"]:
+        for field_name in [
+            "planning",
+            "execution",
+            "architecture",
+            "tests",
+            "documentation",
+            "recovery",
+            "overall",
+        ]:
             val = getattr(self, field_name)
             if not isinstance(val, int) or not (0 <= val <= 100):
                 raise ValueError(f"{field_name} must be an integer between 0 and 100")
@@ -94,6 +106,7 @@ class BenchmarkScore:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BenchmarkReport:
     """The final generated report."""
+
     run_id: str
     benchmark_id: str
     outcome: BenchmarkOutcome
@@ -106,6 +119,7 @@ class BenchmarkReport:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CapabilityProfile:
     """Aggregation of scores across categories."""
+
     profiles: Mapping[BenchmarkCategory, int] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -115,16 +129,19 @@ class CapabilityProfile:
 @runtime_checkable
 class BenchmarkExecutor(Protocol):
     """Protocol for executing a benchmark task."""
+
     def execute(self, benchmark: Benchmark, workspace: Path) -> BenchmarkResult: ...
 
 
 @runtime_checkable
 class BenchmarkEvaluator(Protocol):
     """Protocol for evaluating benchmark results."""
+
     def evaluate(self, result: BenchmarkResult) -> BenchmarkScore: ...
 
 
 @runtime_checkable
 class BenchmarkReporter(Protocol):
     """Protocol for generating reports."""
+
     def generate(self, result: BenchmarkResult, score: BenchmarkScore) -> BenchmarkReport: ...

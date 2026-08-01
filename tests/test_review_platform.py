@@ -1,11 +1,11 @@
 """Comprehensive tests for the Engineering Review Platform (Sprint 7.5)."""
 
-import pytest
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from eag.events import EventBus
+import pytest
+
 from eag.review import (
     AnalyzerError,
     AnalyzerRegistry,
@@ -19,15 +19,14 @@ from eag.review import (
     ReviewContext,
     ReviewDecision,
     ReviewError,
-    ReviewEvent,
     ReviewFinding,
     ReviewIssue,
     ReviewMetrics,
     ReviewReport,
     ReviewRuntime,
     ReviewStarted,
-    ReviewSuggestion,
     ReviewState,
+    ReviewSuggestion,
     ReviewValidationError,
     Severity,
     SuggestionGenerated,
@@ -40,12 +39,15 @@ from eag.review.events import IssueDetected, ReflectionCompleted, ReflectionStar
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
+
 
 @pytest.fixture
 def event_bus() -> MockEventBus:
     return MockEventBus()
+
 
 @pytest.fixture
 def registry() -> AnalyzerRegistry:
@@ -55,23 +57,31 @@ def registry() -> AnalyzerRegistry:
     reg.register("docs", DocumentationAnalyzer())
     return reg
 
+
 @pytest.fixture
 def runtime(registry: AnalyzerRegistry, event_bus: MockEventBus) -> ReviewRuntime:
     return ReviewRuntime(registry=registry, event_bus=event_bus)
 
-def make_context(exec_success: bool = True, tests_pass: bool = True, tests_exist: bool = True, readme_exists: bool = True) -> ReviewContext:
+
+def make_context(
+    exec_success: bool = True,
+    tests_pass: bool = True,
+    tests_exist: bool = True,
+    readme_exists: bool = True,
+) -> ReviewContext:
     return ReviewContext(
         workspace_path=Path("/tmp"),
         execution_success=exec_success,
         metadata={
             "tests_pass": tests_pass,
             "tests_exist": tests_exist,
-            "readme_exists": readme_exists
-        }
+            "readme_exists": readme_exists,
+        },
     )
 
 
 # --- Enum Tests (15) ---
+
 
 class TestReviewEnums:
     def test_review_state_values(self) -> None:
@@ -130,10 +140,11 @@ class TestReviewEnums:
 
 # --- Model Tests (50) ---
 
+
 class TestReviewModels:
     def test_review_issue_immutable(self) -> None:
         i = ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             i.title = "new"  # type: ignore[misc]
 
     def test_review_issue_invalid_category(self) -> None:
@@ -150,23 +161,34 @@ class TestReviewModels:
 
     def test_review_issue_confidence_validation(self) -> None:
         with pytest.raises(ValueError):
-            ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", confidence=1.5)
+            ReviewIssue(
+                category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", confidence=1.5
+            )
 
     def test_review_issue_confidence_type_validation(self) -> None:
         with pytest.raises(TypeError):
-            ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", confidence="high")  # type: ignore[arg-type]
+            ReviewIssue(
+                category=IssueCategory.STYLE,
+                severity=Severity.WARNING,
+                title="T",
+                confidence="high",
+            )  # type: ignore[arg-type]
 
     def test_review_issue_metadata(self) -> None:
-        i = ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", metadata={"k": "v"})
+        i = ReviewIssue(
+            category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", metadata={"k": "v"}
+        )
         assert i.metadata["k"] == "v"
 
     def test_review_issue_invalid_metadata(self) -> None:
         with pytest.raises(TypeError):
-            ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", metadata="bad")  # type: ignore[arg-type]
+            ReviewIssue(
+                category=IssueCategory.STYLE, severity=Severity.WARNING, title="T", metadata="bad"
+            )  # type: ignore[arg-type]
 
     def test_review_suggestion_immutable(self) -> None:
         s = ReviewSuggestion(priority=SuggestionPriority.HIGH, message="Fix it")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             s.message = "new"  # type: ignore[misc]
 
     def test_review_suggestion_invalid_priority(self) -> None:
@@ -178,12 +200,14 @@ class TestReviewModels:
             ReviewSuggestion(priority=SuggestionPriority.HIGH, message="")
 
     def test_review_suggestion_metadata(self) -> None:
-        s = ReviewSuggestion(priority=SuggestionPriority.HIGH, message="Fix it", metadata={"k": "v"})
+        s = ReviewSuggestion(
+            priority=SuggestionPriority.HIGH, message="Fix it", metadata={"k": "v"}
+        )
         assert s.metadata["k"] == "v"
 
     def test_review_finding_immutable(self) -> None:
         f = ReviewFinding(title="Finding")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             f.title = "new"  # type: ignore[misc]
 
     def test_review_finding_empty_title(self) -> None:
@@ -218,7 +242,7 @@ class TestReviewModels:
 
     def test_reflection_immutable(self) -> None:
         r = Reflection(root_cause="Root", reasoning="Reason")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.root_cause = "new"  # type: ignore[misc]
 
     def test_reflection_empty_root_cause(self) -> None:
@@ -243,7 +267,7 @@ class TestReviewModels:
 
     def test_review_metrics_immutable(self) -> None:
         m = ReviewMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             m.issues_found = 5  # type: ignore[misc]
 
     def test_review_metrics_negative_value(self) -> None:
@@ -265,7 +289,7 @@ class TestReviewModels:
 
     def test_review_report_immutable(self) -> None:
         r = ReviewReport(decision=ReviewDecision.APPROVED, overall_score=90)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.decision = ReviewDecision.REJECTED  # type: ignore[misc]
 
     def test_review_report_invalid_decision(self) -> None:
@@ -308,7 +332,9 @@ class TestReviewModels:
         assert c.metadata["k"] == "v"
 
     def test_review_issue_creation(self) -> None:
-        i = ReviewIssue(category=IssueCategory.TESTING, severity=Severity.ERROR, title="Missing tests")
+        i = ReviewIssue(
+            category=IssueCategory.TESTING, severity=Severity.ERROR, title="Missing tests"
+        )
         assert i.category == IssueCategory.TESTING
         assert i.severity == Severity.ERROR
         assert i.title == "Missing tests"
@@ -320,13 +346,19 @@ class TestReviewModels:
         assert s.message == "Add tests"
 
     def test_review_finding_creation(self) -> None:
-        i = ReviewIssue(category=IssueCategory.TESTING, severity=Severity.ERROR, title="Missing tests")
+        i = ReviewIssue(
+            category=IssueCategory.TESTING, severity=Severity.ERROR, title="Missing tests"
+        )
         f = ReviewFinding(title="Test Gap", issues=(i,))
         assert len(f.issues) == 1
         assert f.issues[0].title == "Missing tests"
 
     def test_reflection_creation(self) -> None:
-        r = Reflection(root_cause="Lack of coverage", reasoning="Tests weren't generated", recommended_actions=("Gen tests",))
+        r = Reflection(
+            root_cause="Lack of coverage",
+            reasoning="Tests weren't generated",
+            recommended_actions=("Gen tests",),
+        )
         assert r.root_cause == "Lack of coverage"
         assert len(r.recommended_actions) == 1
 
@@ -362,6 +394,7 @@ class TestReviewModels:
 
 # --- Error Tests (5) ---
 
+
 class TestReviewErrors:
     def test_review_error_hierarchy(self) -> None:
         assert issubclass(AnalyzerError, ReviewError)
@@ -387,34 +420,37 @@ class TestReviewErrors:
 
 # --- Event Tests (5) ---
 
+
 class TestReviewEvents:
     def test_review_started_immutable(self) -> None:
         e = ReviewStarted(review_id="r1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             e.review_id = "r2"  # type: ignore[misc]
 
     def test_review_completed_immutable(self) -> None:
         e = ReviewCompleted(review_id="r1", decision="approved", score=100)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             e.score = 90  # type: ignore[misc]
 
     def test_issue_detected_immutable(self) -> None:
         e = IssueDetected(review_id="r1", issue_id="i1", severity="warning")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             e.severity = "error"  # type: ignore[misc]
 
     def test_suggestion_generated_immutable(self) -> None:
         e = SuggestionGenerated(review_id="r1", suggestion_id="s1", priority="high")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             e.priority = "low"  # type: ignore[misc]
 
     def test_event_timestamp_auto(self) -> None:
         from datetime import datetime
+
         e = ReviewStarted(review_id="r1")
         assert isinstance(e.timestamp, datetime)
 
 
 # --- Registry & Analyzer Tests (20) ---
+
 
 class TestRegistryAndAnalyzers:
     def test_registry_register(self, registry: AnalyzerRegistry) -> None:
@@ -476,6 +512,7 @@ class TestRegistryAndAnalyzers:
 
 # --- Reflection Engine Tests (10) ---
 
+
 class TestReflectionEngine:
     def test_reflect_approved(self) -> None:
         engine = ReflectionEngine()
@@ -486,33 +523,46 @@ class TestReflectionEngine:
 
     def test_reflect_rejected(self) -> None:
         engine = ReflectionEngine()
-        issue = ReviewIssue(category=IssueCategory.CORRECTNESS, severity=Severity.CRITICAL, title="Crash")
+        issue = ReviewIssue(
+            category=IssueCategory.CORRECTNESS, severity=Severity.CRITICAL, title="Crash"
+        )
         finding = ReviewFinding(title="Fail", issues=(issue,))
-        report = ReviewReport(decision=ReviewDecision.REJECTED, overall_score=0, findings=(finding,))
+        report = ReviewReport(
+            decision=ReviewDecision.REJECTED, overall_score=0, findings=(finding,)
+        )
         refl = engine.reflect(report)
         assert "Critical failures" in refl.root_cause
         assert refl.confidence == 0.99
 
     def test_reflect_changes_requested(self) -> None:
         engine = ReflectionEngine()
-        issue = ReviewIssue(category=IssueCategory.TESTING, severity=Severity.ERROR, title="No tests")
+        issue = ReviewIssue(
+            category=IssueCategory.TESTING, severity=Severity.ERROR, title="No tests"
+        )
         finding = ReviewFinding(title="Fail", issues=(issue,))
-        report = ReviewReport(decision=ReviewDecision.CHANGES_REQUESTED, overall_score=50, findings=(finding,))
+        report = ReviewReport(
+            decision=ReviewDecision.CHANGES_REQUESTED, overall_score=50, findings=(finding,)
+        )
         refl = engine.reflect(report)
         assert "Quality thresholds" in refl.root_cause
         assert refl.confidence == 0.95
 
     def test_reflect_warnings(self) -> None:
         engine = ReflectionEngine()
-        issue = ReviewIssue(category=IssueCategory.DOCUMENTATION, severity=Severity.WARNING, title="No docs")
+        issue = ReviewIssue(
+            category=IssueCategory.DOCUMENTATION, severity=Severity.WARNING, title="No docs"
+        )
         finding = ReviewFinding(title="Warn", issues=(issue,))
-        report = ReviewReport(decision=ReviewDecision.APPROVED_WITH_WARNINGS, overall_score=85, findings=(finding,))
+        report = ReviewReport(
+            decision=ReviewDecision.APPROVED_WITH_WARNINGS, overall_score=85, findings=(finding,)
+        )
         refl = engine.reflect(report)
         assert "minor maintainability" in refl.root_cause.lower()
         assert refl.confidence == 0.90
 
 
 # --- Runtime Tests (20) ---
+
 
 class TestReviewRuntime:
     def test_runtime_review_success(self, runtime: ReviewRuntime) -> None:
@@ -540,7 +590,9 @@ class TestReviewRuntime:
         assert report.decision == ReviewDecision.APPROVED_WITH_WARNINGS
         assert report.overall_score == 95  # 100 - 5
 
-    def test_runtime_review_events_published(self, runtime: ReviewRuntime, event_bus: MockEventBus) -> None:
+    def test_runtime_review_events_published(
+        self, runtime: ReviewRuntime, event_bus: MockEventBus
+    ) -> None:
         ctx = make_context()
         runtime.review(ctx)
         event_types = [type(e) for e in event_bus.published_events]
@@ -549,7 +601,9 @@ class TestReviewRuntime:
         assert ReflectionStarted in event_types
         assert ReflectionCompleted in event_types
 
-    def test_runtime_review_issue_events_published(self, runtime: ReviewRuntime, event_bus: MockEventBus) -> None:
+    def test_runtime_review_issue_events_published(
+        self, runtime: ReviewRuntime, event_bus: MockEventBus
+    ) -> None:
         ctx = make_context(tests_exist=False)
         runtime.review(ctx)
         assert any(isinstance(e, IssueDetected) for e in event_bus.published_events)

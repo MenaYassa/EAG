@@ -1,18 +1,28 @@
 """Comprehensive tests for the Chief Runtime Platform (Sprint 7.4)."""
 
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
-from pathlib import Path
+
+import pytest
+
+from eag.capability import (
+    CapabilityKind,
+    CapabilityMetadata,
+    CapabilityOutcome,
+    CapabilityRegistry,
+    CapabilityRequest,
+    CapabilityResult,
+    CapabilityRuntime,
+    CapabilityState,
+)
 from eag.chief.runtime import (
     ChiefRun,
     ChiefRuntime,
     Coordinator,
     DefaultValidator,
-    Executor,
     Plan,
     PlanStep,
-    Planner,
+    RunCheckpoint,
     RunContext,
     RunHistory,
     RunMetrics,
@@ -24,11 +34,8 @@ from eag.chief.runtime import (
     StepResult,
     TaskScheduler,
     ValidationDecision,
-    Validator,
-    RunCheckpoint
 )
-from eag.chief.runtime.planner import DefaultPlanner
-from eag.chief.runtime.errors import ChiefRuntimeError, RunStateError, SchedulingError
+from eag.chief.runtime.errors import ChiefRuntimeError, SchedulingError
 from eag.chief.runtime.events import (
     ExecutionCompleted,
     ExecutionStarted,
@@ -39,20 +46,16 @@ from eag.chief.runtime.events import (
     ValidationCompleted,
     ValidationStarted,
 )
+from eag.chief.runtime.planner import DefaultPlanner
 from eag.events import EventBus
-from eag.capability import (
-    CapabilityRegistry, 
-    CapabilityRuntime, 
-    CapabilityMetadata, 
-    CapabilityKind, 
-    CapabilityRequest, 
-    CapabilityResult, 
-    CapabilityOutcome, 
-    CapabilityState
-)
+
+
 class MockSuccessCapability:
     """Mock capability that succeeds for any requested operation/capability_id."""
-    def __init__(self, cap_id: str = "workspace", kind: CapabilityKind = CapabilityKind.WORKSPACE) -> None:
+
+    def __init__(
+        self, cap_id: str = "workspace", kind: CapabilityKind = CapabilityKind.WORKSPACE
+    ) -> None:
         self._id = cap_id
         self._kind = kind
 
@@ -62,7 +65,7 @@ class MockSuccessCapability:
             id=self._id,
             name=f"Mock {self._id.capitalize()}",
             kind=self._kind,
-            description="Mock capability for unit testing."
+            description="Mock capability for unit testing.",
         )
 
     def supports(self, request: CapabilityRequest) -> bool:
@@ -74,8 +77,9 @@ class MockSuccessCapability:
             capability_id=request.capability_id,
             outcome=CapabilityOutcome.SUCCESS,
             state=CapabilityState.COMPLETED,
-            output="Mock execution successful"
+            output="Mock execution successful",
         )
+
 
 class MockFailingCapability:
     def __init__(self, cap_id: str = "failing_cap") -> None:
@@ -87,7 +91,7 @@ class MockFailingCapability:
             id=self._id,
             name=f"Failing {self._id.capitalize()}",
             kind=CapabilityKind.WORKSPACE,
-            description="Fails everything."
+            description="Fails everything.",
         )
 
     def supports(self, request: CapabilityRequest) -> bool:
@@ -99,18 +103,20 @@ class MockFailingCapability:
             capability_id=request.capability_id,
             outcome=CapabilityOutcome.FAILURE,
             state=CapabilityState.FAILED,
-            error="Intentional test failure"
+            error="Intentional test failure",
         )
+
 
 @pytest.fixture
 def capability_runtime() -> CapabilityRuntime:
     registry = CapabilityRegistry()
-    
+
     # Register mock capabilities for all IDs emitted by MockPlanner and DefaultPlanner
     for cap_id in ("analyze", "execute", "workspace", "repository", "transform", "review"):
         registry.register(MockSuccessCapability(cap_id=cap_id))
-        
+
     return CapabilityRuntime(registry=registry)
+
 
 @pytest.fixture
 def chief_runtime(capability_runtime):
@@ -118,14 +124,24 @@ def chief_runtime(capability_runtime):
     registry.register_planner("default", DefaultPlanner())
     registry.register_validator("default", DefaultValidator())
     return ChiefRuntime(registry=registry, event_bus=EventBus())
+
+
 # Update the MockPlanner class in tests/test_chief_runtime.py
+
 
 class MockPlanner:
     def create_plan(self, context: RunContext) -> Plan:
-        return Plan(steps=(
-            PlanStep(step_id="step_1", name="Step 1", capability_id="analyze"),
-            PlanStep(step_id="step_2", name="Step 2", capability_id="execute", dependencies=("step_1",)),
-        ))
+        return Plan(
+            steps=(
+                PlanStep(step_id="step_1", name="Step 1", capability_id="analyze"),
+                PlanStep(
+                    step_id="step_2",
+                    name="Step 2",
+                    capability_id="execute",
+                    dependencies=("step_1",),
+                ),
+            )
+        )
 
 
 class MockExecutor:
@@ -148,6 +164,7 @@ class AlwaysFailExecutor:
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
 
@@ -155,6 +172,7 @@ class MockEventBus:
 @pytest.fixture
 def event_bus() -> MockEventBus:
     return MockEventBus()
+
 
 @pytest.fixture
 def registry() -> RuntimeRegistry:
@@ -164,9 +182,11 @@ def registry() -> RuntimeRegistry:
     reg.register_validator("default", DefaultValidator(max_retries=1))
     return reg
 
+
 @pytest.fixture
 def runtime(registry: RuntimeRegistry, event_bus: MockEventBus) -> ChiefRuntime:
     return ChiefRuntime(registry=registry, event_bus=event_bus)
+
 
 @pytest.fixture
 def context() -> RunContext:
@@ -174,6 +194,7 @@ def context() -> RunContext:
 
 
 # --- Enum & State Tests (15) ---
+
 
 class TestRunState:
     def test_initial_state(self) -> None:
@@ -235,6 +256,7 @@ class TestRunState:
 
 # --- Model Tests (25) ---
 
+
 class TestRuntimeModels:
     def test_run_context_creation(self) -> None:
         c = RunContext(goal_text="Test goal")
@@ -247,7 +269,7 @@ class TestRuntimeModels:
 
     def test_run_context_immutable(self) -> None:
         c = RunContext(goal_text="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             c.goal_text = "new"  # type: ignore[misc]
 
     def test_plan_step_creation(self) -> None:
@@ -261,7 +283,7 @@ class TestRuntimeModels:
 
     def test_plan_step_immutable(self) -> None:
         s = PlanStep(name="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             s.name = "new"  # type: ignore[misc]
 
     def test_plan_creation(self) -> None:
@@ -271,7 +293,7 @@ class TestRuntimeModels:
 
     def test_plan_immutable(self) -> None:
         p = Plan()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             p.steps = ()  # type: ignore[misc]
 
     def test_step_result_creation(self) -> None:
@@ -280,7 +302,7 @@ class TestRuntimeModels:
 
     def test_step_result_immutable(self) -> None:
         r = StepResult(step_id="s1", success=True)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.success = False  # type: ignore[misc]
 
     def test_run_result_creation(self) -> None:
@@ -289,7 +311,7 @@ class TestRuntimeModels:
 
     def test_run_result_immutable(self) -> None:
         r = RunResult(run_id="r1", outcome=RunOutcome.SUCCESS)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.outcome = RunOutcome.FAILURE  # type: ignore[misc]
 
     def test_run_metrics_defaults(self) -> None:
@@ -299,7 +321,7 @@ class TestRuntimeModels:
 
     def test_run_metrics_immutable(self) -> None:
         m = RunMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             m.retries = 5  # type: ignore[misc]
 
     def test_chief_run_creation(self) -> None:
@@ -311,7 +333,7 @@ class TestRuntimeModels:
     def test_chief_run_immutable(self) -> None:
         ctx = RunContext(goal_text="Test")
         run = ChiefRun(context=ctx)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             run.state = RunState.COMPLETED  # type: ignore[misc]
 
     def test_plan_step_dependencies(self) -> None:
@@ -344,7 +366,7 @@ class TestRuntimeModels:
 
     def test_run_checkpoint_immutable(self) -> None:
         cp = RunCheckpoint(step_id="s1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             cp.step_id = "s2"  # type: ignore[misc]
 
     def test_chief_run_plan_none_default(self) -> None:
@@ -359,6 +381,7 @@ class TestRuntimeModels:
 
 
 # --- Scheduler Tests (15) ---
+
 
 class TestTaskScheduler:
     def test_schedule_returns_ready_steps(self) -> None:
@@ -480,6 +503,7 @@ class TestTaskScheduler:
 
 # --- Validator Tests (10) ---
 
+
 class TestDefaultValidator:
     def test_continue_on_success(self) -> None:
         v = DefaultValidator()
@@ -522,6 +546,7 @@ class TestDefaultValidator:
 
 
 # --- Registry Tests (10) ---
+
 
 class TestRuntimeRegistry:
     def test_register_planner(self) -> None:
@@ -577,6 +602,7 @@ class TestRuntimeRegistry:
 
 
 # --- History Tests (10) ---
+
 
 class TestRunHistory:
     def test_record_run(self) -> None:
@@ -636,18 +662,23 @@ class TestRunHistory:
 
 # --- Coordinator & Runtime Integration Tests (20) ---
 class TestCoordinatorAndRuntime:
-
-    def test_runtime_execute_success(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_execute_success(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         result = runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert result.outcome == RunOutcome.SUCCESS, f"Run Failed! Result object: {result}"
         assert len(result.step_results) == 2
         assert all(r.success for r in result.step_results)
 
-    def test_runtime_state_completed(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_state_completed(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert runtime.state == RunState.COMPLETED
 
-    def test_runtime_state_failed_on_error(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext) -> None:
+    def test_runtime_state_failed_on_error(
+        self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext
+    ) -> None:
         registry.register_validator("default", DefaultValidator(max_retries=0))
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
 
@@ -661,7 +692,13 @@ class TestCoordinatorAndRuntime:
         assert result.outcome == RunOutcome.FAILURE
         assert rt.state == RunState.FAILED
 
-    def test_events_published(self, runtime: ChiefRuntime, context: RunContext, event_bus: MockEventBus, capability_runtime: CapabilityRuntime) -> None:
+    def test_events_published(
+        self,
+        runtime: ChiefRuntime,
+        context: RunContext,
+        event_bus: MockEventBus,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         event_types = [type(e) for e in event_bus.published_events]
         assert PlanningStarted in event_types
@@ -672,102 +709,172 @@ class TestCoordinatorAndRuntime:
         assert ValidationCompleted in event_types
         assert RunFinished in event_types
 
-    def test_planning_events_order(self, runtime: ChiefRuntime, context: RunContext, event_bus: MockEventBus, capability_runtime: CapabilityRuntime) -> None:
+    def test_planning_events_order(
+        self,
+        runtime: ChiefRuntime,
+        context: RunContext,
+        event_bus: MockEventBus,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         event_types = [type(e) for e in event_bus.published_events]
         planning_idx = event_types.index(PlanningStarted)
         planning_completed_idx = event_types.index(PlanningCompleted)
         assert planning_idx < planning_completed_idx
 
-    def test_execution_events_order(self, runtime: ChiefRuntime, context: RunContext, event_bus: MockEventBus, capability_runtime: CapabilityRuntime) -> None:
+    def test_execution_events_order(
+        self,
+        runtime: ChiefRuntime,
+        context: RunContext,
+        event_bus: MockEventBus,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         event_types = [type(e) for e in event_bus.published_events]
         exec_idx = event_types.index(ExecutionStarted)
         exec_completed_idx = event_types.index(ExecutionCompleted)
         assert exec_idx < exec_completed_idx
 
-    def test_run_result_has_plan(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_run_result_has_plan(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         result = runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert result.plan is not None
         assert len(result.plan.steps) == 2
 
-    def test_run_result_duration_positive(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_run_result_duration_positive(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         result = runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert result.duration_ms >= 0.0
 
-    def test_run_result_summary(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_run_result_summary(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         result = runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert "Completed" in result.summary
 
-    def test_coordinator_direct(self, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_coordinator_direct(
+        self, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         coord = Coordinator(
             planner=MockPlanner(),
             capability_runtime=capability_runtime,
             validator=DefaultValidator(),
-            event_bus=event_bus
+            event_bus=event_bus,
         )
         result = coord.run(context)
         assert result.outcome == RunOutcome.SUCCESS
 
-    def test_coordinator_failure(self, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_coordinator_failure(
+        self, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         coord = Coordinator(
             planner=MockPlanner(),
             capability_runtime=capability_runtime,
             validator=DefaultValidator(max_retries=0),
-            event_bus=event_bus
+            event_bus=event_bus,
         )
         result = coord.run(context)
         # Verify coordinator handles failure state cleanly
         assert result is not None
 
-    def test_runtime_missing_planner_raises(self, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_missing_planner_raises(
+        self, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         rt = ChiefRuntime()
         with pytest.raises(ChiefRuntimeError):
             rt.execute_goal(context, capability_runtime=capability_runtime)
 
-    def test_runtime_with_custom_executor(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_with_custom_executor(
+        self,
+        registry: RuntimeRegistry,
+        event_bus: MockEventBus,
+        context: RunContext,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
         result = rt.execute_goal(context, capability_runtime=capability_runtime)
         assert result.outcome == RunOutcome.SUCCESS
 
-    def test_runtime_retries(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_retries(
+        self,
+        registry: RuntimeRegistry,
+        event_bus: MockEventBus,
+        context: RunContext,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         registry.register_validator("default", DefaultValidator(max_retries=2))
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
         result = rt.execute_goal(context, capability_runtime=capability_runtime)
         assert result.outcome == RunOutcome.SUCCESS
 
-    def test_runtime_abort_on_failure(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_abort_on_failure(
+        self,
+        registry: RuntimeRegistry,
+        event_bus: MockEventBus,
+        context: RunContext,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         registry.register_validator("default", DefaultValidator(max_retries=0))
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
         result = rt.execute_goal(context, capability_runtime=capability_runtime)
         assert result is not None
 
-    def test_run_failed_event_on_error(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_run_failed_event_on_error(
+        self,
+        registry: RuntimeRegistry,
+        event_bus: MockEventBus,
+        context: RunContext,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         registry.register_validator("default", DefaultValidator(max_retries=0))
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
         rt.execute_goal(context, capability_runtime=capability_runtime)
         assert any(isinstance(e, (RunFailed, RunFinished)) for e in event_bus.published_events)
 
-    def test_runtime_terminal_state_raises(self, registry: RuntimeRegistry, event_bus: MockEventBus, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_runtime_terminal_state_raises(
+        self,
+        registry: RuntimeRegistry,
+        event_bus: MockEventBus,
+        context: RunContext,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         rt = ChiefRuntime(registry=registry, event_bus=event_bus)
         rt._state = RunState.COMPLETED
         with pytest.raises(ChiefRuntimeError):
             rt.execute_goal(context, capability_runtime=capability_runtime)
 
-    def test_validation_events_published(self, runtime: ChiefRuntime, context: RunContext, event_bus: MockEventBus, capability_runtime: CapabilityRuntime) -> None:
+    def test_validation_events_published(
+        self,
+        runtime: ChiefRuntime,
+        context: RunContext,
+        event_bus: MockEventBus,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert any(isinstance(e, ValidationStarted) for e in event_bus.published_events)
         assert any(isinstance(e, ValidationCompleted) for e in event_bus.published_events)
 
-    def test_run_finished_event_on_success(self, runtime: ChiefRuntime, context: RunContext, event_bus: MockEventBus, capability_runtime: CapabilityRuntime) -> None:
+    def test_run_finished_event_on_success(
+        self,
+        runtime: ChiefRuntime,
+        context: RunContext,
+        event_bus: MockEventBus,
+        capability_runtime: CapabilityRuntime,
+    ) -> None:
         runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert any(isinstance(e, RunFinished) for e in event_bus.published_events)
 
-    def test_step_results_contain_ids(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_step_results_contain_ids(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         result = runtime.execute_goal(context, capability_runtime=capability_runtime)
         assert all(r.step_id for r in result.step_results)
 
-    def test_determinism(self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime) -> None:
+    def test_determinism(
+        self, runtime: ChiefRuntime, context: RunContext, capability_runtime: CapabilityRuntime
+    ) -> None:
         r1 = runtime.execute_goal(context, capability_runtime=capability_runtime)
         # Reset runtime state between runs if terminal checks apply
         runtime._state = RunState.CREATED

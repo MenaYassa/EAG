@@ -1,5 +1,10 @@
 """Chief Capability Platform for EAG."""
 
+from eag.capability.capabilities.composite import CompositeCapability
+from eag.capability.capabilities.repository import RepositoryCapability
+from eag.capability.capabilities.review import ReviewCapability
+from eag.capability.capabilities.transformation import TransformationCapability
+from eag.capability.capabilities.workspace import WorkspaceCapability
 from eag.capability.enums import (
     CapabilityKind,
     CapabilityOutcome,
@@ -20,11 +25,6 @@ from eag.capability.models import (
     CapabilityRequest,
     CapabilityResult,
 )
-from eag.capability.capabilities.composite import CompositeCapability
-from eag.capability.capabilities.repository import RepositoryCapability
-from eag.capability.capabilities.review import ReviewCapability
-from eag.capability.capabilities.transformation import TransformationCapability
-from eag.capability.capabilities.workspace import WorkspaceCapability
 from eag.capability.registry import CapabilityRegistry
 from eag.capability.runtime import CapabilityRuntime
 

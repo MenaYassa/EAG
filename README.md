@@ -23,7 +23,7 @@ explainable.
 
 ## Current Status
 
-**Version:** 0.8 — Engineering Platform
+**Version:** 0.91 — Chief Engineer & Benchmarking
 | Milestone | Status |
 | --- | --- |
 | Sprint 0 — Foundation | ✅ Complete |
@@ -33,8 +33,10 @@ explainable.
 | Sprint 4 — Source Intelligence Platform | ✅ Complete |
 | Sprint 5 — Planner Platform | ✅ Complete |
 | Sprint 6 — Engineering Platform | ✅ Complete |
-| Sprint 7 — Chief Engineer | 🚧 In Progress |
-| Sprint 8 — Workers | 🔜 Next |
+| Sprint 7 — Chief Engineer | ✅ Complete |
+| EBS-0 Benchmark Platform | ✅ Complete |
+| Sprint 8 — Workers | ⏳ In Progress |
+| Sprint 9 — Autonomous Engineering | 🔜 Next |
 
 ### Implemented Capabilities
 
@@ -56,13 +58,16 @@ explainable.
     
 *   **Planner Engine** — Goal decomposition, planning models, execution plans, validation, approval, and dry run
 
+*   **Chief Engineer** — Model routing, tool selection, multi-model coordination
+
+*   **Benchmark Platform** — EBS-0 suite with 5 benchmarks
 
 ### Upcoming
 
-*   **Chief Engineer** — Model routing, tool selection, multi-model coordination (In Progress)
-    
 *   **Workers** — Parallel execution, collaboration, and multi-agent task completion
     
+*   **Autonomous Engineering** — Evolving from an autonomous engineer to an autonomous engineering organization
+
 
 * * *
 
@@ -149,8 +154,6 @@ is what makes EAG safe, explainable, and sustainable.
 
 ## Planned Features
 
-*   **Chief Engineer** — Model-agnostic routing, tool selection, and coordination
-    
 *   **Worker Coordination** — Parallel execution and multi-agent collaboration
     
 *   **Multi-model Routing** — Route tasks to the best available model
@@ -232,7 +235,7 @@ MIT
 
 ## Project Status
 
-EAG is under active development. The platform has completed five sprints
-and is preparing for Sprint 6 — the Chief Engineer, which will add model-agnostic
-routing, tool selection, and multi-model coordination.
+EAG is under active development. The platform has completed up to Sprint 7 (Chief Engineer)
+and the EBS-0 Benchmark Platform, marking the completion of the single-engineer architecture.
+We are now preparing for Sprint 8 — Workers, evolving EAG into an autonomous engineering organization.
 For the complete development plan, see [ROADMAP.md](docs/ROADMAP.md).

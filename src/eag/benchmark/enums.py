@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class BenchmarkState(StrEnum):
     """Lifecycle state of a benchmark run."""
+
     CREATED = "created"
     READY = "ready"
     RUNNING = "running"
@@ -16,6 +17,7 @@ class BenchmarkState(StrEnum):
 
 class BenchmarkOutcome(StrEnum):
     """The final outcome of a benchmark."""
+
     PASS = "pass"
     FAIL = "fail"
     PARTIAL = "partial"
@@ -24,6 +26,7 @@ class BenchmarkOutcome(StrEnum):
 
 class BenchmarkDifficulty(StrEnum):
     """Difficulty tiers for benchmarks."""
+
     TRIVIAL = "trivial"
     EASY = "easy"
     MEDIUM = "medium"
@@ -33,6 +36,7 @@ class BenchmarkDifficulty(StrEnum):
 
 class BenchmarkCategory(StrEnum):
     """Engineering categories assessed by benchmarks."""
+
     PROJECT_GENERATION = "project_generation"
     FEATURE_ENGINEERING = "feature_engineering"
     REFACTORING = "refactoring"
@@ -43,6 +47,7 @@ class BenchmarkCategory(StrEnum):
 
 class ScoreLevel(StrEnum):
     """Qualitative levels for benchmark scores."""
+
     EXCELLENT = "excellent"
     GOOD = "good"
     FAIR = "fair"

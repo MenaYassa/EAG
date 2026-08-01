@@ -10,7 +10,7 @@ class DefaultPlanner:
     def create_plan(self, context: RunContext) -> Plan:
         # Extract benchmark ID from metadata
         benchmark_id = context.metadata.get("benchmark_id")
-        
+
         # 1. Use the template planner for known benchmark IDs
         if benchmark_id and benchmark_id.startswith("EBS-"):
             try:

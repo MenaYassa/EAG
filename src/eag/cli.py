@@ -11,7 +11,6 @@ from eag.execution.errors import (
     CommandApprovalRequiredError,
     CommandDeniedError,
 )
-
 from eag.explorer.formatter import JsonFormatter, TerminalFormatter
 from eag.explorer.models import (
     DependencyRequest,
@@ -948,9 +947,13 @@ def path(start: str, end: str) -> None:
         click.echo(formatter.format_path(report))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
+
+
 @app.command()
 def benchmark(
-    benchmark_id: str = typer.Argument("EBS-001", help="The ID of the benchmark to run (e.g., EBS-001 or B001)."),
+    benchmark_id: str = typer.Argument(
+        "EBS-001", help="The ID of the benchmark to run (e.g., EBS-001 or B001)."
+    ),
     keep_dir: bool = typer.Option(
         False,
         "--keep-dir",
@@ -1060,7 +1063,9 @@ def benchmark(
                 target_workspace = workspace
 
             # Initialize real runtimes
-            ws_runtime = WorkspaceRuntime(root=target_workspace, mode=WorkspaceMode.LIVE, event_bus=self.event_bus)
+            ws_runtime = WorkspaceRuntime(
+                root=target_workspace, mode=WorkspaceMode.LIVE, event_bus=self.event_bus
+            )
             ws_runtime.open()
 
             vcs_runtime = RepositoryRuntime(root=target_workspace, event_bus=self.event_bus)
@@ -1132,7 +1137,9 @@ def benchmark(
     try:
         benchmark = registry.find(normalized_id)
     except Exception:
-        typer.echo(f"Benchmark {normalized_id} not found. Available: {[b.id for b in registry.list()]}")
+        typer.echo(
+            f"Benchmark {normalized_id} not found. Available: {[b.id for b in registry.list()]}"
+        )
         raise typer.Exit(1)
 
     run, report = runner.run(benchmark)

@@ -601,7 +601,7 @@ ToolRegistry:
 
 * * *
 
-## 11. Planner (Sprint 5 — Future)
+## 11. Planner
 
 The Planner sits above the Knowledge Platform and below the Execution  
 Platform. It transforms goals into validated, approved execution plans.
@@ -639,7 +639,7 @@ PlanTask:
 
 * * *
 
-## 12. Chief Engineer (Sprint 6 — Future)
+## 12. Chief Engineer
 
 The Chief Engineer routes tasks to models and selects tools.
 
@@ -655,7 +655,7 @@ Plan Task
 
 * * *
 
-## 13. Workers (Sprint 7 — Future)
+## 13. Workers (Sprint 8 — Future)
 
 Workers execute tasks in parallel with coordination.
 
@@ -705,18 +705,18 @@ Plan
 └────────────────────────┬────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────┐
-│                 Planner (Sprint 5)                      │
+│                 Planner                                 │
 │      Goal → Decompose → Plan → Validate → Dry Run      │
 │      → Approve                                         │
 └────────────────────────┬────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────┐
-│              Chief Engineer (Sprint 6)                  │
+│              Chief Engineer                             │
 │      Route tasks to models, select tools               │
 └────────────────────────┬────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────┐
-│                Workers (Sprint 7)                       │
+│                Workers (Sprint 8)                       │
 │      Execute tasks in parallel with coordination       │
 └────────────────────────┬────────────────────────────────┘
                          │

@@ -1,16 +1,14 @@
 """Comprehensive tests for the Benchmark Platform (EBS-0)."""
 
-import pytest
 from pathlib import Path
-from typing import Any
+
+import pytest
 
 from eag.benchmark import (
     Benchmark,
     BenchmarkCategory,
     BenchmarkDifficulty,
-    BenchmarkError,
     BenchmarkEvaluator,
-    BenchmarkExecutor,
     BenchmarkOutcome,
     BenchmarkRegistry,
     BenchmarkReport,
@@ -22,16 +20,13 @@ from eag.benchmark import (
     CapabilityProfile,
     DefaultEvaluator,
     DefaultReporter,
-    EvaluationError,
-    FixtureError,
     FixtureManager,
     RegistryError,
-    RunnerError,
     ScoreLevel,
 )
 
-
 # --- Mock Executor ---
+
 
 class MockExecutor:
     def __init__(self, success: bool = True, metadata: dict | None = None) -> None:
@@ -43,8 +38,9 @@ class MockExecutor:
             run_id="mock_run",
             benchmark_id=benchmark.id,
             success=self._success,
-            metadata=self._metadata
+            metadata=self._metadata,
         )
+
 
 class FailingExecutor:
     def execute(self, benchmark: Benchmark, workspace: Path) -> BenchmarkResult:
@@ -58,13 +54,21 @@ def registry() -> BenchmarkRegistry:
     reg.register(Benchmark(id="B002", name="Notes", category=BenchmarkCategory.FEATURE_ENGINEERING))
     return reg
 
+
 @pytest.fixture
 def runner() -> BenchmarkRunner:
-    return BenchmarkRunner(executor=MockExecutor(success=True, metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True}))
+    return BenchmarkRunner(
+        executor=MockExecutor(
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True},
+        )
+    )
+
 
 @pytest.fixture
 def failing_runner() -> BenchmarkRunner:
     return BenchmarkRunner(executor=FailingExecutor())
+
 
 def make_benchmark(bid: str = "B001") -> Benchmark:
     return Benchmark(id=bid, name=f"Benchmark {bid}")
@@ -72,10 +76,11 @@ def make_benchmark(bid: str = "B001") -> Benchmark:
 
 # --- Model Tests (20) ---
 
+
 class TestBenchmarkModels:
     def test_benchmark_immutable(self) -> None:
         b = make_benchmark()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             b.id = "new"  # type: ignore[misc]
 
     def test_benchmark_invalid_id(self) -> None:
@@ -93,17 +98,17 @@ class TestBenchmarkModels:
 
     def test_benchmark_run_immutable(self) -> None:
         r = BenchmarkRun(benchmark_id="B001")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.state = BenchmarkState.COMPLETED  # type: ignore[misc]
 
     def test_benchmark_result_immutable(self) -> None:
         r = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             r.success = False  # type: ignore[misc]
 
     def test_benchmark_score_immutable(self) -> None:
         s = BenchmarkScore(run_id="r1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             s.overall = 100  # type: ignore[misc]
 
     def test_benchmark_score_validation(self) -> None:
@@ -115,13 +120,19 @@ class TestBenchmarkModels:
             BenchmarkScore(run_id="r1", overall=-1)
 
     def test_benchmark_report_immutable(self) -> None:
-        r = BenchmarkReport(run_id="r1", benchmark_id="B001", outcome=BenchmarkOutcome.PASS, score=BenchmarkScore(run_id="r1"), duration_ms=100.0)
-        with pytest.raises(Exception):
+        r = BenchmarkReport(
+            run_id="r1",
+            benchmark_id="B001",
+            outcome=BenchmarkOutcome.PASS,
+            score=BenchmarkScore(run_id="r1"),
+            duration_ms=100.0,
+        )
+        with pytest.raises(Exception, match=""):
             r.outcome = BenchmarkOutcome.FAIL  # type: ignore[misc]
 
     def test_capability_profile_immutable(self) -> None:
         p = CapabilityProfile()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=""):
             p.profiles = {}  # type: ignore[misc]
 
     def test_benchmark_state_values(self) -> None:
@@ -149,7 +160,9 @@ class TestBenchmarkModels:
         assert b.metadata["key"] == "value"
 
     def test_benchmark_result_metadata(self) -> None:
-        r = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"key": "value"})
+        r = BenchmarkResult(
+            run_id="r1", benchmark_id="B001", success=True, metadata={"key": "value"}
+        )
         assert r.metadata["key"] == "value"
 
     def test_benchmark_run_defaults(self) -> None:
@@ -168,6 +181,7 @@ class TestBenchmarkModels:
 
 
 # --- Registry Tests (15) ---
+
 
 class TestBenchmarkRegistry:
     def test_register(self, registry: BenchmarkRegistry) -> None:
@@ -234,12 +248,15 @@ class TestBenchmarkRegistry:
 
 # --- Evaluator & Reporter Tests (15) ---
 
+
 class TestEvaluatorAndReporter:
     def test_evaluator_success(self) -> None:
         evaluator = DefaultEvaluator()
         result = BenchmarkResult(
-            run_id="r1", benchmark_id="B001", success=True,
-            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True}
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True},
         )
         score = evaluator.evaluate(result)
         assert score.overall == 100
@@ -255,8 +272,7 @@ class TestEvaluatorAndReporter:
     def test_evaluator_partial_metadata(self) -> None:
         evaluator = DefaultEvaluator()
         result = BenchmarkResult(
-            run_id="r1", benchmark_id="B001", success=True,
-            metadata={"tests_pass": True}
+            run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": True}
         )
         score = evaluator.evaluate(result)
         assert score.tests == 100
@@ -265,7 +281,12 @@ class TestEvaluatorAndReporter:
 
     def test_reporter_success(self) -> None:
         reporter = DefaultReporter()
-        result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True})
+        result = BenchmarkResult(
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True},
+        )
         score = BenchmarkScore(run_id="r1", overall=100, level=ScoreLevel.EXCELLENT)
         report = reporter.generate(result, score)
         assert report.outcome == BenchmarkOutcome.PASS
@@ -281,7 +302,9 @@ class TestEvaluatorAndReporter:
     def test_reporter_recommendations(self) -> None:
         reporter = DefaultReporter()
         result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True)
-        score = BenchmarkScore(run_id="r1", overall=50, tests=50, documentation=50, level=ScoreLevel.FAIR)
+        score = BenchmarkScore(
+            run_id="r1", overall=50, tests=50, documentation=50, level=ScoreLevel.FAIR
+        )
         report = reporter.generate(result, score)
         assert len(report.recommendations) == 2
 
@@ -307,21 +330,36 @@ class TestEvaluatorAndReporter:
 
     def test_evalutor_level_good(self) -> None:
         evaluator = DefaultEvaluator()
-        result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": True, "readme_exists": True, "valid_structure": False})
+        result = BenchmarkResult(
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": False},
+        )
         score = evaluator.evaluate(result)
         assert score.overall == 83
         assert score.level == ScoreLevel.GOOD
 
     def test_evaluator_level_fair(self) -> None:
         evaluator = DefaultEvaluator()
-        result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": True, "readme_exists": False, "valid_structure": False})
+        result = BenchmarkResult(
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": False, "valid_structure": False},
+        )
         score = evaluator.evaluate(result)
         assert score.overall == 66
         assert score.level == ScoreLevel.FAIR
 
     def test_evaluator_level_poor(self) -> None:
         evaluator = DefaultEvaluator()
-        result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": False, "readme_exists": False, "valid_structure": False})
+        result = BenchmarkResult(
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": False, "readme_exists": False, "valid_structure": False},
+        )
         score = evaluator.evaluate(result)
         assert score.overall == 50
         assert score.level == ScoreLevel.POOR
@@ -335,8 +373,15 @@ class TestEvaluatorAndReporter:
 
     def test_reporter_recommendations_empty(self) -> None:
         reporter = DefaultReporter()
-        result = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True, metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True})
-        score = BenchmarkScore(run_id="r1", overall=100, tests=100, documentation=100, level=ScoreLevel.EXCELLENT)
+        result = BenchmarkResult(
+            run_id="r1",
+            benchmark_id="B001",
+            success=True,
+            metadata={"tests_pass": True, "readme_exists": True, "valid_structure": True},
+        )
+        score = BenchmarkScore(
+            run_id="r1", overall=100, tests=100, documentation=100, level=ScoreLevel.EXCELLENT
+        )
         report = reporter.generate(result, score)
         assert len(report.recommendations) == 0
 
@@ -345,6 +390,7 @@ class TestEvaluatorAndReporter:
 
 
 # --- Runner & Fixtures Tests (10) ---
+
 
 class TestRunnerAndFixtures:
     def test_runner_success(self, runner: BenchmarkRunner) -> None:
@@ -380,11 +426,11 @@ class TestRunnerAndFixtures:
         fixture_dir = tmp_path / "fixture"
         fixture_dir.mkdir()
         (fixture_dir / "test.txt").write_text("test")
-        
+
         fm = FixtureManager()
         b = Benchmark(id="B001", name="Test", fixture_path=fixture_dir)
         workspace = fm.prepare(b)
-        
+
         assert (workspace / "test.txt").exists()
         fm.cleanup(workspace)
 

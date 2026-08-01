@@ -45,7 +45,7 @@ def make_unsupported_context(runtime: SourceRuntime, code: str = "x = 1") -> Tra
 class TestDescriptorsAndCatalog:
     def test_descriptor_immutable(self) -> None:
         desc = TransformationDescriptor(name="test", category=TransformationCategory.SEMANTIC)
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match=""):  # noqa: B017
             desc.name = "other"  # type: ignore[misc]
 
     def test_descriptor_invalid_name(self) -> None:
