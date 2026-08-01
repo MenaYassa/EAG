@@ -9,13 +9,11 @@ from eag.capability.models import (
     CapabilityRequest,
     CapabilityResult,
 )
-from eag.vcs.runtime import RepositoryRuntime
-
 
 class RepositoryCapability:
     """Capability for interacting with the Repository (Git) Platform."""
     
-    def __init__(self, vcs_runtime: RepositoryRuntime) -> None:
+    def __init__(self, vcs_runtime) -> None:
         self._runtime = vcs_runtime
 
     @property
@@ -24,7 +22,7 @@ class RepositoryCapability:
             id="repository",
             name="Repository Operations",
             kind=CapabilityKind.REPOSITORY,
-            description="Commit, branch, and manage Git operations."
+            description="Init, commit, branch, and manage Git operations."
         )
 
     def supports(self, request: CapabilityRequest) -> bool:
@@ -36,7 +34,15 @@ class RepositoryCapability:
     def execute(self, request: CapabilityRequest, context: CapabilityContext) -> CapabilityResult:
         operation = request.parameters.get("operation")
         
-        if operation == "commit":
+        if operation == "init":
+            # VCSRuntime.open() handles initialization
+            self._runtime.open()
+            return CapabilityResult(
+                request_id=request.request_id, capability_id="repository",
+                outcome=CapabilityOutcome.SUCCESS, state=CapabilityState.COMPLETED,
+                output="Repository initialized"
+            )
+        elif operation == "commit":
             message = request.parameters.get("message", "Automated EAG commit")
             commit_id = self._runtime.commit(message)
             return CapabilityResult(

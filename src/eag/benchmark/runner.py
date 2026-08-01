@@ -73,6 +73,14 @@ class BenchmarkRunner:
             return completed_run, report
             
         except Exception as e:
+            # --- ADD THESE 4 LINES ---
+            import traceback
+            print("\n" + "!"*50)
+            print("RUNNER CRASHED! HERE IS THE REAL ERROR:")
+            traceback.print_exc()
+            print("!"*50 + "\n")
+            # -------------------------
+
             duration = (time.monotonic() - start_time) * 1000
             failed_run = BenchmarkRun(
                 run_id=run.run_id,

@@ -295,9 +295,14 @@ class TestWorkspaceCapability:
 
     def test_execute_unsupported_op(self, workspace_runtime: MockWorkspaceRuntime, context: CapabilityContext) -> None:
         cap = WorkspaceCapability(workspace_runtime)
-        req = CapabilityRequest(capability_id="workspace", parameters={"operation": "delete"})
+        req = CapabilityRequest(
+            request_id="test_req_1",
+            capability_id="workspace",
+            parameters={"operation": "delete", "path": "dummy.txt"}
+        )
         result = cap.execute(req, context)
-        assert result.success is False
+        assert result is not None
+        assert result.outcome == CapabilityOutcome.FAILURE
         assert "Unsupported operation" in result.error
 
     def test_health(self, workspace_runtime: MockWorkspaceRuntime) -> None:

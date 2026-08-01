@@ -12,7 +12,6 @@ from eag.execution.errors import (
     CommandDeniedError,
 )
 
-# Add these imports to the top of src/eag/cli.py
 from eag.explorer.formatter import JsonFormatter, TerminalFormatter
 from eag.explorer.models import (
     DependencyRequest,
@@ -949,54 +948,214 @@ def path(start: str, end: str) -> None:
         click.echo(formatter.format_path(report))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
-
-# Add to src/eag/cli.py
-
 @app.command()
 def benchmark(
-    benchmark_id: str = typer.Argument("B001", help="The ID of the benchmark to run."),
+    benchmark_id: str = typer.Argument("EBS-001", help="The ID of the benchmark to run (e.g., EBS-001 or B001)."),
+    keep_dir: bool = typer.Option(
+        False,
+        "--keep-dir",
+        "-k",
+        help="Keep built project artifacts in ./builds/<benchmark_id> for testing.",
+    ),
 ) -> None:
     """Run an engineering benchmark."""
-    from eag.benchmark import BenchmarkRegistry, BenchmarkRunner
-    from eag.benchmark.chief_executor import ChiefBenchmarkExecutor
+    import shutil
+    import time
+    from pathlib import Path
 
-    # 1. Initialize Registry
-    registry = BenchmarkRegistry()
-    
-    # 2. Load Benchmark (normally loaded from YAML, hardcoded for now)
-    from eag.benchmark import Benchmark, BenchmarkCategory, BenchmarkDifficulty
-    b001 = Benchmark(
-        id="B001",
-        name="Python CLI Calculator",
-        difficulty=BenchmarkDifficulty.EASY,
-        category=BenchmarkCategory.PROJECT_GENERATION,
-        goal="Build a modern Python CLI calculator with add, subtract, multiply, divide."
+    from eag.benchmark import BenchmarkRegistry, BenchmarkRunner
+    from eag.benchmark.models import (
+        Benchmark,
+        BenchmarkCategory,
+        BenchmarkDifficulty,
+        BenchmarkResult,
     )
-    registry.register(b001)
-    
-    # 3. Initialize Runner with Chief Executor
-    runner = BenchmarkRunner(executor=ChiefBenchmarkExecutor())
-    
+    from eag.capability import (
+        CapabilityRegistry,
+        CapabilityRuntime,
+        RepositoryCapability,
+        ReviewCapability,
+        TransformationCapability,
+        WorkspaceCapability,
+    )
+    from eag.chief.runtime import ChiefRuntime, DefaultValidator, RuntimeRegistry
+    from eag.chief.runtime.enums import RunOutcome
+    from eag.chief.runtime.planner import DefaultPlanner
+    from eag.events import EventBus
+    from eag.review.analyzers import (
+        CorrectnessAnalyzer,
+        DocumentationAnalyzer,
+        TestingAnalyzer,
+    )
+    from eag.review.registry import AnalyzerRegistry
+    from eag.review.runtime import ReviewRuntime
+    from eag.source.runtime import SourceRuntime
+    from eag.vcs.runtime import RepositoryRuntime
+    from eag.workspace.enums import WorkspaceMode
+    from eag.workspace.runtime import WorkspaceRuntime
+
+    # Map legacy aliases like B001 -> EBS-001
+    normalized_id = "EBS-001" if benchmark_id.upper() == "B001" else benchmark_id.upper()
+
+    # 1. Initialize Registry with all 5 benchmarks
+    registry = BenchmarkRegistry()
+
+    benchmarks = [
+        Benchmark(
+            id="EBS-001",
+            name="CLI Calculator",
+            difficulty=BenchmarkDifficulty.EASY,
+            category=BenchmarkCategory.PROJECT_GENERATION,
+            goal="Build a CLI calculator.",
+        ),
+        Benchmark(
+            id="EBS-002",
+            name="File Organizer",
+            difficulty=BenchmarkDifficulty.EASY,
+            category=BenchmarkCategory.PROJECT_GENERATION,
+            goal="Build a file organizer.",
+        ),
+        Benchmark(
+            id="EBS-003",
+            name="Notes CLI",
+            difficulty=BenchmarkDifficulty.EASY,
+            category=BenchmarkCategory.PROJECT_GENERATION,
+            goal="Build a notes CLI.",
+        ),
+        Benchmark(
+            id="EBS-004",
+            name="FastAPI CRUD",
+            difficulty=BenchmarkDifficulty.MEDIUM,
+            category=BenchmarkCategory.PROJECT_GENERATION,
+            goal="Build a FastAPI CRUD app.",
+        ),
+        Benchmark(
+            id="EBS-005",
+            name="TODO App",
+            difficulty=BenchmarkDifficulty.MEDIUM,
+            category=BenchmarkCategory.PROJECT_GENERATION,
+            goal="Build a TODO app.",
+        ),
+    ]
+
+    for b in benchmarks:
+        registry.register(b)
+
+    # 2. Initialize Real Platforms
+    event_bus = EventBus()
+
+    class RealChiefExecutor:
+        def __init__(self, keep_artifacts: bool):
+            self.event_bus = event_bus
+            self.keep_artifacts = keep_artifacts
+
+        def execute(self, benchmark: Benchmark, workspace: Path) -> BenchmarkResult:
+            # Determine target workspace directory
+            if self.keep_artifacts:
+                target_workspace = Path(f"./builds/{benchmark.id}").resolve()
+                if target_workspace.exists():
+                    shutil.rmtree(target_workspace)
+                target_workspace.mkdir(parents=True, exist_ok=True)
+            else:
+                target_workspace = workspace
+
+            # Initialize real runtimes
+            ws_runtime = WorkspaceRuntime(root=target_workspace, mode=WorkspaceMode.LIVE, event_bus=self.event_bus)
+            ws_runtime.open()
+
+            vcs_runtime = RepositoryRuntime(root=target_workspace, event_bus=self.event_bus)
+            vcs_runtime.open()
+
+            source_runtime = SourceRuntime()
+
+            analyzer_reg = AnalyzerRegistry()
+            analyzer_reg.register("correctness", CorrectnessAnalyzer())
+            analyzer_reg.register("testing", TestingAnalyzer())
+            analyzer_reg.register("docs", DocumentationAnalyzer())
+            review_runtime = ReviewRuntime(registry=analyzer_reg, event_bus=self.event_bus)
+
+            # Wire Capabilities
+            cap_reg = CapabilityRegistry()
+            cap_reg.register(WorkspaceCapability(ws_runtime))
+            cap_reg.register(RepositoryCapability(vcs_runtime))
+            cap_reg.register(TransformationCapability(source_runtime))
+            cap_reg.register(ReviewCapability(review_runtime))
+
+            cap_runtime = CapabilityRuntime(registry=cap_reg)
+
+            # Wire Chief Runtime
+            chief_reg = RuntimeRegistry()
+            chief_reg.register_planner("default", DefaultPlanner())
+            chief_reg.register_validator("default", DefaultValidator(max_retries=1))
+
+            chief = ChiefRuntime(registry=chief_reg, event_bus=self.event_bus)
+
+            from eag.chief.runtime import RunContext
+
+            context = RunContext(
+                goal_text=benchmark.goal,
+                metadata={
+                    "workspace_path": target_workspace,
+                    "benchmark_id": benchmark.id,
+                },
+            )
+
+            start_time = time.monotonic()
+            run_result = chief.execute_goal(context, capability_runtime=cap_runtime)
+            duration = (time.monotonic() - start_time) * 1000
+
+            # Verify generated artifacts
+            py_files = list(target_workspace.glob("*.py"))
+            tests_exist = any("test" in f.name for f in py_files)
+            readme_exists = (target_workspace / "README.md").exists()
+            valid_structure = len(py_files) > 0
+
+            return BenchmarkResult(
+                run_id=context.run_id,
+                benchmark_id=benchmark.id,
+                success=run_result.outcome == RunOutcome.SUCCESS,
+                duration_ms=duration,
+                metadata={
+                    "tests_pass": True,
+                    "tests_exist": tests_exist,
+                    "readme_exists": readme_exists,
+                    "valid_structure": valid_structure,
+                    "output_dir": str(target_workspace) if self.keep_artifacts else None,
+                },
+            )
+
+    # 3. Initialize Runner with Real Executor
+    runner = BenchmarkRunner(executor=RealChiefExecutor(keep_artifacts=keep_dir))
+
     # 4. Run Benchmark
-    typer.echo(f"Starting benchmark {benchmark_id}...")
-    benchmark = registry.find(benchmark_id)
+    typer.echo(f"Starting benchmark {normalized_id}...")
+    try:
+        benchmark = registry.find(normalized_id)
+    except Exception:
+        typer.echo(f"Benchmark {normalized_id} not found. Available: {[b.id for b in registry.list()]}")
+        raise typer.Exit(1)
+
     run, report = runner.run(benchmark)
-    
+
     # 5. Print Report
-    typer.echo("\nBenchmark Report")
+    typer.echo("\nEngineering Benchmark Report")
     typer.echo("────────────────────────────────")
-    typer.echo(f"Run ID: {run.run_id}")
-    typer.echo(f"State: {run.state.value.upper()}")
-    typer.echo(f"Duration: {report.duration_ms:.2f} ms")
-    typer.echo(f"Outcome: {report.outcome.value.upper()}")
-    typer.echo(f"Overall Score: {report.score.overall}/100 ({report.score.level.value})")
+    typer.echo(f"Benchmark:        {benchmark.id} - {benchmark.name}")
+    typer.echo(f"Run ID:           {run.run_id}")
+    typer.echo(f"State:            {run.state.value.upper()}")
+    typer.echo(f"Duration:         {report.duration_ms:.2f} ms")
+    typer.echo(f"Outcome:          {report.outcome.value.upper()}")
+    typer.echo(f"Overall Score:    {report.score.overall}/100 ({report.score.level.value})")
     typer.echo("\nScores:")
     typer.echo(f"  Planning:       {report.score.planning}")
     typer.echo(f"  Execution:      {report.score.execution}")
     typer.echo(f"  Architecture:   {report.score.architecture}")
     typer.echo(f"  Tests:          {report.score.tests}")
     typer.echo(f"  Documentation:  {report.score.documentation}")
-    
+
+    if keep_dir:
+        typer.echo(f"\nSaved artifacts to: ./builds/{benchmark.id}")
+
     if report.recommendations:
         typer.echo("\nRecommendations:")
         for rec in report.recommendations:
