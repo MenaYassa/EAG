@@ -1,4 +1,4 @@
-# EAG Architecture v0.5
+# EAG Architecture v0.91
 
 * * *
 
@@ -656,10 +656,10 @@ class Plugin:
 
 * * *
 
-## Planning Architecture (Sprint 5 — Future)
+## Planning Architecture
 
-The Planner Engine will sit above the Knowledge Platform and below the  
-Execution Platform. It will transform engineering goals into validated,  
+The Planner Engine sits above the Knowledge Platform and below the
+Execution Platform. It transforms engineering goals into validated,
 approved execution plans.
 
 ```
@@ -716,9 +716,9 @@ Plan:
 EAG's organizational structure mirrors its architecture:
 | Department | Responsibility | Current Runtime(s) |
 | --- | --- | --- |
-| Executive | Goal management, planning (future) | Planner (Sprint 5) |
+| Executive | Goal management, orchestration | Chief Engineer |
 | Knowledge | Repository understanding | Repository, Source, Index, Graph |
-| Planning | Task decomposition, plan validation | Planner (Sprint 5) |
+| Planning | Task decomposition, plan validation | Planner |
 | Engineering | Execution of changes | Execution Runtime |
 | Infrastructure | Runtime lifecycle, DI, plugins | Kernel, EventBus, Tool Registry |
 | Security | Safety, guardrails, approvals | Safety Runtime |
@@ -731,10 +731,10 @@ EAG's organizational structure mirrors its architecture:
 
 | Version | Capability | Milestone |
 | --- | --- | --- |
-| v0.5 | Engineering Graph Platform | ✅ Complete |
-| v0.7 | Planner Engine | Sprint 5 |
-| v0.9 | Chief Engineer — model routing, tool selection | Sprint 6 |
-| v1.0 | Autonomous Engineering Platform — workers, parallel execution | Sprint 7 |
+| v0.8 | Engineering Platform | ✅ Complete |
+| v0.91| Chief Engineer & Benchmarking | ✅ Complete |
+| v1.0 | Autonomous Multi-Agent Workers | Sprint 8 |
+| v1.1 | Autonomous Engineering Org | Sprint 9 |
 
 * * *
 

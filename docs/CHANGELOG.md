@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * * *
 
 
+## v0.91.0 — Chief Engineer & Benchmarking
+
+### Added
+* Chief Engineer Runtime and Execution Orchestrator
+* Model Router, Capability Discovery, and Tool Selection
+* EBS-0 Benchmark Platform with 5 benchmarks (EBS-001 through EBS-005)
+* Single-engineer architecture completion
+
+### Notes
+This release marks a significant milestone as we complete the single-engineer architecture with Sprint 7 and introduce our initial benchmark suite. EAG is now capable of end-to-end task execution and validation. We are preparing to evolve into an autonomous engineering organization starting with Sprint 8 (Workers).
+
+* * *
+
+
 ## v0.8.0 — Engineering Platform
 
 ### Added

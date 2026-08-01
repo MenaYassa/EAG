@@ -132,11 +132,9 @@ This is a major shift from the original "Chief Engineer" sprint. It focuses on b
 
 ---
 
-## Upcoming Sprints
+### Sprint 7 — Chief Engineer ✅
 
-### Sprint 7 — Chief Engineer 🚧
-
-This sprint turns the Chief Engineer into an orchestrator, not just a LiteLLM integration. Sub-sprints 7.1 and 7.2 are currently in progress.
+This sprint turns the Chief Engineer into an orchestrator.
 
 - Chief Engineer Runtime
 - LiteLLM Integration
@@ -150,11 +148,26 @@ This sprint turns the Chief Engineer into an orchestrator, not just a LiteLLM in
 - Engineering Memory
 - Chief CLI
 
-**Target Version:** v0.9
+**Target Version:** v0.9 ✅
 
 ---
 
-### Sprint 8 — Workers 🔜
+### EBS-0 Benchmark Platform ✅
+
+- Benchmarking Framework
+- EBS-001
+- EBS-002
+- EBS-003
+- EBS-004
+- EBS-005
+
+**Target Version:** v0.91 ✅
+
+---
+
+## Upcoming Sprints
+
+### Sprint 8 — Workers ⏳
 
 Workers become a full‑fledged distributed execution system.
 
@@ -171,6 +184,18 @@ Workers become a full‑fledged distributed execution system.
 
 ---
 
+### Sprint 9 — Autonomous Engineering 🔜
+
+Evolving from an autonomous engineer to an autonomous engineering organization.
+
+- Organization orchestration
+- Advanced multi-agent workflows
+- High-level project planning and execution
+
+**Target Version:** v1.1
+
+---
+
 ## Version Roadmap
 
 | Version | Milestone                       | Status |
@@ -183,8 +208,10 @@ Workers become a full‑fledged distributed execution system.
 | v0.6    | Engineering Platform            | ✅     |
 | v0.7    | Planning Intelligence           | ✅     |
 | v0.8    | Semantic Transformations        | ✅     |
-| v0.9    | Chief Engineer                  | 🚧     |
-| v1.0    | Autonomous Multi‑Agent Engineer | 🔜     |
+| v0.9    | Chief Engineer                  | ✅     |
+| v0.91   | EBS-0 Benchmark Platform        | ✅     |
+| v1.0    | Autonomous Multi‑Agent Workers  | ⏳     |
+| v1.1    | Autonomous Engineering Org      | 🔜     |
 
 ---
 
@@ -199,8 +226,10 @@ v0.5 Source Intelligence ██████████████████�
 v0.6 Engineering Platform ████████████████████ 100%
 v0.7 Planning Intelligence ████████████████████ 100%
 v0.8 Semantic Transformations ████████████████████ 100%
-v0.9 Chief Engineer █████░░░░░░░░░░░░░░░ 25%
+v0.9 Chief Engineer ████████████████████ 100%
+v0.91 Benchmark Platform ████████████████████ 100%
 v1.0 Workers ░░░░░░░░░░░░░░░░░░░░ 0%
+v1.1 Autonomous Org ░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
 
