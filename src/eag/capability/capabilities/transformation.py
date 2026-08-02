@@ -1,6 +1,5 @@
 """Transformation capability for EAG."""
 
-
 from eag.capability.enums import (
     CapabilityKind,
     CapabilityOutcome,
