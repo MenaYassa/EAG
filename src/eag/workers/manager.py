@@ -33,7 +33,12 @@ class WorkerManager:
 
     def find_best_worker(self, task: WorkerTask) -> Worker | None:
         """Finds the best available worker for a given task."""
-        candidates = self._registry.by_capability(task.required_capability)
+        # If no capability is required, any worker is a candidate
+        if not task.required_capability:
+            candidates = self._registry.list()
+        else:
+            candidates = self._registry.by_capability(task.required_capability)
+
         available = []
 
         for w in candidates:
@@ -49,13 +54,15 @@ class WorkerManager:
             return None
 
         # Prefer workers who have this capability as a preference
-        preferred = [
-            w for w in available if task.required_capability in w.profile.preferred_capabilities
-        ]
-        if preferred:
-            return preferred[0]  # Already sorted by ID from registry
+        if task.required_capability:
+            preferred = [
+                w for w in available if task.required_capability in w.profile.preferred_capabilities
+            ]
+            if preferred:
+                return preferred[0]  # Already sorted by ID from registry
 
         return available[0]
+
 
     def assign(self, worker_id: str, task_id: str) -> bool:
         """Assigns a task to a worker."""
@@ -77,15 +84,19 @@ class WorkerManager:
         return self._get_instance(worker_id).state
 
     def idle_workers(self) -> tuple[Worker, ...]:
-        return tuple(
-            self._registry.find(wid)
-            for wid, inst in self._instances.items()
-            if inst.state == WorkerState.IDLE
-        )
+        """Returns all unassigned workers by checking the registry, not just cached instances."""
+        idle = []
+        for w in self._registry.list():
+            inst = self._instances.get(w.profile.id)
+            if not inst or inst.state == WorkerState.IDLE:
+                idle.append(w)
+        return tuple(idle)
 
     def busy_workers(self) -> tuple[Worker, ...]:
-        return tuple(
-            self._registry.find(wid)
-            for wid, inst in self._instances.items()
-            if inst.state in [WorkerState.EXECUTING, WorkerState.ASSIGNED]
-        )
+        """Returns all currently busy workers."""
+        busy = []
+        for w in self._registry.list():
+            inst = self._instances.get(w.profile.id)
+            if inst and inst.state in [WorkerState.EXECUTING, WorkerState.ASSIGNED]:
+                busy.append(w)
+        return tuple(busy)

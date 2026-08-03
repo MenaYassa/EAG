@@ -75,9 +75,11 @@ class WorkerRuntime:
             self._event_bus.publish(WorkerReleased(worker_id=worker_id))
 
     def get_metrics(self) -> WorkerRuntimeMetrics:
-        total = len(self._manager._instances)
+        # Calculate total across the entire registry, not just cached instances
+        total = len(self._manager._registry.list())
         idle = len(self._manager.idle_workers())
         busy = len(self._manager.busy_workers())
+        
         utilization = (busy / total) if total > 0 else 0.0
 
         return WorkerRuntimeMetrics(
