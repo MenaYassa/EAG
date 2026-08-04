@@ -1,20 +1,19 @@
 """Comprehensive tests for the Reflection Platform (Sprint 9.1)."""
 
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
-from datetime import datetime, UTC
 
-from eag.events import EventBus
+import pytest
+
 from eag.reflection import (
     DefaultReflectionEngine,
     EngineNotFoundError,
     FindingCategory,
+    RecommendationPriority,
     ReflectionCompleted,
     ReflectionContext,
     ReflectionEngine,
     ReflectionError,
-    ReflectionEvent,
     ReflectionFailed,
     ReflectionFinding,
     ReflectionMetrics,
@@ -24,13 +23,11 @@ from eag.reflection import (
     ReflectionRuntime,
     ReflectionStarted,
     ReflectionSummary,
-    ReflectionValidationError,
-    RecommendationPriority,
     Severity,
 )
 
-
 # --- Mocks & Fixtures ---
+
 
 @dataclass(frozen=True)
 class MockRunResult:
@@ -38,34 +35,42 @@ class MockRunResult:
     outcome: str = "success"
     summary: str = "Completed successfully"
 
+
 @dataclass
 class MockReviewReport:
     decision: str = "approved"
     overall_score: int = 95
     summary: str = "Good quality"
 
+
 @dataclass
 class MockBenchmarkResult:
     success: bool = True
     metadata: dict = field(default_factory=lambda: {"score": 100})
 
+
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
+
 
 @pytest.fixture
 def event_bus() -> MockEventBus:
     return MockEventBus()
 
+
 @pytest.fixture
 def engine() -> DefaultReflectionEngine:
     return DefaultReflectionEngine()
 
+
 @pytest.fixture
 def runtime(engine: DefaultReflectionEngine, event_bus: MockEventBus) -> ReflectionRuntime:
     return ReflectionRuntime(engine=engine, event_bus=event_bus)
+
 
 @pytest.fixture
 def context() -> ReflectionContext:
@@ -73,11 +78,12 @@ def context() -> ReflectionContext:
         run_id="r1",
         run_result=MockRunResult(),
         review_report=MockReviewReport(),
-        benchmark_result=MockBenchmarkResult()
+        benchmark_result=MockBenchmarkResult(),
     )
 
 
 # --- Enum Tests (15) ---
+
 
 class TestReflectionEnums:
     def test_finding_category_values(self) -> None:
@@ -134,9 +140,12 @@ class TestReflectionEnums:
 
 # --- Model Tests (45) ---
 
+
 class TestReflectionModels:
     def test_finding_immutable(self) -> None:
-        f = ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="Test")
+        f = ReflectionFinding(
+            category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="Test"
+        )
         with pytest.raises(Exception):
             f.title = "new"  # type: ignore[misc]
 
@@ -154,10 +163,20 @@ class TestReflectionModels:
 
     def test_finding_confidence_validation(self) -> None:
         with pytest.raises(ValueError):
-            ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T", confidence=1.5)
+            ReflectionFinding(
+                category=FindingCategory.EXECUTION,
+                severity=Severity.HIGH,
+                title="T",
+                confidence=1.5,
+            )
 
     def test_finding_metadata(self) -> None:
-        f = ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T", metadata={"k": "v"})
+        f = ReflectionFinding(
+            category=FindingCategory.EXECUTION,
+            severity=Severity.HIGH,
+            title="T",
+            metadata={"k": "v"},
+        )
         assert f.metadata["k"] == "v"
 
     def test_recommendation_immutable(self) -> None:
@@ -175,7 +194,9 @@ class TestReflectionModels:
 
     def test_recommendation_confidence_validation(self) -> None:
         with pytest.raises(ValueError):
-            ReflectionRecommendation(priority=RecommendationPriority.HIGH, title="T", confidence=1.5)
+            ReflectionRecommendation(
+                priority=RecommendationPriority.HIGH, title="T", confidence=1.5
+            )
 
     def test_summary_immutable(self) -> None:
         s = ReflectionSummary()
@@ -270,8 +291,12 @@ class TestReflectionModels:
         assert hash(r) is not None
 
     def test_finding_equality(self) -> None:
-        f1 = ReflectionFinding(id="f1", category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T")
-        f2 = ReflectionFinding(id="f1", category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T")
+        f1 = ReflectionFinding(
+            id="f1", category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T"
+        )
+        f2 = ReflectionFinding(
+            id="f1", category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T"
+        )
         assert f1 == f2
 
     def test_recommendation_equality(self) -> None:
@@ -280,8 +305,12 @@ class TestReflectionModels:
         assert r1 == r2
 
     def test_finding_id_generated(self) -> None:
-        f1 = ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T")
-        f2 = ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T")
+        f1 = ReflectionFinding(
+            category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T"
+        )
+        f2 = ReflectionFinding(
+            category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T"
+        )
         assert f1.id != f2.id
 
     def test_report_id_generated(self) -> None:
@@ -295,11 +324,18 @@ class TestReflectionModels:
 
     def test_finding_confidence_type_validation(self) -> None:
         with pytest.raises(TypeError):
-            ReflectionFinding(category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="T", confidence="high")  # type: ignore[arg-type]
+            ReflectionFinding(
+                category=FindingCategory.EXECUTION,
+                severity=Severity.HIGH,
+                title="T",
+                confidence="high",
+            )  # type: ignore[arg-type]
 
     def test_recommendation_confidence_type_validation(self) -> None:
         with pytest.raises(TypeError):
-            ReflectionRecommendation(priority=RecommendationPriority.HIGH, title="T", confidence="high")  # type: ignore[arg-type]
+            ReflectionRecommendation(
+                priority=RecommendationPriority.HIGH, title="T", confidence="high"
+            )  # type: ignore[arg-type]
 
     def test_metrics_score_type_validation(self) -> None:
         with pytest.raises(TypeError):
@@ -334,6 +370,7 @@ class TestReflectionModels:
 
 
 # --- Registry Tests (15) ---
+
 
 class TestReflectionRegistry:
     def test_register(self) -> None:
@@ -370,10 +407,11 @@ class TestReflectionRegistry:
     def test_register_multiple(self) -> None:
         reg = ReflectionRegistry()
         reg.register("default", DefaultReflectionEngine())
-        
+
         class CustomEngine:
-            def reflect(self, context): pass
-            
+            def reflect(self, context):
+                pass
+
         reg.register("custom", CustomEngine())
         assert len(reg.list()) == 2
 
@@ -395,31 +433,41 @@ class TestReflectionRegistry:
 
 # --- Runtime & Engine Tests (50) ---
 
+
 class TestReflectionRuntimeAndEngine:
-    def test_runtime_reflect_success(self, runtime: ReflectionRuntime, context: ReflectionContext) -> None:
+    def test_runtime_reflect_success(
+        self, runtime: ReflectionRuntime, context: ReflectionContext
+    ) -> None:
         report = runtime.reflect(context)
         assert isinstance(report, ReflectionReport)
         assert report.run_id == "r1"
 
-    def test_runtime_publishes_started(self, runtime: ReflectionRuntime, context: ReflectionContext, event_bus: MockEventBus) -> None:
+    def test_runtime_publishes_started(
+        self, runtime: ReflectionRuntime, context: ReflectionContext, event_bus: MockEventBus
+    ) -> None:
         runtime.reflect(context)
         assert any(isinstance(e, ReflectionStarted) for e in event_bus.published_events)
 
-    def test_runtime_publishes_completed(self, runtime: ReflectionRuntime, context: ReflectionContext, event_bus: MockEventBus) -> None:
+    def test_runtime_publishes_completed(
+        self, runtime: ReflectionRuntime, context: ReflectionContext, event_bus: MockEventBus
+    ) -> None:
         runtime.reflect(context)
         assert any(isinstance(e, ReflectionCompleted) for e in event_bus.published_events)
 
     def test_runtime_publishes_failed_on_exception(self, event_bus: MockEventBus) -> None:
         class FailingEngine:
-            def reflect(self, context): raise RuntimeError("Fail")
-            
+            def reflect(self, context):
+                raise RuntimeError("Fail")
+
         rt = ReflectionRuntime(engine=FailingEngine(), event_bus=event_bus)
         with pytest.raises(ReflectionError):
             rt.reflect(ReflectionContext(run_id="r", run_result=MockRunResult()))
-            
+
         assert any(isinstance(e, ReflectionFailed) for e in event_bus.published_events)
 
-    def test_engine_success_run(self, engine: DefaultReflectionEngine, context: ReflectionContext) -> None:
+    def test_engine_success_run(
+        self, engine: DefaultReflectionEngine, context: ReflectionContext
+    ) -> None:
         report = engine.reflect(context)
         assert len(report.findings) > 0
         assert any("Successful" in f.title for f in report.findings)
@@ -427,8 +475,7 @@ class TestReflectionRuntimeAndEngine:
 
     def test_engine_failed_run(self, engine: DefaultReflectionEngine) -> None:
         ctx = ReflectionContext(
-            run_id="r",
-            run_result=MockRunResult(outcome="failure", summary="Crashed")
+            run_id="r", run_result=MockRunResult(outcome="failure", summary="Crashed")
         )
         report = engine.reflect(ctx)
         assert any(f.severity == Severity.CRITICAL for f in report.findings)
@@ -438,7 +485,7 @@ class TestReflectionRuntimeAndEngine:
         ctx = ReflectionContext(
             run_id="r",
             run_result=MockRunResult(),
-            review_report=MockReviewReport(decision="rejected", overall_score=40)
+            review_report=MockReviewReport(decision="rejected", overall_score=40),
         )
         report = engine.reflect(ctx)
         assert any(f.category == FindingCategory.REVIEW for f in report.findings)
@@ -448,26 +495,27 @@ class TestReflectionRuntimeAndEngine:
         ctx = ReflectionContext(
             run_id="r",
             run_result=MockRunResult(),
-            benchmark_result=MockBenchmarkResult(success=True, metadata={"score": 60})
+            benchmark_result=MockBenchmarkResult(success=True, metadata={"score": 60}),
         )
         report = engine.reflect(ctx)
         assert any(f.category == FindingCategory.TESTING for f in report.findings)
         assert any("Increase Test Coverage" in r.title for r in report.recommendations)
 
-    def test_engine_metrics_success(self, engine: DefaultReflectionEngine, context: ReflectionContext) -> None:
+    def test_engine_metrics_success(
+        self, engine: DefaultReflectionEngine, context: ReflectionContext
+    ) -> None:
         report = engine.reflect(context)
         assert report.metrics.execution_score == 100
         assert report.metrics.review_score == 95
 
     def test_engine_metrics_failure(self, engine: DefaultReflectionEngine) -> None:
-        ctx = ReflectionContext(
-            run_id="r",
-            run_result=MockRunResult(outcome="failure")
-        )
+        ctx = ReflectionContext(run_id="r", run_result=MockRunResult(outcome="failure"))
         report = engine.reflect(ctx)
         assert report.metrics.execution_score == 0
 
-    def test_engine_deterministic(self, engine: DefaultReflectionEngine, context: ReflectionContext) -> None:
+    def test_engine_deterministic(
+        self, engine: DefaultReflectionEngine, context: ReflectionContext
+    ) -> None:
         r1 = engine.reflect(context)
         r2 = engine.reflect(context)
         # Findings and recommendations have UUIDs, so we compare structure
@@ -475,20 +523,21 @@ class TestReflectionRuntimeAndEngine:
         assert r1.metrics == r2.metrics
         assert r1.summary == r2.summary
 
-    def test_runtime_with_custom_engine(self, event_bus: MockEventBus, context: ReflectionContext) -> None:
+    def test_runtime_with_custom_engine(
+        self, event_bus: MockEventBus, context: ReflectionContext
+    ) -> None:
         class CustomEngine:
             def reflect(self, context):
-                return ReflectionReport(run_id=context.run_id, summary=ReflectionSummary(strengths=("Custom",)))
-                
+                return ReflectionReport(
+                    run_id=context.run_id, summary=ReflectionSummary(strengths=("Custom",))
+                )
+
         rt = ReflectionRuntime(engine=CustomEngine(), event_bus=event_bus)
         report = rt.reflect(context)
         assert "Custom" in report.summary.strengths
 
     def test_engine_no_review_or_benchmark(self, engine: DefaultReflectionEngine) -> None:
-        ctx = ReflectionContext(
-            run_id="r",
-            run_result=MockRunResult()
-        )
+        ctx = ReflectionContext(run_id="r", run_result=MockRunResult())
         report = engine.reflect(ctx)
         # Should still succeed and report no issues
         assert any("Successful" in f.title for f in report.findings)
@@ -497,12 +546,14 @@ class TestReflectionRuntimeAndEngine:
         ctx = ReflectionContext(
             run_id="r",
             run_result=MockRunResult(),
-            review_report=MockReviewReport(decision="approved", overall_score=100)
+            review_report=MockReviewReport(decision="approved", overall_score=100),
         )
         report = engine.reflect(ctx)
         assert "Quality review approved the work" in report.summary.strengths
-        
+
+
 # --- Hardening Tests (5) ---
+
 
 class TestReflectionHardening:
     """Additional tests for deterministic ordering, multiple findings, and edge cases."""
@@ -512,10 +563,10 @@ class TestReflectionHardening:
         ctx = ReflectionContext(
             run_id="r_multi",
             run_result=MockRunResult(outcome="failure", summary="Crashed"),
-            benchmark_result=MockBenchmarkResult(success=False, metadata={"score": 0})
+            benchmark_result=MockBenchmarkResult(success=False, metadata={"score": 0}),
         )
         report = engine.reflect(ctx)
-        
+
         # Should have Execution Failed and Benchmark Failed
         assert len(report.findings) >= 2
         titles = [f.title for f in report.findings]
@@ -528,10 +579,10 @@ class TestReflectionHardening:
             run_id="r_order",
             run_result=MockRunResult(),
             review_report=MockReviewReport(decision="rejected", overall_score=30),
-            benchmark_result=MockBenchmarkResult(success=True, metadata={"score": 50})
+            benchmark_result=MockBenchmarkResult(success=True, metadata={"score": 50}),
         )
         report = engine.reflect(ctx)
-        
+
         # Should have HIGH (Review) and NORMAL (Testing)
         assert len(report.recommendations) == 2
         assert report.recommendations[0].priority == RecommendationPriority.HIGH
@@ -540,11 +591,10 @@ class TestReflectionHardening:
     def test_empty_reflection_still_valid(self, engine: DefaultReflectionEngine) -> None:
         """Verify a successful run with no review/benchmark produces a valid report."""
         ctx = ReflectionContext(
-            run_id="r_empty",
-            run_result=MockRunResult(outcome="success", summary="Done")
+            run_id="r_empty", run_result=MockRunResult(outcome="success", summary="Done")
         )
         report = engine.reflect(ctx)
-        
+
         assert report is not None
         assert len(report.findings) == 1  # The "Successful Execution" info finding
         assert report.findings[0].severity == Severity.INFO
@@ -556,11 +606,13 @@ class TestReflectionHardening:
         ctx = ReflectionContext(
             run_id="r_conf",
             run_result=MockRunResult(),
-            review_report=MockReviewReport(decision="rejected", overall_score=30), # HIGH, 0.9 conf
-            benchmark_result=MockBenchmarkResult(success=False, metadata={"score": 0}) # HIGH, 1.0 conf
+            review_report=MockReviewReport(decision="rejected", overall_score=30),  # HIGH, 0.9 conf
+            benchmark_result=MockBenchmarkResult(
+                success=False, metadata={"score": 0}
+            ),  # HIGH, 1.0 conf
         )
         report = engine.reflect(ctx)
-        
+
         # Both are HIGH severity. Benchmark (1.0) should come before Review (0.9)
         assert len(report.findings) == 2
         assert report.findings[0].title == "Benchmark Failed"
@@ -568,20 +620,24 @@ class TestReflectionHardening:
         assert report.findings[1].title == "Review Rejected"
         assert report.findings[1].confidence == 0.9
 
-    def test_large_reports_immutable_and_deterministic(self, engine: DefaultReflectionEngine, context: ReflectionContext) -> None:
+    def test_large_reports_immutable_and_deterministic(
+        self, engine: DefaultReflectionEngine, context: ReflectionContext
+    ) -> None:
         """Verify that large reports remain immutable and deterministic."""
         # Simulate a large report by running reflection multiple times and checking determinism
         r1 = engine.reflect(context)
         r2 = engine.reflect(context)
-        
+
         assert len(r1.findings) == len(r2.findings)
         assert len(r1.recommendations) == len(r2.recommendations)
-        
+
         # Verify exact ordering match
-        assert [f.id for f in r1.findings] != [f.id for f in r2.findings] # IDs are random
+        assert [f.id for f in r1.findings] != [f.id for f in r2.findings]  # IDs are random
         # But the content and order should be identical
-        assert [(f.title, f.severity, f.confidence) for f in r1.findings] == [(f.title, f.severity, f.confidence) for f in r2.findings]
-        
+        assert [(f.title, f.severity, f.confidence) for f in r1.findings] == [
+            (f.title, f.severity, f.confidence) for f in r2.findings
+        ]
+
         # Verify immutability
         with pytest.raises(Exception):
             r1.findings = ()  # type: ignore[misc]

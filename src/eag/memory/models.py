@@ -33,6 +33,7 @@ def _validate_confidence(value: float) -> float:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LessonLearned:
     """An immutable lesson extracted from an engineering run."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     category: MemoryCategory
     description: str
@@ -44,7 +45,9 @@ class LessonLearned:
     def __post_init__(self) -> None:
         if not isinstance(self.category, MemoryCategory):
             raise TypeError("category must be a MemoryCategory")
-        object.__setattr__(self, "description", _validate_non_empty_str(self.description, "description"))
+        object.__setattr__(
+            self, "description", _validate_non_empty_str(self.description, "description")
+        )
         object.__setattr__(self, "confidence", _validate_confidence(self.confidence))
         if not isinstance(self.level, KnowledgeLevel):
             raise TypeError("level must be a KnowledgeLevel")
@@ -53,6 +56,7 @@ class LessonLearned:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MemoryEntry:
     """The atomic record of an engineering run stored in memory."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()), compare=False)
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC), compare=False)
     run_id: str
@@ -66,7 +70,9 @@ class MemoryEntry:
     def __post_init__(self) -> None:
         object.__setattr__(self, "run_id", _validate_non_empty_str(self.run_id, "run_id"))
         object.__setattr__(self, "goal", _validate_non_empty_str(self.goal, "goal"))
-        object.__setattr__(self, "reflection_id", _validate_non_empty_str(self.reflection_id, "reflection_id"))
+        object.__setattr__(
+            self, "reflection_id", _validate_non_empty_str(self.reflection_id, "reflection_id")
+        )
         if not isinstance(self.tags, tuple):
             raise TypeError("tags must be a tuple")
         if not isinstance(self.lessons, tuple):
@@ -77,6 +83,7 @@ class MemoryEntry:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EngineeringExperience:
     """A normalized experience derived from one or more memory entries."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     project_type: str
     goal_type: str = ""
@@ -88,7 +95,9 @@ class EngineeringExperience:
     source_entries: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "project_type", _validate_non_empty_str(self.project_type, "project_type"))
+        object.__setattr__(
+            self, "project_type", _validate_non_empty_str(self.project_type, "project_type")
+        )
         object.__setattr__(self, "confidence", _validate_confidence(self.confidence))
         if not isinstance(self.lessons, tuple):
             raise TypeError("lessons must be a tuple")
@@ -99,6 +108,7 @@ class EngineeringExperience:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MemoryStatistics:
     """Aggregate statistics over the memory base."""
+
     total_runs: int = 0
     success_rate: float = 0.0
     average_score: float = 0.0
@@ -108,12 +118,17 @@ class MemoryStatistics:
     worker_success_rates: Mapping[str, float] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "worker_success_rates", _validate_mapping(self.worker_success_rates, "worker_success_rates"))
+        object.__setattr__(
+            self,
+            "worker_success_rates",
+            _validate_mapping(self.worker_success_rates, "worker_success_rates"),
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MemorySnapshot:
     """An immutable snapshot of the memory base at a point in time."""
+
     version: str = "1.0.0"
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     entries: tuple[MemoryEntry, ...] = ()
@@ -123,6 +138,7 @@ class MemorySnapshot:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MemoryQuery:
     """A structured query against the memory base."""
+
     goal_contains: str = ""
     tags: tuple[str, ...] = ()
     categories: tuple[MemoryCategory, ...] = ()
@@ -139,6 +155,7 @@ class MemoryQuery:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class MemorySearchResult:
     """The result of a memory query."""
+
     records: tuple[MemoryEntry, ...]
     statistics: MemoryStatistics
     count: int

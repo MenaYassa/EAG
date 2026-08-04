@@ -2,9 +2,6 @@
 
 from eag.workers.collaboration_metrics import CollaborationMetrics
 from eag.workers.delegation import DelegationEngine
-from eag.workers.matcher import CapabilityMatcher, CapabilityScore
-from eag.workers.review_worker import ReviewWorker
-
 from eag.workers.enums import (
     ExperienceLevel,
     TaskPriority,
@@ -32,6 +29,7 @@ from eag.workers.events import (
 )
 from eag.workers.health import WorkerHealthManager
 from eag.workers.manager import WorkerManager
+from eag.workers.matcher import CapabilityMatcher, CapabilityScore
 from eag.workers.metrics import WorkerRuntimeMetrics
 from eag.workers.models import (
     WorkerAssignment,
@@ -43,6 +41,7 @@ from eag.workers.models import (
 )
 from eag.workers.protocol import Worker
 from eag.workers.registry import WorkerRegistry
+from eag.workers.review_worker import ReviewWorker
 from eag.workers.runtime import WorkerRuntime
 
 __all__ = [

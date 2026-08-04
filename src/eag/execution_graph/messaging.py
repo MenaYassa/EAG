@@ -5,7 +5,7 @@ from eag.execution_graph.models import WorkerMessage
 
 class Mailbox:
     """A simple mailbox for receiving messages."""
-    
+
     def __init__(self) -> None:
         self._messages: list[WorkerMessage] = []
 

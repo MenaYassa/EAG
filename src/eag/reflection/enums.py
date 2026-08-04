@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class FindingCategory(StrEnum):
     """Categories of reflection findings."""
+
     PLANNING = "planning"
     EXECUTION = "execution"
     WORKER = "worker"
@@ -17,6 +18,7 @@ class FindingCategory(StrEnum):
 
 class Severity(StrEnum):
     """Severity levels for findings."""
+
     INFO = "info"
     LOW = "low"
     MEDIUM = "medium"
@@ -26,6 +28,7 @@ class Severity(StrEnum):
 
 class RecommendationPriority(StrEnum):
     """Priority levels for recommendations."""
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"

@@ -1,11 +1,10 @@
 """Comprehensive tests for the Engineering Memory Platform (Sprint 9.2)."""
 
-import pytest
 from dataclasses import dataclass, field
 from typing import Any
-from datetime import datetime, UTC
 
-from eag.events import EventBus
+import pytest
+
 from eag.memory import (
     EngineeringExperience,
     EntryNotFoundError,
@@ -24,6 +23,7 @@ from eag.memory import (
     MemoryStatistics,
     MemoryStorage,
 )
+from eag.reflection.enums import FindingCategory, RecommendationPriority, Severity
 from eag.reflection.models import (
     ReflectionContext,
     ReflectionFinding,
@@ -32,10 +32,9 @@ from eag.reflection.models import (
     ReflectionReport,
     ReflectionSummary,
 )
-from eag.reflection.enums import FindingCategory, RecommendationPriority, Severity
-
 
 # --- Mocks & Fixtures ---
+
 
 @dataclass
 class MockRunResult:
@@ -43,33 +42,42 @@ class MockRunResult:
     outcome: str = "success"
     summary: str = "Build a FastAPI project"
 
+
 @dataclass
 class MockEventBus:
     published_events: list[Any] = field(default_factory=list)
+
     def publish(self, event: Any) -> None:
         self.published_events.append(event)
+
 
 @pytest.fixture
 def event_bus() -> MockEventBus:
     return MockEventBus()
 
+
 @pytest.fixture
 def storage() -> InMemoryStorage:
     return InMemoryStorage()
+
 
 @pytest.fixture
 def runtime(storage: InMemoryStorage, event_bus: MockEventBus) -> MemoryRuntime:
     return MemoryRuntime(storage=storage, event_bus=event_bus)
 
+
 @pytest.fixture
 def builder() -> ExperienceBuilder:
     return ExperienceBuilder()
 
-def make_reflection_context(run_id: str = "r1", summary: str = "Build FastAPI") -> ReflectionContext:
+
+def make_reflection_context(
+    run_id: str = "r1", summary: str = "Build FastAPI"
+) -> ReflectionContext:
     return ReflectionContext(
-        run_id=run_id,
-        run_result=MockRunResult(run_id=run_id, summary=summary)
+        run_id=run_id, run_result=MockRunResult(run_id=run_id, summary=summary)
     )
+
 
 def make_reflection_report(score: int = 90) -> ReflectionReport:
     return ReflectionReport(
@@ -81,23 +89,22 @@ def make_reflection_report(score: int = 90) -> ReflectionReport:
                 severity=Severity.MEDIUM,
                 title="Low Coverage",
                 description="Coverage was 60%",
-                confidence=0.8
+                confidence=0.8,
             ),
         ),
         recommendations=(
             ReflectionRecommendation(
-                priority=RecommendationPriority.HIGH,
-                title="Add Tests",
-                action="Increase coverage"
+                priority=RecommendationPriority.HIGH, title="Add Tests", action="Increase coverage"
             ),
         ),
-        metrics=ReflectionMetrics(overall_score=score)
+        metrics=ReflectionMetrics(overall_score=score),
     )
 
 
 # ====================================================================
 # Model Tests (40 tests)
 # ====================================================================
+
 
 class TestMemoryModels:
     def test_lesson_immutable(self) -> None:
@@ -118,7 +125,9 @@ class TestMemoryModels:
             LessonLearned(category=MemoryCategory.TESTING, description="T", confidence=1.5)
 
     def test_lesson_knowledge_level(self) -> None:
-        l = LessonLearned(category=MemoryCategory.TESTING, description="T", level=KnowledgeLevel.RULE)
+        l = LessonLearned(
+            category=MemoryCategory.TESTING, description="T", level=KnowledgeLevel.RULE
+        )
         assert l.level == KnowledgeLevel.RULE
 
     def test_entry_immutable(self) -> None:
@@ -285,6 +294,7 @@ class TestMemoryModels:
 # Storage Tests (25 tests)
 # ====================================================================
 
+
 class TestStorage:
     def test_store_and_retrieve(self, storage: InMemoryStorage) -> None:
         entry = MemoryEntry(run_id="r", goal="g", reflection_id="ref")
@@ -305,7 +315,7 @@ class TestStorage:
         e2 = MemoryEntry(run_id="r2", goal="Flask", reflection_id="ref2")
         storage.store(e1)
         storage.store(e2)
-        
+
         result = storage.search(MemoryQuery(goal_contains="fastapi"))
         assert result.count == 1
         assert result.records[0].id == e1.id
@@ -315,7 +325,7 @@ class TestStorage:
         e2 = MemoryEntry(run_id="r2", goal="g2", reflection_id="ref2", tags=("ui",))
         storage.store(e1)
         storage.store(e2)
-        
+
         result = storage.search(MemoryQuery(tags=("api",)))
         assert result.count == 1
         assert result.records[0].id == e1.id
@@ -323,7 +333,7 @@ class TestStorage:
     def test_search_limit(self, storage: InMemoryStorage) -> None:
         for i in range(10):
             storage.store(MemoryEntry(run_id=f"r{i}", goal="g", reflection_id=f"ref{i}"))
-            
+
         result = storage.search(MemoryQuery(limit=5))
         assert result.count == 5
 
@@ -346,9 +356,23 @@ class TestStorage:
         assert stats.total_runs == 0
 
     def test_statistics_with_entries(self, storage: InMemoryStorage) -> None:
-        storage.store(MemoryEntry(run_id="r1", goal="g", reflection_id="ref1", metadata={"outcome": "success", "score": 90}))
-        storage.store(MemoryEntry(run_id="r2", goal="g", reflection_id="ref2", metadata={"outcome": "failure", "score": 40}))
-        
+        storage.store(
+            MemoryEntry(
+                run_id="r1",
+                goal="g",
+                reflection_id="ref1",
+                metadata={"outcome": "success", "score": 90},
+            )
+        )
+        storage.store(
+            MemoryEntry(
+                run_id="r2",
+                goal="g",
+                reflection_id="ref2",
+                metadata={"outcome": "failure", "score": 40},
+            )
+        )
+
         stats = storage.statistics()
         assert stats.total_runs == 2
         assert stats.success_rate == 0.5
@@ -425,6 +449,7 @@ class TestStorage:
 # Registry Tests (15 tests)
 # ====================================================================
 
+
 class TestMemoryRegistry:
     def test_register(self) -> None:
         reg = MemoryRegistry()
@@ -482,28 +507,54 @@ class TestMemoryRegistry:
 
     def test_register_custom_backend(self) -> None:
         class CustomBackend:
-            def store(self, entry): pass
-            def retrieve(self, entry_id): pass
-            def search(self, query): pass
-            def snapshot(self): return ()
-            def statistics(self): return MemoryStatistics()
-            def delete(self, entry_id): return False
-            def clear(self): pass
-            
+            def store(self, entry):
+                pass
+
+            def retrieve(self, entry_id):
+                pass
+
+            def search(self, query):
+                pass
+
+            def snapshot(self):
+                return ()
+
+            def statistics(self):
+                return MemoryStatistics()
+
+            def delete(self, entry_id):
+                return False
+
+            def clear(self):
+                pass
+
         reg = MemoryRegistry()
         reg.register("custom", CustomBackend())
         assert len(reg.list()) == 1
 
     def test_find_custom_backend(self) -> None:
         class CustomBackend:
-            def store(self, entry): pass
-            def retrieve(self, entry_id): pass
-            def search(self, query): pass
-            def snapshot(self): return ()
-            def statistics(self): return MemoryStatistics()
-            def delete(self, entry_id): return False
-            def clear(self): pass
-            
+            def store(self, entry):
+                pass
+
+            def retrieve(self, entry_id):
+                pass
+
+            def search(self, query):
+                pass
+
+            def snapshot(self):
+                return ()
+
+            def statistics(self):
+                return MemoryStatistics()
+
+            def delete(self, entry_id):
+                return False
+
+            def clear(self):
+                pass
+
         reg = MemoryRegistry()
         reg.register("custom", CustomBackend())
         assert reg.find("custom") is not None
@@ -533,13 +584,14 @@ class TestMemoryRegistry:
 # Runtime Tests (20 tests)
 # ====================================================================
 
+
 class TestMemoryRuntime:
     def test_store_reflection_success(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context()
         report = make_reflection_report()
-        
+
         entry = runtime.store_reflection(ctx, report)
-        
+
         assert entry.run_id == "r1"
         assert entry.reflection_id == report.id
         assert runtime.retrieve(entry.id) == entry
@@ -555,10 +607,10 @@ class TestMemoryRuntime:
     def test_search_by_goal(self, runtime: MemoryRuntime) -> None:
         ctx1 = make_reflection_context(run_id="r1", summary="FastAPI")
         ctx2 = make_reflection_context(run_id="r2", summary="Flask")
-        
+
         runtime.store_reflection(ctx1, make_reflection_report())
         runtime.store_reflection(ctx2, make_reflection_report())
-        
+
         result = runtime.search(MemoryQuery(goal_contains="fastapi"))
         assert result.count == 1
 
@@ -566,7 +618,7 @@ class TestMemoryRuntime:
         for i in range(15):
             ctx = make_reflection_context(run_id=f"r{i}", summary="g")
             runtime.store_reflection(ctx, make_reflection_report())
-            
+
         history = runtime.history()
         assert len(history) == 10
 
@@ -574,14 +626,14 @@ class TestMemoryRuntime:
         for i in range(5):
             ctx = make_reflection_context(run_id=f"r{i}", summary="g")
             runtime.store_reflection(ctx, make_reflection_report())
-            
+
         history = runtime.history(limit=2)
         assert len(history) == 2
 
     def test_snapshot(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context()
         runtime.store_reflection(ctx, make_reflection_report())
-        
+
         snap = runtime.snapshot()
         assert len(snap.entries) == 1
         assert isinstance(snap.statistics, MemoryStatistics)
@@ -589,7 +641,7 @@ class TestMemoryRuntime:
     def test_statistics(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context()
         runtime.store_reflection(ctx, make_reflection_report(score=90))
-        
+
         stats = runtime.statistics()
         assert stats.total_runs == 1
         assert stats.success_rate == 1.0
@@ -597,7 +649,7 @@ class TestMemoryRuntime:
     def test_get_relevant_experience_found(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context(summary="FastAPI project")
         runtime.store_reflection(ctx, make_reflection_report())
-        
+
         exp = runtime.get_relevant_experience("FastAPI project")
         assert exp is not None
         assert exp.project_type == "fastapi"
@@ -609,14 +661,14 @@ class TestMemoryRuntime:
     def test_delete(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context()
         entry = runtime.store_reflection(ctx, make_reflection_report())
-        
+
         assert runtime.delete(entry.id) is True
         assert runtime.statistics().total_runs == 0
 
     def test_clear(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context()
         runtime.store_reflection(ctx, make_reflection_report())
-        
+
         runtime.clear()
         assert runtime.statistics().total_runs == 0
 
@@ -647,7 +699,7 @@ class TestMemoryRuntime:
     def test_get_relevant_experience_returns_experience(self, runtime: MemoryRuntime) -> None:
         ctx = make_reflection_context(summary="FastAPI project")
         runtime.store_reflection(ctx, make_reflection_report())
-        
+
         exp = runtime.get_relevant_experience("FastAPI project")
         assert isinstance(exp, EngineeringExperience)
 
@@ -667,13 +719,14 @@ class TestMemoryRuntime:
 # Experience Builder Tests (15 tests)
 # ====================================================================
 
+
 class TestExperienceBuilder:
     def test_build_from_reflection_success(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context(summary="FastAPI project")
         report = make_reflection_report(score=90)
-        
+
         exp = builder.build_from_reflection(ctx, report)
-        
+
         assert exp.project_type == "fastapi"
         assert exp.outcome == "success"
         assert exp.benchmark_score == 90.0
@@ -682,9 +735,9 @@ class TestExperienceBuilder:
     def test_build_from_reflection_failure(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context(summary="FastAPI project")
         report = make_reflection_report(score=40)
-        
+
         exp = builder.build_from_reflection(ctx, report)
-        
+
         assert exp.outcome == "failure"
 
     def test_build_from_entries_success(self, builder: ExperienceBuilder) -> None:
@@ -692,9 +745,9 @@ class TestExperienceBuilder:
             MemoryEntry(run_id="r1", goal="FastAPI", reflection_id="ref1", metadata={"score": 90}),
             MemoryEntry(run_id="r2", goal="FastAPI", reflection_id="ref2", metadata={"score": 80}),
         )
-        
+
         exp = builder.build_from_entries(entries)
-        
+
         assert exp.project_type == "fastapi"
         assert exp.benchmark_score == 85.0
         assert len(exp.source_entries) == 2
@@ -706,9 +759,9 @@ class TestExperienceBuilder:
     def test_build_from_reflection_extracts_lessons(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context()
         report = make_reflection_report()
-        
+
         exp = builder.build_from_reflection(ctx, report)
-        
+
         assert len(exp.lessons) == len(report.findings)
         assert exp.lessons[0].category == report.findings[0].category
 
@@ -719,14 +772,14 @@ class TestExperienceBuilder:
             MemoryEntry(run_id="r1", goal="FastAPI", reflection_id="ref1", lessons=(l1,)),
             MemoryEntry(run_id="r2", goal="FastAPI", reflection_id="ref2", lessons=(l2,)),
         )
-        
+
         exp = builder.build_from_entries(entries)
         assert len(exp.lessons) == 2
 
     def test_build_from_reflection_project_type_unknown(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context(summary="Unknown project")
         report = make_reflection_report()
-        
+
         exp = builder.build_from_reflection(ctx, report)
         assert exp.project_type == "unknown"
 
@@ -738,7 +791,7 @@ class TestExperienceBuilder:
     def test_build_from_reflection_includes_source(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context(run_id="r123")
         report = make_reflection_report()
-        
+
         exp = builder.build_from_reflection(ctx, report)
         assert "r123" in exp.source_entries
 
@@ -747,7 +800,7 @@ class TestExperienceBuilder:
             MemoryEntry(id="e1", run_id="r1", goal="g", reflection_id="ref1"),
             MemoryEntry(id="e2", run_id="r2", goal="g", reflection_id="ref2"),
         )
-        
+
         exp = builder.build_from_entries(entries)
         assert "e1" in exp.source_entries
         assert "e2" in exp.source_entries
@@ -755,7 +808,7 @@ class TestExperienceBuilder:
     def test_build_from_reflection_confidence(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context()
         report = make_reflection_report()
-        
+
         exp = builder.build_from_reflection(ctx, report)
         assert exp.confidence == 0.9
 
@@ -778,7 +831,7 @@ class TestExperienceBuilder:
     def test_build_from_reflection_lesson_recommendation(self, builder: ExperienceBuilder) -> None:
         ctx = make_reflection_context()
         report = make_reflection_report()
-        
+
         exp = builder.build_from_reflection(ctx, report)
         # The builder should map high priority recommendations to lessons
         assert exp.lessons[0].recommendation == "Increase coverage"

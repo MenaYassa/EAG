@@ -2,7 +2,6 @@
 
 from eag.scheduler.errors import QueueError
 from eag.task_graph.models import TaskNode
-from eag.workers.enums import TaskPriority
 
 
 class ReadyQueue:
@@ -15,15 +14,10 @@ class ReadyQueue:
         """Pushes a task to the queue, maintaining priority order."""
         if self.contains(task.id):
             raise QueueError(f"Task '{task.id}' is already in the queue")
-            
+
         self._queue.append(task)
         # Sort by priority (descending) and then ID for determinism
-        priority_order = {
-            "critical": 0,
-            "high": 1,
-            "normal": 2,
-            "low": 3
-        }
+        priority_order = {"critical": 0, "high": 1, "normal": 2, "low": 3}
         self._queue.sort(key=lambda t: (priority_order.get(t.priority.value, 2), t.id))
 
     def pop(self) -> TaskNode:

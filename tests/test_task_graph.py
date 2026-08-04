@@ -1,6 +1,7 @@
 """Comprehensive tests for the Task Graph Platform (Sprint 8.3)."""
 
 import pytest
+
 from eag.task_graph import (
     CycleError,
     DependencyType,
@@ -16,17 +17,24 @@ from eag.task_graph import (
 )
 from eag.workers.enums import TaskPriority
 
-
 # --- Fixtures ---
 
-def make_node(node_id: str = "n1", title: str = "Task", cap: str = "python", priority: TaskPriority = TaskPriority.NORMAL) -> TaskNode:
+
+def make_node(
+    node_id: str = "n1",
+    title: str = "Task",
+    cap: str = "python",
+    priority: TaskPriority = TaskPriority.NORMAL,
+) -> TaskNode:
     return TaskNode(id=node_id, title=title, required_capability=cap, priority=priority)
+
 
 def make_edge(source: str, target: str) -> TaskEdge:
     return TaskEdge(source=source, target=target)
 
 
 # --- Model Tests (25) ---
+
 
 class TestTaskGraphModels:
     def test_node_immutable(self) -> None:
@@ -143,6 +151,7 @@ class TestTaskGraphModels:
 
 
 # --- Graph Construction & API Tests (25) ---
+
 
 class TestTaskGraphAPI:
     def test_empty_graph(self) -> None:
@@ -271,7 +280,7 @@ class TestTaskGraphAPI:
             make_edge("n0", "n2"),
             make_edge("n1", "n3"),
             make_edge("n2", "n3"),
-            make_edge("n3", "n4")
+            make_edge("n3", "n4"),
         )
         g = TaskGraph(nodes=nodes, edges=edges)
         assert len(g.roots()) == 1
@@ -293,6 +302,7 @@ class TestTaskGraphAPI:
 
 # --- Validation Tests (25) ---
 
+
 class TestTaskGraphValidation:
     def test_cycle_detection_simple(self) -> None:
         nodes = (make_node("n1"), make_node("n2"))
@@ -306,7 +316,7 @@ class TestTaskGraphValidation:
             make_edge("n0", "n1"),
             make_edge("n1", "n2"),
             make_edge("n2", "n3"),
-            make_edge("n3", "n1") # Cycle back to n1
+            make_edge("n3", "n1"),  # Cycle back to n1
         )
         with pytest.raises(CycleError):
             TaskGraph(nodes=nodes, edges=edges)
@@ -381,7 +391,7 @@ class TestTaskGraphValidation:
 
     def test_large_graph_validation(self) -> None:
         nodes = tuple(make_node(f"n{i}") for i in range(100))
-        edges = tuple(make_edge(f"n{i}", f"n{i+1}") for i in range(99))
+        edges = tuple(make_edge(f"n{i}", f"n{i + 1}") for i in range(99))
         g = TaskGraph(nodes=nodes, edges=edges)
         assert len(g.nodes) == 100
 
@@ -394,7 +404,10 @@ class TestTaskGraphValidation:
 
     def test_cycle_error_message(self) -> None:
         with pytest.raises(CycleError, match="Cycle detected"):
-            TaskGraph(nodes=(make_node("n1"), make_node("n2")), edges=(make_edge("n1", "n2"), make_edge("n2", "n1")))
+            TaskGraph(
+                nodes=(make_node("n1"), make_node("n2")),
+                edges=(make_edge("n1", "n2"), make_edge("n2", "n1")),
+            )
 
     def test_duplicate_node_error_message(self) -> None:
         with pytest.raises(DuplicateNodeError, match="Duplicate node IDs"):
@@ -416,7 +429,7 @@ class TestTaskGraphValidation:
 
     def test_validation_runs_on_construction(self) -> None:
         # All validation should happen in __init__
-        pass # Covered by previous tests
+        pass  # Covered by previous tests
 
     def test_add_node_does_not_validate_edges(self) -> None:
         # Adding a node shouldn't trigger edge validation failures if edges are valid
@@ -433,7 +446,7 @@ class TestTaskGraphValidation:
         nodes = (make_node("n1"), make_node("n2"), make_node("n3"))
         edges = (make_edge("n1", "n2"),)
         g = TaskGraph(nodes=nodes, edges=edges)
-        assert len(g.roots()) == 2 # n1 and n3
+        assert len(g.roots()) == 2  # n1 and n3
 
     def test_empty_graph_is_valid(self) -> None:
         g = TaskGraph()
@@ -441,6 +454,7 @@ class TestTaskGraphValidation:
 
 
 # --- Scheduling & Determinism Tests (25) ---
+
 
 class TestTaskGraphScheduling:
     def test_ready_empty_graph(self) -> None:
@@ -477,13 +491,13 @@ class TestTaskGraphScheduling:
     def test_ready_blocked_by_multiple_parents(self) -> None:
         n1, n2, n3 = make_node("n1"), make_node("n2"), make_node("n3")
         g = TaskGraph(nodes=(n1, n2, n3), edges=(make_edge("n1", "n3"), make_edge("n2", "n3")))
-        
+
         # Only n1 and n2 are ready
         assert len(g.ready(set())) == 2
-        
+
         # Complete n1, n3 is still blocked by n2
         assert len(g.ready({"n1"})) == 1
-        
+
         # Complete n2, n3 is now ready
         ready = g.ready({"n1", "n2"})
         assert len(ready) == 1
@@ -494,7 +508,7 @@ class TestTaskGraphScheduling:
         n2 = make_node("n2", priority=TaskPriority.HIGH)
         n3 = make_node("n3", priority=TaskPriority.CRITICAL)
         g = TaskGraph(nodes=(n1, n2, n3))
-        
+
         ready = g.ready(set())
         assert ready[0].id == "n3"
         assert ready[1].id == "n2"
@@ -504,8 +518,8 @@ class TestTaskGraphScheduling:
         n1 = make_node("n1")
         n2 = make_node("n2")
         n3 = make_node("n3")
-        g = TaskGraph(nodes=(n3, n1, n2)) # Insert out of order
-        
+        g = TaskGraph(nodes=(n3, n1, n2))  # Insert out of order
+
         ready = g.ready(set())
         # Should be sorted by ID
         assert [n.id for n in ready] == ["n1", "n2", "n3"]
@@ -522,18 +536,23 @@ class TestTaskGraphScheduling:
     def test_topological_sort_linear(self) -> None:
         n1, n2, n3 = make_node("n1"), make_node("n2"), make_node("n3")
         g = TaskGraph(nodes=(n1, n2, n3), edges=(make_edge("n1", "n2"), make_edge("n2", "n3")))
-        
+
         sorted_nodes = g.topological_sort()
         assert [n.id for n in sorted_nodes] == ["n1", "n2", "n3"]
 
     def test_topological_sort_diamond(self) -> None:
         n1, n2, n3, n4 = (make_node(f"n{i}") for i in range(1, 5))
-        edges = (make_edge("n1", "n2"), make_edge("n1", "n3"), make_edge("n2", "n4"), make_edge("n3", "n4"))
+        edges = (
+            make_edge("n1", "n2"),
+            make_edge("n1", "n3"),
+            make_edge("n2", "n4"),
+            make_edge("n3", "n4"),
+        )
         g = TaskGraph(nodes=(n1, n2, n3, n4), edges=edges)
-        
+
         sorted_nodes = g.topological_sort()
         ids = [n.id for n in sorted_nodes]
-        
+
         assert ids[0] == "n1"
         assert ids[-1] == "n4"
         # n2 and n3 can be in either order, but must be after n1 and before n4
@@ -542,9 +561,14 @@ class TestTaskGraphScheduling:
 
     def test_topological_sort_deterministic(self) -> None:
         n1, n2, n3, n4 = (make_node(f"n{i}") for i in range(1, 5))
-        edges = (make_edge("n1", "n2"), make_edge("n1", "n3"), make_edge("n2", "n4"), make_edge("n3", "n4"))
+        edges = (
+            make_edge("n1", "n2"),
+            make_edge("n1", "n3"),
+            make_edge("n2", "n4"),
+            make_edge("n3", "n4"),
+        )
         g = TaskGraph(nodes=(n1, n2, n3, n4), edges=edges)
-        
+
         sort1 = g.topological_sort()
         sort2 = g.topological_sort()
         assert sort1 == sort2
@@ -564,22 +588,28 @@ class TestTaskGraphScheduling:
 
     def test_ready_with_partial_completion_complex(self) -> None:
         nodes = tuple(make_node(f"n{i}") for i in range(5))
-        edges = (make_edge("n0", "n1"), make_edge("n0", "n2"), make_edge("n1", "n3"), make_edge("n2", "n3"), make_edge("n3", "n4"))
+        edges = (
+            make_edge("n0", "n1"),
+            make_edge("n0", "n2"),
+            make_edge("n1", "n3"),
+            make_edge("n2", "n3"),
+            make_edge("n3", "n4"),
+        )
         g = TaskGraph(nodes=nodes, edges=edges)
-        
-        assert len(g.ready(set())) == 1 # n0
-        assert len(g.ready({"n0"})) == 2 # n1, n2
-        assert len(g.ready({"n0", "n1"})) == 1 # n2
-        assert len(g.ready({"n0", "n1", "n2"})) == 1 # n3
-        assert len(g.ready({"n0", "n1", "n2", "n3"})) == 1 # n4
+
+        assert len(g.ready(set())) == 1  # n0
+        assert len(g.ready({"n0"})) == 2  # n1, n2
+        assert len(g.ready({"n0", "n1"})) == 1  # n2
+        assert len(g.ready({"n0", "n1", "n2"})) == 1  # n3
+        assert len(g.ready({"n0", "n1", "n2", "n3"})) == 1  # n4
 
     def test_topological_sort_preserves_dependencies(self) -> None:
         n1, n2, n3 = make_node("n1"), make_node("n2"), make_node("n3")
         g = TaskGraph(nodes=(n1, n2, n3), edges=(make_edge("n1", "n3"), make_edge("n2", "n3")))
-        
+
         sorted_nodes = g.topological_sort()
         ids = [n.id for n in sorted_nodes]
-        
+
         assert ids.index("n1") < ids.index("n3")
         assert ids.index("n2") < ids.index("n3")
 
@@ -588,7 +618,7 @@ class TestTaskGraphScheduling:
         n2 = make_node("n2", priority=TaskPriority.HIGH)
         n3 = make_node("n3", priority=TaskPriority.LOW)
         g = TaskGraph(nodes=(n3, n1, n2))
-        
+
         ready = g.ready(set())
         # High priority first, then sorted by ID
         assert [n.id for n in ready] == ["n1", "n2", "n3"]
@@ -596,7 +626,7 @@ class TestTaskGraphScheduling:
     def test_graph_with_no_edges_topological_sort(self) -> None:
         n1, n2, n3 = make_node("n1"), make_node("n2"), make_node("n3")
         g = TaskGraph(nodes=(n3, n1, n2))
-        
+
         sorted_nodes = g.topological_sort()
         assert [n.id for n in sorted_nodes] == ["n1", "n2", "n3"]
 
@@ -609,9 +639,9 @@ class TestTaskGraphScheduling:
 
     def test_topological_sort_large_graph(self) -> None:
         nodes = tuple(make_node(f"n{i}") for i in range(100))
-        edges = tuple(make_edge(f"n{i}", f"n{i+1}") for i in range(99))
+        edges = tuple(make_edge(f"n{i}", f"n{i + 1}") for i in range(99))
         g = TaskGraph(nodes=nodes, edges=edges)
-        
+
         sorted_nodes = g.topological_sort()
         assert len(sorted_nodes) == 100
         assert sorted_nodes[0].id == "n0"
@@ -628,9 +658,9 @@ class TestTaskGraphScheduling:
     def test_determinism_independent_of_insertion_order(self) -> None:
         n1, n2, n3 = make_node("n1"), make_node("n2"), make_node("n3")
         edges = (make_edge("n1", "n2"), make_edge("n2", "n3"))
-        
+
         g1 = TaskGraph(nodes=(n3, n2, n1), edges=edges)
         g2 = TaskGraph(nodes=(n1, n2, n3), edges=edges)
-        
+
         assert g1.topological_sort() == g2.topological_sort()
         assert g1.ready(set()) == g2.ready(set())

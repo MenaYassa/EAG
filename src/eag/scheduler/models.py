@@ -21,10 +21,8 @@ def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str,
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ExecutionBatch:
     """One scheduling iteration containing parallel assignments."""
-    id: str = field(
-        default_factory=lambda: str(uuid.uuid4()), 
-        compare=False
-    )
+
+    id: str = field(default_factory=lambda: str(uuid.uuid4()), compare=False)
     assignments: tuple[WorkerAssignment, ...] = ()
     parallelism: int = 0
     metadata: Mapping[str, Any] = field(default_factory=dict, hash=False)
@@ -39,14 +37,9 @@ class ExecutionBatch:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SchedulingDecision:
     """Represents one scheduling cycle output."""
-    id: str = field(
-        default_factory=lambda: str(uuid.uuid4()), 
-        compare=False
-    )
-    timestamp: datetime = field(
-        default_factory=lambda: datetime.now(UTC), 
-        compare=False
-    )
+
+    id: str = field(default_factory=lambda: str(uuid.uuid4()), compare=False)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC), compare=False)
     ready_tasks: tuple[TaskNode, ...] = ()
     assigned_workers: tuple[WorkerAssignment, ...] = ()
     policy: SchedulingPolicy = SchedulingPolicy.BEST_CAPABILITY
@@ -59,6 +52,7 @@ class SchedulingDecision:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SchedulerMetrics:
     """Metrics tracking the overall scheduler activity."""
+
     total_cycles: int = 0
     batches_executed: int = 0
     tasks_completed: int = 0

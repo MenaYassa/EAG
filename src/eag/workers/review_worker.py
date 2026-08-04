@@ -6,7 +6,7 @@ from eag.workers.models import WorkerContext, WorkerProfile, WorkerResult, Worke
 
 class ReviewWorker:
     """A specialized worker that reviews engineering artifacts."""
-    
+
     @property
     def profile(self) -> WorkerProfile:
         return WorkerProfile(
@@ -14,7 +14,7 @@ class ReviewWorker:
             name="Review Worker",
             role=WorkerRole.REVIEW,
             capabilities=("review", "architecture", "style", "testing", "quality"),
-            preferred_capabilities=("review",)
+            preferred_capabilities=("review",),
         )
 
     def supports(self, task: WorkerTask) -> bool:
@@ -30,5 +30,5 @@ class ReviewWorker:
             task_id=task.id,
             success=True,
             summary="Review passed. Code quality is excellent.",
-            artifacts=context.shared_artifacts
+            artifacts=context.shared_artifacts,
         )

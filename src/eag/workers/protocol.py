@@ -9,6 +9,7 @@ from eag.workers.models import (
     WorkerTask,
 )
 
+
 @runtime_checkable
 class Worker(Protocol):
     """The contract for an engineering worker."""

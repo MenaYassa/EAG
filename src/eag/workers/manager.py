@@ -63,7 +63,6 @@ class WorkerManager:
 
         return available[0]
 
-
     def assign(self, worker_id: str, task_id: str) -> bool:
         """Assigns a task to a worker."""
         inst = self._get_instance(worker_id)

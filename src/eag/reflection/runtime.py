@@ -17,7 +17,7 @@ class ReflectionRuntime:
     def reflect(self, context: ReflectionContext) -> ReflectionReport:
         """Runs the reflection engine and produces a report."""
         self._event_bus.publish(ReflectionStarted(run_id=context.run_id))
-        
+
         try:
             report = self._engine.reflect(context)
             self._event_bus.publish(ReflectionCompleted(run_id=context.run_id, report_id=report.id))

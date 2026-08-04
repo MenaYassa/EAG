@@ -3,7 +3,12 @@
 from eag.reflection.default_engine import DefaultReflectionEngine
 from eag.reflection.enums import FindingCategory, RecommendationPriority, Severity
 from eag.reflection.errors import EngineNotFoundError, ReflectionError, ReflectionValidationError
-from eag.reflection.events import ReflectionCompleted, ReflectionEvent, ReflectionFailed, ReflectionStarted
+from eag.reflection.events import (
+    ReflectionCompleted,
+    ReflectionEvent,
+    ReflectionFailed,
+    ReflectionStarted,
+)
 from eag.reflection.models import (
     ReflectionContext,
     ReflectionFinding,

@@ -25,6 +25,7 @@ def _validate_non_empty_str(value: str, field_name: str) -> str:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TaskNode:
     """Represents one engineering activity in the graph."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     description: str = ""
@@ -48,6 +49,7 @@ class TaskNode:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TaskEdge:
     """Represents a dependency between two tasks."""
+
     source: str
     target: str
     dependency_type: DependencyType = DependencyType.FINISH_TO_START

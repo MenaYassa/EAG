@@ -1,7 +1,6 @@
 """Memory runtime for EAG."""
 
 from eag.events import EventBus
-from eag.memory.errors import MemoryError
 from eag.memory.experience import ExperienceBuilder
 from eag.memory.models import (
     EngineeringExperience,
@@ -27,14 +26,16 @@ class MemoryRuntime:
         """Automatically stores a reflection as a memory entry."""
         entry = MemoryEntry(
             run_id=context.run_id,
-            goal=context.run_result.summary if hasattr(context.run_result, 'summary') else "Unknown Goal",
+            goal=context.run_result.summary
+            if hasattr(context.run_result, "summary")
+            else "Unknown Goal",
             reflection_id=report.id,
             summary=report.summary.strengths[0] if report.summary.strengths else "No summary",
             tags=(report.metrics.execution_score > 50 and "success" or "failure",),
             metadata={
                 "score": report.metrics.overall_score,
-                "outcome": "success" if report.metrics.overall_score > 50 else "failure"
-            }
+                "outcome": "success" if report.metrics.overall_score > 50 else "failure",
+            },
         )
         self._storage.store(entry)
         return entry
@@ -61,10 +62,10 @@ class MemoryRuntime:
         """Retrieves the most relevant past experience for a given goal."""
         query = MemoryQuery(goal_contains=goal.split()[0], limit=5)
         result = self.search(query)
-        
+
         if not result.records:
             return None
-            
+
         return self._experience_builder.build_from_entries(result.records)
 
     def delete(self, entry_id: str) -> bool:

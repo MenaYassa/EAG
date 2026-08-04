@@ -16,15 +16,12 @@ class Dispatcher:
         worker = self._manager.find_best_worker(task)
         if not worker:
             return None
-            
+
         assigned = self._manager.assign(worker.profile.id, task.id)
         if not assigned:
             return None
-            
-        return WorkerAssignment(
-            worker_id=worker.profile.id,
-            task_id=task.id
-        )
+
+        return WorkerAssignment(worker_id=worker.profile.id, task_id=task.id)
 
     def release(self, worker_id: str) -> None:
         """Releases a worker back to the pool."""

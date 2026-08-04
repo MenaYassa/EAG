@@ -41,6 +41,7 @@ def _validate_score(value: int) -> int:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionFinding:
     """An immutable representation of an issue found during reflection."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     category: FindingCategory
     severity: Severity
@@ -63,6 +64,7 @@ class ReflectionFinding:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionRecommendation:
     """An actionable recommendation generated during reflection."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     priority: RecommendationPriority
     title: str
@@ -82,6 +84,7 @@ class ReflectionRecommendation:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionSummary:
     """A summary of the reflection process."""
+
     strengths: tuple[str, ...] = ()
     weaknesses: tuple[str, ...] = ()
     risks: tuple[str, ...] = ()
@@ -96,6 +99,7 @@ class ReflectionSummary:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionMetrics:
     """Metrics derived during the reflection process."""
+
     planning_score: int = 100
     execution_score: int = 100
     review_score: int = 100
@@ -104,13 +108,21 @@ class ReflectionMetrics:
     overall_score: int = 100
 
     def __post_init__(self) -> None:
-        for field_name in ["planning_score", "execution_score", "review_score", "worker_score", "architecture_score", "overall_score"]:
+        for field_name in [
+            "planning_score",
+            "execution_score",
+            "review_score",
+            "worker_score",
+            "architecture_score",
+            "overall_score",
+        ]:
             object.__setattr__(self, field_name, _validate_score(getattr(self, field_name)))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionContext:
     """Context provided to the reflection engine."""
+
     run_id: str
     run_result: Any  # ChiefRuntime RunResult
     review_report: Any | None = None  # ReviewRuntime ReviewReport
@@ -125,6 +137,7 @@ class ReflectionContext:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReflectionReport:
     """The final, immutable artifact produced by the Reflection Runtime."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     run_id: str
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

@@ -79,7 +79,7 @@ class WorkerRuntime:
         total = len(self._manager._registry.list())
         idle = len(self._manager.idle_workers())
         busy = len(self._manager.busy_workers())
-        
+
         utilization = (busy / total) if total > 0 else 0.0
 
         return WorkerRuntimeMetrics(

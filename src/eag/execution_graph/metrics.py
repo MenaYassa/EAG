@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ExecutionMetrics:
     """Metrics tracking the parallel execution activity."""
+
     total_batches: int = 0
     max_parallelism: int = 0
     average_batch_size: float = 0.0

@@ -1,9 +1,8 @@
 """Comprehensive tests for Worker Collaboration (Sprint 8.5)."""
 
-import pytest
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Any
+
+import pytest
 
 from eag.workers import (
     CapabilityMatcher,
@@ -25,8 +24,8 @@ from eag.workers import (
 )
 from eag.workers.enums import ExperienceLevel, TaskPriority
 
-
 # --- Mocks & Fixtures ---
+
 
 class MockWorker:
     def __init__(self, profile: WorkerProfile, fail: bool = False) -> None:
@@ -51,51 +50,83 @@ class MockWorker:
             task_id=task.id,
             success=True,
             summary=f"Task {task.id} completed",
-            artifacts=context.shared_artifacts
+            artifacts=context.shared_artifacts,
         )
+
 
 @pytest.fixture
 def health_manager() -> WorkerHealthManager:
     return WorkerHealthManager()
 
+
 @pytest.fixture
 def registry() -> WorkerRegistry:
     reg = WorkerRegistry()
-    reg.register(MockWorker(WorkerProfile(
-        id="w_py", name="Python Worker", role=WorkerRole.BACKEND,
-        capabilities=("python", "fastapi", "pytest"), preferred_capabilities=("python", "fastapi"),
-        frameworks=("fastapi",), supported_languages=("python",), domains=("backend",)
-    )))
-    reg.register(MockWorker(WorkerProfile(
-        id="w_test", name="Testing Worker", role=WorkerRole.TESTING,
-        capabilities=("pytest", "testing"), preferred_capabilities=("pytest",)
-    )))
-    reg.register(MockWorker(WorkerProfile(
-        id="w_docs", name="Docs Worker", role=WorkerRole.DOCUMENTATION,
-        capabilities=("markdown", "docs"), preferred_capabilities=("markdown",)
-    )))
+    reg.register(
+        MockWorker(
+            WorkerProfile(
+                id="w_py",
+                name="Python Worker",
+                role=WorkerRole.BACKEND,
+                capabilities=("python", "fastapi", "pytest"),
+                preferred_capabilities=("python", "fastapi"),
+                frameworks=("fastapi",),
+                supported_languages=("python",),
+                domains=("backend",),
+            )
+        )
+    )
+    reg.register(
+        MockWorker(
+            WorkerProfile(
+                id="w_test",
+                name="Testing Worker",
+                role=WorkerRole.TESTING,
+                capabilities=("pytest", "testing"),
+                preferred_capabilities=("pytest",),
+            )
+        )
+    )
+    reg.register(
+        MockWorker(
+            WorkerProfile(
+                id="w_docs",
+                name="Docs Worker",
+                role=WorkerRole.DOCUMENTATION,
+                capabilities=("markdown", "docs"),
+                preferred_capabilities=("markdown",),
+            )
+        )
+    )
     reg.register(ReviewWorker())
     return reg
+
 
 @pytest.fixture
 def manager(registry: WorkerRegistry, health_manager: WorkerHealthManager) -> WorkerManager:
     return WorkerManager(registry=registry, health_manager=health_manager)
 
+
 @pytest.fixture
 def matcher() -> CapabilityMatcher:
     return CapabilityMatcher()
+
 
 @pytest.fixture
 def delegate(matcher: CapabilityMatcher, manager: WorkerManager) -> DelegationEngine:
     return DelegationEngine(matcher=matcher, manager=manager)
 
-def make_task(task_id: str = "t1", cap: str = "python", priority: TaskPriority = TaskPriority.NORMAL) -> WorkerTask:
+
+def make_task(
+    task_id: str = "t1", cap: str = "python", priority: TaskPriority = TaskPriority.NORMAL
+) -> WorkerTask:
     return WorkerTask(id=task_id, title="Test Task", required_capability=cap, priority=priority)
 
 
 # ====================================================================
 # Worker Profiles Tests (40 tests)
 # ====================================================================
+
 
 class TestWorkerProfiles:
     def test_profile_immutable(self) -> None:
@@ -278,6 +309,7 @@ class TestWorkerProfiles:
 # Capability Matcher Tests (50 tests)
 # ====================================================================
 
+
 class TestCapabilityMatcher:
     def test_score_exact_match(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
         w = registry.find("w_py")
@@ -285,7 +317,9 @@ class TestCapabilityMatcher:
         score = matcher.score(w, task)
         assert score.score == 100.0
 
-    def test_score_exact_match_reasons(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_exact_match_reasons(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_py")
         task = make_task(cap="python")
         score = matcher.score(w, task)
@@ -299,27 +333,35 @@ class TestCapabilityMatcher:
         assert score.score == 80.0
         assert "Prefers this capability: markdown" not in score.reasons
 
-    def test_score_missing_capability(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_missing_capability(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_docs")
         task = make_task(cap="python")
         score = matcher.score(w, task)
         assert score.score == 0.0
         assert "python" in score.missing_capabilities
 
-    def test_score_missing_capability_reason(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_missing_capability_reason(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_docs")
         task = make_task(cap="python")
         score = matcher.score(w, task)
         assert "Missing required capability: python" in score.reasons
 
-    def test_score_no_capability_required(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_no_capability_required(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_py")
         task = WorkerTask(title="T", required_capability="")
         score = matcher.score(w, task)
         assert score.score == 50.0
         assert "No specific capability required" in score.reasons
 
-    def test_score_matched_capabilities(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_matched_capabilities(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_py")
         task = make_task(cap="python")
         score = matcher.score(w, task)
@@ -327,23 +369,34 @@ class TestCapabilityMatcher:
 
     def test_score_capped_at_100(self, matcher: CapabilityMatcher) -> None:
         # Worker that matches role, preference, and capability
-        w = MockWorker(WorkerProfile(
-            id="w_perfect", name="Perfect", role=WorkerRole.TESTING,
-            capabilities=("testing",), preferred_capabilities=("testing",)
-        ))
+        w = MockWorker(
+            WorkerProfile(
+                id="w_perfect",
+                name="Perfect",
+                role=WorkerRole.TESTING,
+                capabilities=("testing",),
+                preferred_capabilities=("testing",),
+            )
+        )
         task = make_task(cap="testing")
         score = matcher.score(w, task)
         # 80 + 20 (pref) + 10 (role) = 110, capped at 100
         assert score.score == 100.0
 
-    def test_rank_filters_missing(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_rank_filters_missing(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = make_task(cap="python")
         ranked = matcher.rank(registry.list(), task)
         assert len(ranked) == 1
         assert ranked[0].worker_id == "w_py"
 
     def test_rank_sorts_by_score(self, matcher: CapabilityMatcher) -> None:
-        w1 = MockWorker(WorkerProfile(id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)))
+        w1 = MockWorker(
+            WorkerProfile(
+                id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)
+            )
+        )
         w2 = MockWorker(WorkerProfile(id="w2", name="B", capabilities=("python",)))
         task = make_task(cap="python")
         ranked = matcher.rank((w1, w2), task)
@@ -358,7 +411,9 @@ class TestCapabilityMatcher:
         assert ranked[0].worker_id == "a_worker"
         assert ranked[1].worker_id == "z_worker"
 
-    def test_best_worker_success(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_best_worker_success(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = make_task(cap="python")
         result = matcher.best_worker(registry.list(), task)
         assert result is not None
@@ -366,12 +421,16 @@ class TestCapabilityMatcher:
         assert worker.profile.id == "w_py"
         assert score.score == 100.0
 
-    def test_best_worker_none_available(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_best_worker_none_available(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = make_task(cap="rust")
         result = matcher.best_worker(registry.list(), task)
         assert result is None
 
-    def test_best_worker_no_capability_required(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_best_worker_no_capability_required(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = WorkerTask(title="T", required_capability="")
         result = matcher.best_worker(registry.list(), task)
         assert result is not None
@@ -386,10 +445,14 @@ class TestCapabilityMatcher:
         assert score.score == 0.0
 
     def test_score_multiple_capabilities(self, matcher: CapabilityMatcher) -> None:
-        w = MockWorker(WorkerProfile(
-            id="w1", name="A", capabilities=("python", "fastapi", "pytest"),
-            preferred_capabilities=("python", "fastapi")
-        ))
+        w = MockWorker(
+            WorkerProfile(
+                id="w1",
+                name="A",
+                capabilities=("python", "fastapi", "pytest"),
+                preferred_capabilities=("python", "fastapi"),
+            )
+        )
         task = make_task(cap="fastapi")
         score = matcher.score(w, task)
         assert score.score == 100.0  # 80 + 20 (pref)
@@ -402,12 +465,16 @@ class TestCapabilityMatcher:
         result = matcher.best_worker((), make_task())
         assert result is None
 
-    def test_score_returns_capability_score(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_returns_capability_score(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_py")
         score = matcher.score(w, make_task())
         assert isinstance(score, CapabilityScore)
 
-    def test_score_worker_id_set(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_worker_id_set(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_py")
         score = matcher.score(w, make_task())
         assert score.worker_id == "w_py"
@@ -416,19 +483,27 @@ class TestCapabilityMatcher:
         ranked = matcher.rank(registry.list(), make_task())
         assert isinstance(ranked, tuple)
 
-    def test_best_worker_returns_tuple(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_best_worker_returns_tuple(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         result = matcher.best_worker(registry.list(), make_task())
         assert isinstance(result, tuple)
 
     def test_score_role_match_bonus(self, matcher: CapabilityMatcher) -> None:
-        w = MockWorker(WorkerProfile(id="w1", name="A", role=WorkerRole.TESTING, capabilities=("testing",)))
+        w = MockWorker(
+            WorkerProfile(id="w1", name="A", role=WorkerRole.TESTING, capabilities=("testing",))
+        )
         task = make_task(cap="testing")
         score = matcher.score(w, task)
         # 80 + 10 (role match, no preference)
         assert score.score == 90.0
 
     def test_score_preference_bonus(self, matcher: CapabilityMatcher) -> None:
-        w = MockWorker(WorkerProfile(id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)))
+        w = MockWorker(
+            WorkerProfile(
+                id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)
+            )
+        )
         task = make_task(cap="python")
         score = matcher.score(w, task)
         # 80 + 20 (pref, no role match since role=GENERAL)
@@ -440,7 +515,9 @@ class TestCapabilityMatcher:
         score = matcher.score(w, task)
         assert score.score == 80.0
 
-    def test_rank_includes_no_cap_required(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_rank_includes_no_cap_required(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = WorkerTask(title="T", required_capability="")
         ranked = matcher.rank(registry.list(), task)
         # All workers should be included since no cap is required
@@ -448,7 +525,11 @@ class TestCapabilityMatcher:
 
     def test_best_worker_selects_highest_score(self, matcher: CapabilityMatcher) -> None:
         w1 = MockWorker(WorkerProfile(id="w1", name="A", capabilities=("python",)))
-        w2 = MockWorker(WorkerProfile(id="w2", name="B", capabilities=("python",), preferred_capabilities=("python",)))
+        w2 = MockWorker(
+            WorkerProfile(
+                id="w2", name="B", capabilities=("python",), preferred_capabilities=("python",)
+            )
+        )
         task = make_task(cap="python")
         result = matcher.best_worker((w1, w2), task)
         assert result[0].profile.id == "w2"
@@ -477,14 +558,20 @@ class TestCapabilityMatcher:
         assert len(score.reasons) == 2
         assert any("python" in r for r in score.reasons)
 
-    def test_score_reasons_empty_on_miss(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_score_reasons_empty_on_miss(
+        self, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         w = registry.find("w_docs")
         score = matcher.score(w, make_task(cap="rust"))
         assert len(score.reasons) == 1
         assert "Missing" in score.reasons[0]
 
     def test_rank_preserves_order(self, matcher: CapabilityMatcher) -> None:
-        w1 = MockWorker(WorkerProfile(id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)))
+        w1 = MockWorker(
+            WorkerProfile(
+                id="w1", name="A", capabilities=("python",), preferred_capabilities=("python",)
+            )
+        )
         w2 = MockWorker(WorkerProfile(id="w2", name="B", capabilities=("python",)))
         w3 = MockWorker(WorkerProfile(id="w3", name="C", capabilities=("python",)))
         ranked = matcher.rank((w1, w2, w3), make_task(cap="python"))
@@ -506,6 +593,7 @@ class TestCapabilityMatcher:
 # Delegation Engine Tests (50 tests)
 # ====================================================================
 
+
 class TestDelegationEngine:
     def test_delegate_success(self, delegate: DelegationEngine) -> None:
         task = make_task(cap="python")
@@ -526,7 +614,12 @@ class TestDelegationEngine:
         result = delegate.delegate(task)
         assert result is None
 
-    def test_delegate_skips_unhealthy(self, delegate: DelegationEngine, manager: WorkerManager, health_manager: WorkerHealthManager) -> None:
+    def test_delegate_skips_unhealthy(
+        self,
+        delegate: DelegationEngine,
+        manager: WorkerManager,
+        health_manager: WorkerHealthManager,
+    ) -> None:
         health_manager.record_failure("w_py")
         health_manager.record_failure("w_py")
         health_manager.record_failure("w_py")
@@ -534,7 +627,12 @@ class TestDelegationEngine:
         result = delegate.delegate(task)
         assert result is None
 
-    def test_delegate_allows_degraded(self, delegate: DelegationEngine, manager: WorkerManager, health_manager: WorkerHealthManager) -> None:
+    def test_delegate_allows_degraded(
+        self,
+        delegate: DelegationEngine,
+        manager: WorkerManager,
+        health_manager: WorkerHealthManager,
+    ) -> None:
         health_manager.record_failure("w_py")
         task = make_task(cap="python")
         result = delegate.delegate(task)
@@ -573,14 +671,18 @@ class TestDelegationEngine:
         # Should return first available by ID
         assert result[0].profile.id == "w_docs"
 
-    def test_delegate_skips_assigned(self, delegate: DelegationEngine, manager: WorkerManager) -> None:
+    def test_delegate_skips_assigned(
+        self, delegate: DelegationEngine, manager: WorkerManager
+    ) -> None:
         manager.assign("w_py", "t0")
         # Try to delegate a task that only w_py can do
         task = make_task(cap="fastapi")
         result = delegate.delegate(task)
         assert result is None
 
-    def test_delegate_fallback_to_second_best(self, delegate: DelegationEngine, manager: WorkerManager) -> None:
+    def test_delegate_fallback_to_second_best(
+        self, delegate: DelegationEngine, manager: WorkerManager
+    ) -> None:
         # Make w_py busy, try to delegate pytest task
         manager.assign("w_py", "t0")
         task = make_task(cap="pytest")
@@ -596,7 +698,9 @@ class TestDelegationEngine:
         result = delegate.delegate(task)
         assert result is None
 
-    def test_delegate_all_unhealthy(self, delegate: DelegationEngine, health_manager: WorkerHealthManager) -> None:
+    def test_delegate_all_unhealthy(
+        self, delegate: DelegationEngine, health_manager: WorkerHealthManager
+    ) -> None:
         for w_id in ["w_py", "w_test", "w_docs", "w_review"]:
             for _ in range(3):
                 health_manager.record_failure(w_id)
@@ -612,7 +716,9 @@ class TestDelegationEngine:
         result = delegate.delegate(make_task(cap="nonexistent"))
         assert result is None
 
-    def test_delegate_score_matches_matcher(self, delegate: DelegationEngine, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
+    def test_delegate_score_matches_matcher(
+        self, delegate: DelegationEngine, matcher: CapabilityMatcher, registry: WorkerRegistry
+    ) -> None:
         task = make_task(cap="python")
         result = delegate.delegate(task)
         direct_score = matcher.score(registry.find("w_py"), task)
@@ -637,19 +743,23 @@ class TestDelegationEngine:
         # Delegation is based on capability, not priority
         task_high = make_task(cap="python", priority=TaskPriority.HIGH)
         task_low = make_task(cap="python", priority=TaskPriority.LOW)
-        
+
         r1 = delegate.delegate(task_high)
         r2 = delegate.delegate(task_low)
-        
+
         assert r1[0].profile.id == r2[0].profile.id
 
-    def test_delegate_skips_executing(self, delegate: DelegationEngine, manager: WorkerManager) -> None:
+    def test_delegate_skips_executing(
+        self, delegate: DelegationEngine, manager: WorkerManager
+    ) -> None:
         manager._get_instance("w_py").state = WorkerState.EXECUTING
         task = make_task(cap="python")
         result = delegate.delegate(task)
         assert result is None
 
-    def test_delegate_skips_blocked(self, delegate: DelegationEngine, manager: WorkerManager) -> None:
+    def test_delegate_skips_blocked(
+        self, delegate: DelegationEngine, manager: WorkerManager
+    ) -> None:
         manager._get_instance("w_py").state = WorkerState.BLOCKED
         task = make_task(cap="python")
         result = delegate.delegate(task)
@@ -685,6 +795,7 @@ class TestDelegationEngine:
 # ====================================================================
 # Collaboration Context Tests (30 tests)
 # ====================================================================
+
 
 class TestCollaborationContext:
     def test_context_immutable(self) -> None:
@@ -763,7 +874,7 @@ class TestCollaborationContext:
         # Test that artifacts are passed through context
         artifacts = ("file1.py", "file2.py", "README.md")
         c = WorkerContext(run_id="r", goal="g", workspace=Path("/"), shared_artifacts=artifacts)
-        
+
         # Worker should receive these artifacts
         w = MockWorker(WorkerProfile(id="w1", name="A"))
         task = make_task()
@@ -785,10 +896,15 @@ class TestCollaborationContext:
 
     def test_context_with_all_fields(self) -> None:
         c = WorkerContext(
-            run_id="r", goal="g", workspace=Path("/"),
-            repository=Path("/repo"), trace_id="t1",
-            completed_tasks=("t1",), shared_artifacts=("f.py",),
-            messages=("m1",), metadata={"k": "v"}
+            run_id="r",
+            goal="g",
+            workspace=Path("/"),
+            repository=Path("/repo"),
+            trace_id="t1",
+            completed_tasks=("t1",),
+            shared_artifacts=("f.py",),
+            messages=("m1",),
+            metadata={"k": "v"},
         )
         assert c.run_id == "r"
         assert c.goal == "g"
@@ -845,6 +961,7 @@ class TestCollaborationContext:
 # Review Pipeline Tests (30 tests)
 # ====================================================================
 
+
 class TestReviewPipeline:
     def test_review_worker_profile(self) -> None:
         w = ReviewWorker()
@@ -875,19 +992,21 @@ class TestReviewPipeline:
         w = ReviewWorker()
         task = make_task(task_id="t_rev", cap="review")
         ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
-        
+
         result = w.execute(task, ctx)
-        
+
         assert result.success is True
         assert "Review passed" in result.summary
 
     def test_review_worker_preserves_artifacts(self) -> None:
         w = ReviewWorker()
         task = make_task(task_id="t_rev", cap="review")
-        ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"), shared_artifacts=("file.py",))
-        
+        ctx = WorkerContext(
+            run_id="r", goal="g", workspace=Path("/"), shared_artifacts=("file.py",)
+        )
+
         result = w.execute(task, ctx)
-        
+
         assert "file.py" in result.artifacts
 
     def test_review_worker_protocol_compliance(self) -> None:
@@ -902,10 +1021,10 @@ class TestReviewPipeline:
         w = ReviewWorker()
         task = make_task(cap="review")
         ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
-        
+
         r1 = w.execute(task, ctx)
         r2 = w.execute(task, ctx)
-        
+
         assert r1.success == r2.success
         assert r1.summary == r2.summary
 
@@ -913,15 +1032,15 @@ class TestReviewPipeline:
         # Delegate a review task
         task = make_task(cap="review")
         result = delegate.delegate(task)
-        
+
         assert result is not None
         worker, score = result
         assert worker.profile.id == "w_review"
-        
+
         # Execute the review
         ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
         review_result = worker.execute(task, ctx)
-        
+
         assert review_result.success is True
         assert "passed" in review_result.summary.lower()
 
@@ -930,7 +1049,7 @@ class TestReviewPipeline:
         w = ReviewWorker()
         task = make_task(cap="review")
         ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
-        
+
         result = w.execute(task, ctx)
         assert isinstance(result, WorkerResult)
 
@@ -939,7 +1058,7 @@ class TestReviewPipeline:
         w = ReviewWorker()
         task = make_task(cap="review")
         ctx = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
-        
+
         result = w.execute(task, ctx)
         assert result.success is True
 
@@ -947,7 +1066,7 @@ class TestReviewPipeline:
         task = make_task(cap="review")
         r1 = delegate.delegate(task)
         r2 = delegate.delegate(task)
-        
+
         assert r1[0].profile.id == r2[0].profile.id
 
     def test_review_worker_id(self) -> None:
@@ -1022,6 +1141,7 @@ class TestReviewPipeline:
 # Collaboration Metrics Tests (20 tests)
 # ====================================================================
 
+
 class TestCollaborationMetrics:
     def test_metrics_defaults(self) -> None:
         m = CollaborationMetrics()
@@ -1076,7 +1196,7 @@ class TestCollaborationMetrics:
             successful_delegations=9,
             review_acceptance_rate=0.9,
             average_delegation_score=92.5,
-            artifacts_produced=15
+            artifacts_produced=15,
         )
         assert m.delegations == 10
         assert m.successful_delegations == 9
