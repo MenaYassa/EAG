@@ -167,32 +167,43 @@ This sprint turns the Chief Engineer into an orchestrator.
 
 ## Upcoming Sprints
 
-### Sprint 8 — Workers ⏳
+### Sprint 8 — Workers ✅
 
 Workers become a full‑fledged distributed execution system.
 
-- Worker Runtime
-- Worker Registry
-- Task Distribution
-- Parallel Execution
-- Conflict Resolution
-- Supervisor
-- Aggregation
-- Scaling
+- **8.1** Worker Runtime
+- **8.2** Worker Registry
+- **8.3** Worker Collaboration
+- **8.4** Scheduler
+- **8.5** Parallel Execution
+- **8.6** Multi-worker Platform
 
 **Target Version:** v1.0
 
 ---
 
-### Sprint 9 — Autonomous Engineering 🔜
+### Sprint 9 — Autonomous Engineering ⏳
 
 Evolving from an autonomous engineer to an autonomous engineering organization.
 
-- Organization orchestration
-- Advanced multi-agent workflows
-- High-level project planning and execution
+- **9.1** Reflection Engine ✅
+- **9.2** Engineering Memory ✅
+- **9.3** Adaptive Planning 🔜
+- **9.4** Autonomous Engineering Loop 🔜
 
 **Target Version:** v1.1
+
+---
+
+### Sprint 10 — Autonomous Software Engineering 🔜
+
+Let EAG engineer real software autonomously.
+
+- End-to-end repository creation and lifecycle management
+- High-level multi-repository reasoning
+- Real-world autonomous execution
+
+**Target Version:** v2.0
 
 ---
 
@@ -210,8 +221,9 @@ Evolving from an autonomous engineer to an autonomous engineering organization.
 | v0.8    | Semantic Transformations        | ✅     |
 | v0.9    | Chief Engineer                  | ✅     |
 | v0.91   | EBS-0 Benchmark Platform        | ✅     |
-| v1.0    | Autonomous Multi‑Agent Workers  | ⏳     |
-| v1.1    | Autonomous Engineering Org      | 🔜     |
+| v1.0    | Autonomous Multi‑Agent Workers  | ✅     |
+| v1.1    | Autonomous Engineering Org      | ⏳     |
+| v2.0    | Autonomous Software Engineering | 🔜     |
 
 ---
 
@@ -228,8 +240,9 @@ v0.7 Planning Intelligence █████████████████�
 v0.8 Semantic Transformations ████████████████████ 100%
 v0.9 Chief Engineer ████████████████████ 100%
 v0.91 Benchmark Platform ████████████████████ 100%
-v1.0 Workers ░░░░░░░░░░░░░░░░░░░░ 0%
-v1.1 Autonomous Org ░░░░░░░░░░░░░░░░░░░░ 0%
+v1.0 Workers ████████████████████ 100%
+v1.1 Autonomous Org ██████████░░░░░░░░░░ 50%
+v2.0 Auto Software ░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
 

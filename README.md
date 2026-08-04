@@ -23,7 +23,7 @@ explainable.
 
 ## Current Status
 
-**Version:** 0.91 — Chief Engineer & Benchmarking
+**Version:** 1.0 — Autonomous Multi-Agent Workers
 | Milestone | Status |
 | --- | --- |
 | Sprint 0 — Foundation | ✅ Complete |
@@ -35,8 +35,9 @@ explainable.
 | Sprint 6 — Engineering Platform | ✅ Complete |
 | Sprint 7 — Chief Engineer | ✅ Complete |
 | EBS-0 Benchmark Platform | ✅ Complete |
-| Sprint 8 — Workers | ⏳ In Progress |
-| Sprint 9 — Autonomous Engineering | 🔜 Next |
+| Sprint 8 — Workers | ✅ Complete |
+| Sprint 9 — Autonomous Engineering | ⏳ In Progress |
+| Sprint 10 — Autonomous Software Engineering | 🔜 Next |
 
 ### Implemented Capabilities
 
@@ -62,9 +63,10 @@ explainable.
 
 *   **Benchmark Platform** — EBS-0 suite with 5 benchmarks
 
-### Upcoming
+*   **Workers** — Parallel execution, collaboration, and multi-agent task completion (Worker Runtime, Registry, Scheduler)
+*   **Engineering Memory** — Reflection engine and persistent lessons learned
 
-*   **Workers** — Parallel execution, collaboration, and multi-agent task completion
+### Upcoming
     
 *   **Autonomous Engineering** — Evolving from an autonomous engineer to an autonomous engineering organization
 
@@ -235,7 +237,6 @@ MIT
 
 ## Project Status
 
-EAG is under active development. The platform has completed up to Sprint 7 (Chief Engineer)
-and the EBS-0 Benchmark Platform, marking the completion of the single-engineer architecture.
-We are now preparing for Sprint 8 — Workers, evolving EAG into an autonomous engineering organization.
+EAG is under active development. The platform has completed up to Sprint 8 (Workers) and Sprint 9.2 (Engineering Memory), evolving EAG into an autonomous engineering organization with reflection capabilities.
+We are now preparing for Sprint 9.3 (Adaptive Planning) and Sprint 10 (Autonomous Software Engineering).
 For the complete development plan, see [ROADMAP.md](docs/ROADMAP.md).
