@@ -106,7 +106,9 @@ class LiteLLMProvider:
 
             duration = (time.monotonic() - start_time) * 1000
 
-            content = response.choices[0].message.content
+            # Safeguard against empty or None content (e.g., thinking models or token limits)
+            message = response.choices[0].message
+            content = message.content or getattr(message, "reasoning_content", "") or ""
             usage = response.usage
 
             return ExecutionResult(
