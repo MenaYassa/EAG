@@ -161,11 +161,9 @@ class TestLiteLLMProvider:
         if litellm is None:
             pytest.fail("litellm package is not installed. Please run `uv add litellm`.")
 
-        # Pull secrets from the environment
         api_key = os.getenv("LITELLM_TEST_API_KEY")
         api_base = os.getenv("LITELLM_TEST_API_BASE")
 
-        # Gracefully skip if credentials aren't present (e.g., in CI/CD pipelines)
         if not api_key or not api_base:
             pytest.skip("Integration credentials not found in environment. Skipping.")
 
@@ -175,10 +173,10 @@ class TestLiteLLMProvider:
             prompt="Say 'Hello EAG!' and nothing else.",
             model_id="z-ai/glm-5.2",
             provider_id="litellm",
-            options=ExecutionOptions(max_tokens=50, temperature=1.0),
+            # Give it plenty of headroom to think before it speaks
+            options=ExecutionOptions(max_tokens=1024, temperature=0.0),
         )
 
-        # We let the test fail loudly to see the exact API error
         result = provider.execute(ctx)
 
         assert result.success is True
