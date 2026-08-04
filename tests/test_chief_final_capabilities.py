@@ -118,7 +118,7 @@ def context(tmp_path: Path) -> CapabilityContext:
 class TestCapabilityModels:
     def test_metadata_immutable(self) -> None:
         m = CapabilityMetadata(id="test", name="Test")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             m.id = "new"  # type: ignore[misc]
 
     def test_metadata_invalid_id(self) -> None:
@@ -127,7 +127,7 @@ class TestCapabilityModels:
 
     def test_request_immutable(self) -> None:
         r = CapabilityRequest(capability_id="test")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.capability_id = "new"  # type: ignore[misc]
 
     def test_result_immutable(self) -> None:
@@ -137,12 +137,12 @@ class TestCapabilityModels:
             outcome=CapabilityOutcome.SUCCESS,
             state=CapabilityState.COMPLETED,
         )
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.outcome = CapabilityOutcome.FAILURE  # type: ignore[misc]
 
     def test_context_immutable(self) -> None:
         c = CapabilityContext(workspace_path=Path("/tmp"))
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             c.workspace_path = Path("/")  # type: ignore[misc]
 
     def test_kind_values(self) -> None:

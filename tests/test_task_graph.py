@@ -39,7 +39,7 @@ def make_edge(source: str, target: str) -> TaskEdge:
 class TestTaskGraphModels:
     def test_node_immutable(self) -> None:
         n = make_node()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             n.title = "new"  # type: ignore[misc]
 
     def test_node_invalid_title(self) -> None:
@@ -65,7 +65,7 @@ class TestTaskGraphModels:
 
     def test_edge_immutable(self) -> None:
         e = make_edge("a", "b")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             e.source = "c"  # type: ignore[misc]
 
     def test_edge_invalid_source(self) -> None:

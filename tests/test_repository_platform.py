@@ -256,7 +256,7 @@ class TestRuntimeMetrics:
         assert runtime.metrics().checkouts == 2
 
     def test_failure_count(self, runtime: RepositoryRuntime) -> None:
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             runtime.checkout("nonexistent")
         assert runtime.metrics().failures == 1
 

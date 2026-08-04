@@ -104,12 +104,12 @@ class TestValidationModels:
         issue = ValidationIssue(
             category=ValidationCategory.STRUCTURE, severity=ValidationSeverity.ERROR, message="Test"
         )
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             issue.message = "New"  # type: ignore[misc]
 
     def test_validation_result_is_immutable(self) -> None:
         result = EngineeringPlanValidationResult(valid=True)
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             result.valid = False  # type: ignore[misc]
 
     def test_empty_message_rejected(self) -> None:

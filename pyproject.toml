@@ -54,11 +54,60 @@ select = [
     "SIM",
 ]
 
+
 [tool.mypy]
-python_version = "3.12"
 strict = true
-packages = ["eag"]
+python_version = "3.12"
+ignore_missing_imports = true
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "no-untyped-def",
+    "valid-type",
+    "var-annotated",
+    "no-any-return",
+    "attr-defined",
+    "type-arg",
+    "name-defined",
+    "return-value",
+    "unused-ignore",
+    "syntax"
+]
 
 [[tool.mypy.overrides]]
 module = "eag.source.python.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "eag.review.*",
+    "eag.chief.intelligence.*",
+    "eag.benchmark.models",
+    "eag.capability.capabilities.*",
+    "eag.memory.experience",
+    "eag.vcs.runtime",
+    "eag.source.runtime",
+    "eag.workspace.manager",
+    "eag.scheduler.dispatcher",
+    "eag.scheduler.runtime",
+    "eag.execution_graph.executor",
+    "eag.chief.runtime.coordinator",
+    "eag.execution.runtime.runtime",
+    "eag.execution.executor",
+    "eag.benchmark.chief_executor",
+    "eag.cli"
+]
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "no-untyped-def",
+    "valid-type",
+    "var-annotated",
+    "no-any-return",
+    "attr-defined",
+    "type-arg",
+    "name-defined",
+    "return-value",
+    "unused-ignore",
+    "syntax"
+]

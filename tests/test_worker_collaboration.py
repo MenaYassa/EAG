@@ -131,7 +131,7 @@ def make_task(
 class TestWorkerProfiles:
     def test_profile_immutable(self) -> None:
         p = WorkerProfile(name="A")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             p.name = "B"  # type: ignore[misc]
 
     def test_profile_defaults(self) -> None:
@@ -537,7 +537,7 @@ class TestCapabilityMatcher:
     def test_score_immutable(self, matcher: CapabilityMatcher, registry: WorkerRegistry) -> None:
         w = registry.find("w_py")
         score = matcher.score(w, make_task())
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             score.score = 50.0  # type: ignore[misc]
 
     def test_capability_score_defaults(self) -> None:
@@ -800,7 +800,7 @@ class TestDelegationEngine:
 class TestCollaborationContext:
     def test_context_immutable(self) -> None:
         c = WorkerContext(run_id="r", goal="g", workspace=Path("/"))
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             c.goal = "new"  # type: ignore[misc]
 
     def test_context_defaults(self) -> None:
@@ -1153,7 +1153,7 @@ class TestCollaborationMetrics:
 
     def test_metrics_immutable(self) -> None:
         m = CollaborationMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.delegations = 5  # type: ignore[misc]
 
     def test_metrics_delegations(self) -> None:
@@ -1233,12 +1233,12 @@ class TestCollaborationMetrics:
 
     def test_metrics_slots(self) -> None:
         m = CollaborationMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.new_field = "value"  # type: ignore[attr-defined]
 
     def test_metrics_frozen(self) -> None:
         m = CollaborationMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.successful_delegations = 100  # type: ignore[misc]
 
     def test_metrics_str_representation(self) -> None:

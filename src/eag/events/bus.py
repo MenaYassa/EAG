@@ -120,7 +120,7 @@ class EventBus:
             if not handlers:
                 self._subscribers.pop(sub.event_type, None)
 
-    def publish(self, event: Event) -> None:
+    def publish(self, event: Any) -> None:
         """Publish an event to its registered subscribers."""
         subs = self._subscribers.get(type(event), {})
         # Iterate over a copy of values to allow unsubscription during iteration

@@ -119,12 +119,12 @@ def build_simulation(
 class TestPlannerApprovalModels:
     def test_request_is_immutable(self) -> None:
         req = ApprovalRequest(id="req-1", plan_id="plan-1")
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             req.id = "new"  # type: ignore[misc]
 
     def test_decision_is_immutable(self) -> None:
         dec = ApprovalDecision(state=ApprovalState.APPROVED)
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             dec.state = ApprovalState.REJECTED  # type: ignore[misc]
 
     def test_invalid_state_rejected(self) -> None:

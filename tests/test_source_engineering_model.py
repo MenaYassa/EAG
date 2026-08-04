@@ -171,5 +171,5 @@ class TestSourceRuntime:
 
     def test_unsupported_language_raises(self) -> None:
         rt = SourceRuntime()
-        with pytest.raises(Exception, match="No source provider supports path"):
+        with pytest.raises(Exception, match="No source provider supports path"):  # noqa: B017
             rt.parse(Path("test.ts"), "const x = 1;")

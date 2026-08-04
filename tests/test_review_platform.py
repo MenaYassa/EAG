@@ -144,7 +144,7 @@ class TestReviewEnums:
 class TestReviewModels:
     def test_review_issue_immutable(self) -> None:
         i = ReviewIssue(category=IssueCategory.STYLE, severity=Severity.WARNING, title="Test")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             i.title = "new"  # type: ignore[misc]
 
     def test_review_issue_invalid_category(self) -> None:
@@ -188,7 +188,7 @@ class TestReviewModels:
 
     def test_review_suggestion_immutable(self) -> None:
         s = ReviewSuggestion(priority=SuggestionPriority.HIGH, message="Fix it")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             s.message = "new"  # type: ignore[misc]
 
     def test_review_suggestion_invalid_priority(self) -> None:
@@ -207,7 +207,7 @@ class TestReviewModels:
 
     def test_review_finding_immutable(self) -> None:
         f = ReviewFinding(title="Finding")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             f.title = "new"  # type: ignore[misc]
 
     def test_review_finding_empty_title(self) -> None:
@@ -242,7 +242,7 @@ class TestReviewModels:
 
     def test_reflection_immutable(self) -> None:
         r = Reflection(root_cause="Root", reasoning="Reason")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.root_cause = "new"  # type: ignore[misc]
 
     def test_reflection_empty_root_cause(self) -> None:
@@ -267,7 +267,7 @@ class TestReviewModels:
 
     def test_review_metrics_immutable(self) -> None:
         m = ReviewMetrics()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             m.issues_found = 5  # type: ignore[misc]
 
     def test_review_metrics_negative_value(self) -> None:
@@ -289,7 +289,7 @@ class TestReviewModels:
 
     def test_review_report_immutable(self) -> None:
         r = ReviewReport(decision=ReviewDecision.APPROVED, overall_score=90)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.decision = ReviewDecision.REJECTED  # type: ignore[misc]
 
     def test_review_report_invalid_decision(self) -> None:
@@ -424,22 +424,22 @@ class TestReviewErrors:
 class TestReviewEvents:
     def test_review_started_immutable(self) -> None:
         e = ReviewStarted(review_id="r1")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             e.review_id = "r2"  # type: ignore[misc]
 
     def test_review_completed_immutable(self) -> None:
         e = ReviewCompleted(review_id="r1", decision="approved", score=100)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             e.score = 90  # type: ignore[misc]
 
     def test_issue_detected_immutable(self) -> None:
         e = IssueDetected(review_id="r1", issue_id="i1", severity="warning")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             e.severity = "error"  # type: ignore[misc]
 
     def test_suggestion_generated_immutable(self) -> None:
         e = SuggestionGenerated(review_id="r1", suggestion_id="s1", priority="high")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             e.priority = "low"  # type: ignore[misc]
 
     def test_event_timestamp_auto(self) -> None:

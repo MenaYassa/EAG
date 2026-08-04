@@ -80,7 +80,7 @@ def make_benchmark(bid: str = "B001") -> Benchmark:
 class TestBenchmarkModels:
     def test_benchmark_immutable(self) -> None:
         b = make_benchmark()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             b.id = "new"  # type: ignore[misc]
 
     def test_benchmark_invalid_id(self) -> None:
@@ -98,17 +98,17 @@ class TestBenchmarkModels:
 
     def test_benchmark_run_immutable(self) -> None:
         r = BenchmarkRun(benchmark_id="B001")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.state = BenchmarkState.COMPLETED  # type: ignore[misc]
 
     def test_benchmark_result_immutable(self) -> None:
         r = BenchmarkResult(run_id="r1", benchmark_id="B001", success=True)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.success = False  # type: ignore[misc]
 
     def test_benchmark_score_immutable(self) -> None:
         s = BenchmarkScore(run_id="r1")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             s.overall = 100  # type: ignore[misc]
 
     def test_benchmark_score_validation(self) -> None:
@@ -127,12 +127,12 @@ class TestBenchmarkModels:
             score=BenchmarkScore(run_id="r1"),
             duration_ms=100.0,
         )
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.outcome = BenchmarkOutcome.FAIL  # type: ignore[misc]
 
     def test_capability_profile_immutable(self) -> None:
         p = CapabilityProfile()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             p.profiles = {}  # type: ignore[misc]
 
     def test_benchmark_state_values(self) -> None:
