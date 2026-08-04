@@ -809,7 +809,7 @@ class TestWorkerMessaging:
 
     def test_message_immutable(self) -> None:
         msg = WorkerMessage(sender_id="w1", receiver_id="w2", msg_type="TEST")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             msg.content = "new"  # type: ignore[misc]
 
     def test_message_defaults(self) -> None:
@@ -1002,12 +1002,12 @@ class TestArtifactGraph:
 
     def test_node_immutable(self) -> None:
         n = ArtifactNode(path="main.py", creator_worker_id="w1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             n.path = "new.py"  # type: ignore[misc]
 
     def test_edge_immutable(self) -> None:
         e = ArtifactEdge(source="a1", target="a2")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             e.source = "a3"  # type: ignore[misc]
 
     def test_node_hashable(self) -> None:
@@ -1173,7 +1173,7 @@ class TestRuntimeMetrics:
 
     def test_immutable(self) -> None:
         m = ExecutionMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.total_batches = 5  # type: ignore[misc]
 
     def test_total_batches(self) -> None:
@@ -1255,12 +1255,12 @@ class TestRuntimeMetrics:
 
     def test_slots(self) -> None:
         m = ExecutionMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.new_field = "value"  # type: ignore[attr-defined]
 
     def test_frozen(self) -> None:
         m = ExecutionMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.max_parallelism = 100  # type: ignore[misc]
 
     def test_str_representation(self) -> None:

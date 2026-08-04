@@ -144,7 +144,7 @@ def make_edge(source: str, target: str) -> TaskEdge:
 class TestSchedulerModels:
     def test_execution_batch_immutable(self) -> None:
         b = ExecutionBatch()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             b.parallelism = 5  # type: ignore[misc]
 
     def test_execution_batch_defaults(self) -> None:
@@ -167,7 +167,7 @@ class TestSchedulerModels:
 
     def test_scheduling_decision_immutable(self) -> None:
         d = SchedulingDecision()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             d.policy = SchedulingPolicy.ROUND_ROBIN  # type: ignore[misc]
 
     def test_scheduling_decision_defaults(self) -> None:
@@ -181,7 +181,7 @@ class TestSchedulerModels:
 
     def test_worker_assignment_immutable(self) -> None:
         a = WorkerAssignment(worker_id="w1", task_id="t1")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             a.worker_id = "w2"  # type: ignore[misc]
 
     def test_worker_assignment_defaults(self) -> None:
@@ -191,7 +191,7 @@ class TestSchedulerModels:
 
     def test_scheduler_metrics_immutable(self) -> None:
         m = SchedulerMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.total_cycles = 5  # type: ignore[misc]
 
     def test_scheduler_metrics_defaults(self) -> None:
@@ -494,7 +494,7 @@ class TestReadyQueue:
         for i in range(100):
             q.push(make_node(f"t{i}"))
         assert q.size() == 100
-        for i in range(100):
+        for _ in range(100):
             q.pop()
         assert q.empty() is True
 
@@ -505,7 +505,7 @@ class TestReadyQueue:
         for i in range(50):
             q.push(make_node(f"t{i + 50}", priority=TaskPriority.HIGH))
 
-        for i in range(50):
+        for _ in range(50):
             assert q.pop().priority == TaskPriority.HIGH
 
 

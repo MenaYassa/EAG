@@ -51,7 +51,7 @@ class TestVCSEnums:
 class TestVCSModels:
     def test_repository_is_immutable(self, temp_repo_root: Path) -> None:
         repo = Repository(root=temp_repo_root)
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             repo.branch = "dev"  # type: ignore[misc]
 
     def test_commit_creation(self) -> None:
@@ -74,7 +74,7 @@ class TestGitProvider:
 
         git_mod.subprocess.run = mock_run
         try:
-            with pytest.raises(Exception, match="Git executable not found"):
+            with pytest.raises(Exception, match="Git executable not found"):  # noqa: B017
                 provider.init(tmp_path)
         finally:
             git_mod.subprocess.run = original_run

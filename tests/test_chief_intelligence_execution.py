@@ -133,32 +133,32 @@ def make_context(
 class TestExecutionModels:
     def test_execution_result_immutable(self) -> None:
         r = ExecutionResult(success=True)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.success = False  # type: ignore[misc]
 
     def test_trace_event_immutable(self) -> None:
         e = TraceEvent(type=TraceEventType.STARTED)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             e.type = TraceEventType.COMPLETED  # type: ignore[misc]
 
     def test_execution_trace_immutable(self) -> None:
         t = ExecutionTrace()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             t.events = ()  # type: ignore[misc]
 
     def test_execution_context_immutable(self) -> None:
         c = make_context()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             c.prompt = "new"  # type: ignore[misc]
 
     def test_usage_metrics_immutable(self) -> None:
         u = UsageMetrics()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             u.total_tokens = 100  # type: ignore[misc]
 
     def test_provider_health_immutable(self) -> None:
         h = ProviderHealth(provider_id="p1")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             h.status = ProviderHealthStatus.HEALTHY  # type: ignore[misc]
 
     def test_execution_options_defaults(self) -> None:
@@ -189,7 +189,7 @@ class TestExecutionModels:
 
     def test_execution_options_immutable(self) -> None:
         o = ExecutionOptions()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             o.temperature = 0.5  # type: ignore[misc]
 
     def test_trace_event_defaults(self) -> None:

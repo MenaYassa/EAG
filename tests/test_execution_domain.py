@@ -62,7 +62,7 @@ class TestExecutionEnums:
 
 class TestExecutionModels:
     def test_context_is_immutable(self, context: ExecutionContext) -> None:
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             context.mode = ExecutionMode.DRY_RUN  # type: ignore[misc]
 
     def test_context_requires_path(self, dummy_plan: dict) -> None:
@@ -85,7 +85,7 @@ class TestExecutionModels:
 
     def test_report_immutable(self) -> None:
         report = ExecutionReport(state=ExecutionState.CREATED)
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             report.state = ExecutionState.COMPLETED  # type: ignore[misc]
 
 
@@ -101,7 +101,7 @@ class TestExecutionErrors:
 class TestExecutionEvents:
     def test_events_are_immutable(self) -> None:
         event = ExecutionStarted(execution_id="exec-1")
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             event.execution_id = "exec-2"  # type: ignore[misc]
 
     def test_event_timestamp_auto(self) -> None:

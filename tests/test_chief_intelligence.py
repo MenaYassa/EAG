@@ -102,7 +102,7 @@ class TestEnums:
 class TestTraitsAndCapabilities:
     def test_traits_immutable(self) -> None:
         t = AITraits(reasoning=AIReasoningLevel.HIGH)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             t.reasoning = AIReasoningLevel.LOW  # type: ignore[misc]
 
     def test_traits_defaults(self) -> None:
@@ -112,7 +112,7 @@ class TestTraitsAndCapabilities:
 
     def test_capabilities_immutable(self) -> None:
         c = AICapabilities(supports_code=True)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             c.supports_code = False  # type: ignore[misc]
 
     def test_capabilities_defaults(self) -> None:
@@ -159,7 +159,7 @@ class TestTraitsAndCapabilities:
 class TestIntelligenceModels:
     def test_provider_profile_immutable(self) -> None:
         p = ProviderProfile(id="openai", name="OpenAI")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             p.id = "anthropic"  # type: ignore[misc]
 
     def test_provider_profile_invalid_id(self) -> None:
@@ -179,7 +179,7 @@ class TestIntelligenceModels:
         t = AITraits()
         c = AICapabilities()
         m = ModelProfile(id="gpt-4", provider_id="openai", name="GPT-4", traits=t, capabilities=c)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             m.id = "claude"  # type: ignore[misc]
 
     def test_model_profile_invalid_id(self) -> None:
@@ -213,7 +213,7 @@ class TestIntelligenceModels:
 
     def test_ai_requirements_immutable(self) -> None:
         r = AIRequirements()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.minimum_reasoning = AIReasoningLevel.HIGH  # type: ignore[misc]
 
     def test_ai_requirements_defaults(self) -> None:
@@ -224,7 +224,7 @@ class TestIntelligenceModels:
     def test_execution_request_immutable(self) -> None:
         r = AIRequirements()
         req = ExecutionRequest(capability="test", requirements=r)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             req.capability = "new"  # type: ignore[misc]
 
     def test_execution_request_invalid_capability(self) -> None:
@@ -248,7 +248,7 @@ class TestIntelligenceModels:
         m = ModelProfile(id="m", provider_id="p", name="M", traits=t, capabilities=c)
         p = ProviderProfile(id="p", name="P")
         d = SelectionDecision(model=m, provider=p, confidence=0.9, score=0.9)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             d.confidence = 1.0  # type: ignore[misc]
 
     def test_selection_decision_invalid_confidence(self) -> None:
@@ -355,7 +355,7 @@ class TestValidationAndState:
 
     def test_runtime_metrics_immutable(self) -> None:
         m = IntelligenceMetrics()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             m.registered_models = 10  # type: ignore[misc]
 
     def test_confidence_boundary_low(self) -> None:

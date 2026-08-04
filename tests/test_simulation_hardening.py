@@ -63,7 +63,7 @@ class TestSimulationModelsImmutability:
         report = EngineeringSimulationReport(
             status=SimulationStatus.READY, impact=impact, timeline=timeline, summary="Test"
         )
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             report.status = SimulationStatus.BLOCKED  # type: ignore[misc]
 
     def test_impact_is_immutable(self) -> None:
@@ -74,14 +74,14 @@ class TestSimulationModelsImmutability:
             affected_symbols=1,
             affected_modules=1,
         )
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             impact.task_count = 5  # type: ignore[misc]
 
     def test_timeline_is_immutable(self) -> None:
         timeline = SimulationTimeline(
             estimated_minutes=10, critical_path_minutes=5, parallel_savings_minutes=5
         )
-        with pytest.raises(Exception, match="."):
+        with pytest.raises(Exception, match="."):  # noqa: B017
             timeline.estimated_minutes = 20  # type: ignore[misc]
 
 

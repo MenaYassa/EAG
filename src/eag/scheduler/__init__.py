@@ -21,6 +21,7 @@ __all__ = [
     "SchedulerError",
     # Models
     "ExecutionBatch",
+    "SchedulingDecision",
     "SchedulerDecision",
     "SchedulerMetrics",
     "WorkerAssignment",

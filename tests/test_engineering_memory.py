@@ -108,9 +108,9 @@ def make_reflection_report(score: int = 90) -> ReflectionReport:
 
 class TestMemoryModels:
     def test_lesson_immutable(self) -> None:
-        l = LessonLearned(category=MemoryCategory.TESTING, description="Test")
-        with pytest.raises(Exception):
-            l.description = "new"  # type: ignore[misc]
+        lesson = LessonLearned(category=MemoryCategory.TESTING, description="Test")
+        with pytest.raises(Exception):  # noqa: B017
+            lesson.description = "new"  # type: ignore[misc]
 
     def test_lesson_invalid_category(self) -> None:
         with pytest.raises(TypeError):
@@ -125,14 +125,14 @@ class TestMemoryModels:
             LessonLearned(category=MemoryCategory.TESTING, description="T", confidence=1.5)
 
     def test_lesson_knowledge_level(self) -> None:
-        l = LessonLearned(
+        lesson = LessonLearned(
             category=MemoryCategory.TESTING, description="T", level=KnowledgeLevel.RULE
         )
-        assert l.level == KnowledgeLevel.RULE
+        assert lesson.level == KnowledgeLevel.RULE
 
     def test_entry_immutable(self) -> None:
         e = MemoryEntry(run_id="r", goal="g", reflection_id="ref")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             e.goal = "new"  # type: ignore[misc]
 
     def test_entry_invalid_run_id(self) -> None:
@@ -165,7 +165,7 @@ class TestMemoryModels:
 
     def test_experience_immutable(self) -> None:
         exp = EngineeringExperience(project_type="api")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             exp.project_type = "new"  # type: ignore[misc]
 
     def test_experience_invalid_project_type(self) -> None:
@@ -188,7 +188,7 @@ class TestMemoryModels:
 
     def test_statistics_immutable(self) -> None:
         s = MemoryStatistics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             s.total_runs = 5  # type: ignore[misc]
 
     def test_snapshot_defaults(self) -> None:
@@ -198,7 +198,7 @@ class TestMemoryModels:
 
     def test_snapshot_immutable(self) -> None:
         snap = MemorySnapshot()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             snap.entries = ()  # type: ignore[misc]
 
     def test_query_defaults(self) -> None:
@@ -207,7 +207,7 @@ class TestMemoryModels:
 
     def test_query_immutable(self) -> None:
         q = MemoryQuery()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             q.limit = 5  # type: ignore[misc]
 
     def test_query_invalid_tags(self) -> None:
@@ -220,7 +220,7 @@ class TestMemoryModels:
 
     def test_search_result_immutable(self) -> None:
         res = MemorySearchResult(records=(), statistics=MemoryStatistics(), count=0)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             res.count = 5  # type: ignore[misc]
 
     def test_lesson_id_generated(self) -> None:
@@ -257,8 +257,8 @@ class TestMemoryModels:
         assert KnowledgeLevel.RULE == "rule"
 
     def test_entry_with_lessons(self) -> None:
-        l = LessonLearned(category=MemoryCategory.TESTING, description="T")
-        e = MemoryEntry(run_id="r", goal="g", reflection_id="ref", lessons=(l,))
+        lesson = LessonLearned(category=MemoryCategory.TESTING, description="T")
+        e = MemoryEntry(run_id="r", goal="g", reflection_id="ref", lessons=(lesson,))
         assert len(e.lessons) == 1
 
     def test_entry_invalid_lessons(self) -> None:

@@ -269,7 +269,7 @@ class TestRuntimeModels:
 
     def test_run_context_immutable(self) -> None:
         c = RunContext(goal_text="Test")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             c.goal_text = "new"  # type: ignore[misc]
 
     def test_plan_step_creation(self) -> None:
@@ -283,7 +283,7 @@ class TestRuntimeModels:
 
     def test_plan_step_immutable(self) -> None:
         s = PlanStep(name="Test")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             s.name = "new"  # type: ignore[misc]
 
     def test_plan_creation(self) -> None:
@@ -293,7 +293,7 @@ class TestRuntimeModels:
 
     def test_plan_immutable(self) -> None:
         p = Plan()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             p.steps = ()  # type: ignore[misc]
 
     def test_step_result_creation(self) -> None:
@@ -302,7 +302,7 @@ class TestRuntimeModels:
 
     def test_step_result_immutable(self) -> None:
         r = StepResult(step_id="s1", success=True)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.success = False  # type: ignore[misc]
 
     def test_run_result_creation(self) -> None:
@@ -311,7 +311,7 @@ class TestRuntimeModels:
 
     def test_run_result_immutable(self) -> None:
         r = RunResult(run_id="r1", outcome=RunOutcome.SUCCESS)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             r.outcome = RunOutcome.FAILURE  # type: ignore[misc]
 
     def test_run_metrics_defaults(self) -> None:
@@ -321,7 +321,7 @@ class TestRuntimeModels:
 
     def test_run_metrics_immutable(self) -> None:
         m = RunMetrics()
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             m.retries = 5  # type: ignore[misc]
 
     def test_chief_run_creation(self) -> None:
@@ -333,7 +333,7 @@ class TestRuntimeModels:
     def test_chief_run_immutable(self) -> None:
         ctx = RunContext(goal_text="Test")
         run = ChiefRun(context=ctx)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             run.state = RunState.COMPLETED  # type: ignore[misc]
 
     def test_plan_step_dependencies(self) -> None:
@@ -366,7 +366,7 @@ class TestRuntimeModels:
 
     def test_run_checkpoint_immutable(self) -> None:
         cp = RunCheckpoint(step_id="s1")
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             cp.step_id = "s2"  # type: ignore[misc]
 
     def test_chief_run_plan_none_default(self) -> None:

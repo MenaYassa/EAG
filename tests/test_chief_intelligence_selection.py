@@ -356,7 +356,7 @@ class TestRequirementMatcher:
         req = make_request()
         model = make_model()
         result = matcher.match(req.requirements, model)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             result.compatible = False  # type: ignore[misc]
 
     def test_match_result_defaults(self) -> None:
@@ -438,7 +438,7 @@ class TestTraitScorer:
         req = make_request()
         model = make_model()
         breakdown = scorer.score(req.requirements, model, req.policy)
-        with pytest.raises(Exception, match=""):
+        with pytest.raises(Exception):  # noqa: B017
             breakdown.total = 0.5  # type: ignore[misc]
 
     def test_low_cost_policy_weight(self) -> None:

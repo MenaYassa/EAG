@@ -146,7 +146,7 @@ class TestReflectionModels:
         f = ReflectionFinding(
             category=FindingCategory.EXECUTION, severity=Severity.HIGH, title="Test"
         )
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             f.title = "new"  # type: ignore[misc]
 
     def test_finding_invalid_category(self) -> None:
@@ -181,7 +181,7 @@ class TestReflectionModels:
 
     def test_recommendation_immutable(self) -> None:
         r = ReflectionRecommendation(priority=RecommendationPriority.HIGH, title="Fix")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             r.title = "new"  # type: ignore[misc]
 
     def test_recommendation_invalid_priority(self) -> None:
@@ -200,7 +200,7 @@ class TestReflectionModels:
 
     def test_summary_immutable(self) -> None:
         s = ReflectionSummary()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             s.strengths = ("s",)  # type: ignore[misc]
 
     def test_summary_defaults(self) -> None:
@@ -214,7 +214,7 @@ class TestReflectionModels:
 
     def test_metrics_immutable(self) -> None:
         m = ReflectionMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             m.overall_score = 50  # type: ignore[misc]
 
     def test_metrics_score_validation(self) -> None:
@@ -232,7 +232,7 @@ class TestReflectionModels:
 
     def test_context_immutable(self) -> None:
         c = ReflectionContext(run_id="r", run_result=MockRunResult())
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             c.run_id = "new"  # type: ignore[misc]
 
     def test_context_invalid_run_id(self) -> None:
@@ -245,7 +245,7 @@ class TestReflectionModels:
 
     def test_report_immutable(self) -> None:
         r = ReflectionReport(run_id="r")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             r.run_id = "new"  # type: ignore[misc]
 
     def test_report_invalid_run_id(self) -> None:
@@ -639,7 +639,7 @@ class TestReflectionHardening:
         ]
 
         # Verify immutability
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             r1.findings = ()  # type: ignore[misc]
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             r1.recommendations = ()  # type: ignore[misc]
