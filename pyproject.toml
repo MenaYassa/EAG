@@ -59,20 +59,7 @@ select = [
 strict = true
 python_version = "3.12"
 ignore_missing_imports = true
-disable_error_code = [
-    "arg-type",
-    "assignment",
-    "no-untyped-def",
-    "valid-type",
-    "var-annotated",
-    "no-any-return",
-    "attr-defined",
-    "type-arg",
-    "name-defined",
-    "return-value",
-    "unused-ignore",
-    "syntax"
-]
+
 
 [[tool.mypy.overrides]]
 module = "eag.source.python.*"
@@ -88,8 +75,7 @@ module = [
     "eag.vcs.runtime",
     "eag.source.runtime",
     "eag.workspace.manager",
-    "eag.scheduler.dispatcher",
-    "eag.scheduler.runtime",
+    "eag.scheduler.*",
     "eag.execution_graph.executor",
     "eag.chief.runtime.coordinator",
     "eag.execution.runtime.runtime",
