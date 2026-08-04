@@ -61,7 +61,6 @@ class WorkerMetrics:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WorkerProfile:
     """Represents an engineer."""
-
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     role: WorkerRole = WorkerRole.GENERAL
@@ -69,6 +68,9 @@ class WorkerProfile:
     capabilities: tuple[str, ...] = ()
     preferred_capabilities: tuple[str, ...] = ()
     supported_languages: tuple[str, ...] = ()
+    frameworks: tuple[str, ...] = ()
+    domains: tuple[str, ...] = ()
+    preferred_tasks: tuple[str, ...] = ()
     max_parallel_tasks: int = 1
     health: WorkerHealth = WorkerHealth.HEALTHY
     metadata: Mapping[str, Any] = field(default_factory=dict, hash=False)
@@ -81,19 +83,13 @@ class WorkerProfile:
             raise TypeError("experience must be an ExperienceLevel")
         if not isinstance(self.health, WorkerHealth):
             raise TypeError("health must be a WorkerHealth")
-        if not isinstance(self.capabilities, tuple):
-            raise TypeError("capabilities must be a tuple")
-        if not isinstance(self.preferred_capabilities, tuple):
-            raise TypeError("preferred_capabilities must be a tuple")
-        if not isinstance(self.supported_languages, tuple):
-            raise TypeError("supported_languages must be a tuple")
-        if (
-            not isinstance(self.max_parallel_tasks, int)
-            or isinstance(self.max_parallel_tasks, bool)
-            or self.max_parallel_tasks < 1
-        ):
+        for field_name in ["capabilities", "preferred_capabilities", "supported_languages", "frameworks", "domains", "preferred_tasks"]:
+            if not isinstance(getattr(self, field_name), tuple):
+                raise TypeError(f"{field_name} must be a tuple")
+        if not isinstance(self.max_parallel_tasks, int) or isinstance(self.max_parallel_tasks, bool) or self.max_parallel_tasks < 1:
             raise ValueError("max_parallel_tasks must be an integer >= 1")
         object.__setattr__(self, "metadata", _validate_mapping(self.metadata, "metadata"))
+
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -155,12 +151,14 @@ class WorkerAssignment:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WorkerContext:
     """Execution context provided to a worker."""
-
     run_id: str
     goal: str
     workspace: Path
     repository: Path | None = None
     trace_id: str | None = None
+    completed_tasks: tuple[str, ...] = ()  # NEW
+    shared_artifacts: tuple[str, ...] = () # NEW
+    messages: tuple[str, ...] = ()         # NEW
     metadata: Mapping[str, Any] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
@@ -170,9 +168,10 @@ class WorkerContext:
             raise TypeError("workspace must be a Path")
         if self.repository is not None and not isinstance(self.repository, Path):
             raise TypeError("repository must be a Path or None")
+        for field_name in ["completed_tasks", "shared_artifacts", "messages"]:
+            if not isinstance(getattr(self, field_name), tuple):
+                raise TypeError(f"{field_name} must be a tuple")
         object.__setattr__(self, "metadata", _validate_mapping(self.metadata, "metadata"))
-
-
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WorkerResult:
     """The result of a worker executing a task."""

@@ -1,5 +1,10 @@
 """Worker Domain for EAG."""
 
+from eag.workers.collaboration_metrics import CollaborationMetrics
+from eag.workers.delegation import DelegationEngine
+from eag.workers.matcher import CapabilityMatcher, CapabilityScore
+from eag.workers.review_worker import ReviewWorker
+
 from eag.workers.enums import (
     ExperienceLevel,
     TaskPriority,
@@ -78,4 +83,10 @@ __all__ = [
     "WorkerManager",
     "WorkerRegistry",
     "WorkerRuntime",
+    # Collaboration
+    "CapabilityMatcher",
+    "CapabilityScore",
+    "CollaborationMetrics",
+    "DelegationEngine",
+    "ReviewWorker",
 ]
