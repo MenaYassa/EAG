@@ -1167,3 +1167,91 @@ def benchmark(
         typer.echo("\nRecommendations:")
         for rec in report.recommendations:
             typer.echo(f"  - {rec}")
+
+@app.command()
+def build(
+    goal: str = typer.Argument(..., help="The engineering goal to execute."),
+    workspace_dir: str = typer.Option("./eag_workspace", "--workspace", "-w", help="Directory for the engineering workspace.")
+) -> None:
+    """Execute an autonomous engineering goal end-to-end."""
+    from pathlib import Path
+    from eag.adaptive import AdaptivePlanner
+    from eag.autonomous import AutonomousLoopRuntime, LoopContext
+    from eag.capability import CapabilityRuntime, CapabilityRegistry, WorkspaceCapability, RepositoryCapability
+    from eag.chief.runtime import DefaultValidator
+    from eag.chief.runtime.coordinator import Coordinator
+    from eag.chief.runtime.planner import DefaultPlanner
+    from eag.events import EventBus
+    from eag.memory import InMemoryStorage, MemoryRuntime
+    from eag.reflection import DefaultReflectionEngine, ReflectionRuntime
+    from eag.vcs.runtime import RepositoryRuntime
+    from eag.workspace.enums import WorkspaceMode
+    from eag.workspace.runtime import WorkspaceRuntime
+    import shutil
+
+    typer.echo(f"Starting autonomous engineering goal: {goal}")
+    
+    # 1. Clean and setup workspace
+    ws_path = Path(workspace_dir).resolve()
+    if ws_path.exists():
+        shutil.rmtree(ws_path)
+    ws_path.mkdir(parents=True, exist_ok=True)
+    
+    event_bus = EventBus()
+    
+    # 2. Setup real platforms
+    ws_runtime = WorkspaceRuntime(root=ws_path, mode=WorkspaceMode.LIVE, event_bus=event_bus)
+    ws_runtime.open()
+    
+    vcs_runtime = RepositoryRuntime(root=ws_path, event_bus=event_bus)
+    vcs_runtime.open()
+    
+    cap_reg = CapabilityRegistry()
+    cap_reg.register(WorkspaceCapability(ws_runtime))
+    cap_reg.register(RepositoryCapability(vcs_runtime))
+    cap_runtime = CapabilityRuntime(registry=cap_reg)
+    
+    # 3. Setup Intelligence & Memory
+    memory_runtime = MemoryRuntime(storage=InMemoryStorage(), event_bus=event_bus)
+    reflection_runtime = ReflectionRuntime(engine=DefaultReflectionEngine(), event_bus=event_bus)
+    
+    # 4. Setup Coordinator directly
+    base_planner = DefaultPlanner()
+    adaptive_planner = AdaptivePlanner(base_planner=base_planner) # <-- FIX IS HERE
+    
+    coordinator = Coordinator(
+        planner=adaptive_planner,
+        capability_runtime=cap_runtime,
+        validator=DefaultValidator(),
+        event_bus=event_bus,
+        memory_runtime=memory_runtime
+    )
+    
+    # 5. Setup Autonomous Loop
+    loop_runtime = AutonomousLoopRuntime(
+        coordinator=coordinator,
+        reflection_runtime=reflection_runtime,
+        memory_runtime=memory_runtime,
+        event_bus=event_bus
+    )
+    
+    # 6. Execute
+    ctx = LoopContext(
+        goal=goal,
+        max_iterations=3,
+        metadata={"workspace_path": ws_path}
+    )
+    
+    result = loop_runtime.execute(ctx)
+    
+    # 7. Print Report
+    typer.echo("\n" + "="*50)
+    typer.echo("Autonomous Engineering Complete")
+    typer.echo("="*50)
+    typer.echo(f"Outcome: {result.outcome.value.upper()}")
+    typer.echo(f"Iterations: {result.metrics.total_iterations}")
+    typer.echo(f"Duration: {result.duration_ms:.2f} ms")
+    typer.echo(f"Workspace: {ws_path}")
+    if result.final_decision:
+        typer.echo(f"Reason: {result.final_decision.reason}")
+    typer.echo("="*50 + "\n")

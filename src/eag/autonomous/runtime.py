@@ -2,6 +2,7 @@
 
 import time
 from datetime import UTC, datetime
+from typing import Any
 
 from eag.autonomous.approval import ApprovalRuntime
 from eag.autonomous.completion import CompletionEngine
@@ -10,6 +11,7 @@ from eag.autonomous.enums import (
     LoopOutcome,
     LoopState,
     RecoveryActionType,
+    RecoveryPolicy,
 )
 from eag.autonomous.models import (
     LoopContext,
@@ -19,8 +21,8 @@ from eag.autonomous.models import (
     LoopResult,
 )
 from eag.autonomous.recovery import RecoveryEngine
-from eag.capability import CapabilityRuntime
-from eag.chief.runtime import ChiefRuntime, RunContext
+from eag.chief.runtime.coordinator import Coordinator
+from eag.chief.runtime import RunContext
 from eag.events import EventBus
 from eag.memory import MemoryRuntime
 from eag.reflection import ReflectionRuntime
@@ -28,47 +30,47 @@ from eag.reflection.models import ReflectionContext
 
 
 class AutonomousLoopRuntime:
-    """Orchestrates the continuous autonomous engineering loop with approval and recovery."""
+    """Orchestrates the continuous autonomous engineering loop with approval, recovery, and oscillation detection."""
 
     def __init__(
         self,
-        chief_runtime: ChiefRuntime,
+        coordinator: Coordinator,
         reflection_runtime: ReflectionRuntime,
         memory_runtime: MemoryRuntime,
-        capability_runtime: CapabilityRuntime,
         completion_engine: CompletionEngine | None = None,
         recovery_engine: RecoveryEngine | None = None,
         approval_runtime: ApprovalRuntime | None = None,
         event_bus: EventBus | None = None,
     ) -> None:
-        self._chief = chief_runtime
+        self._coordinator = coordinator
         self._reflection = reflection_runtime
         self._memory = memory_runtime
-        self._capability = capability_runtime
         self._completion = completion_engine or CompletionEngine()
         self._recovery = recovery_engine or RecoveryEngine()
         self._approval = approval_runtime or ApprovalRuntime()
         self._event_bus = event_bus or EventBus()
+        self._plan_history: list[str] = []  # Reset per execution
 
     def execute(self, context: LoopContext) -> LoopResult:
-        """Executes the autonomous loop until completion, max iterations, or approval pause."""
+        """Executes the autonomous loop until completion, max iterations, approval pause, or oscillation abort."""
         start_time = time.monotonic()
         iterations: list[LoopIteration] = []
         state = LoopState.RUNNING
         outcome = LoopOutcome.CONTINUE
         final_decision: LoopDecision | None = None
         pending_approval_id: str | None = None
+        self._plan_history = []  # Reset history for this execution
 
-        # Ensure Chief has access to memory for adaptive planning
-        self._chief._coordinator_memory = self._memory
+        # Ensure Coordinator has access to memory for adaptive planning
+        self._coordinator._memory = self._memory
 
         for i in range(1, context.max_iterations + 1):
             iter_start = time.monotonic()
 
-            # 1. Execute via Chief
+            # 1. Execute via Coordinator (no capability_runtime argument)
             chief_ctx = RunContext(goal_text=context.goal, metadata=context.metadata)
-            run_result = self._chief.execute_goal(chief_ctx, capability_runtime=self._capability)
-
+            run_result = self._coordinator.run(chief_ctx)
+            print(f"Iteration {i}: outcome={run_result.outcome}, plan_steps={len(run_result.plan.steps) if run_result.plan else 0}")
             # 2. Reflect
             state = LoopState.REFLECTING
             ref_ctx = ReflectionContext(run_id=run_result.run_id, run_result=run_result)
@@ -77,11 +79,45 @@ class AutonomousLoopRuntime:
             # 3. Remember
             mem_entry = self._memory.store_reflection(ref_ctx, ref_report)
 
-            # 4. Evaluate Completion
+            # 4. Track plan signature for oscillation detection
+            plan_signature = self._get_plan_signature(run_result.plan)
+            self._plan_history.append(plan_signature)
+
+            # 5. Check for oscillation BEFORE evaluating completion
+            if self._is_oscillating():
+                state = LoopState.ABORTED
+                outcome = LoopOutcome.FAILED
+                final_decision = LoopDecision(
+                    continue_loop=False,
+                    reason="Oscillation detected: The planner is cycling between the same plans without progress.",
+                    action=CompletionAction.ESCALATE,
+                    recovery_policy=RecoveryPolicy.ABORT,
+                    confidence=1.0,
+                )
+                # Record the iteration that caused the abort
+                iter_finish = datetime.now(UTC)
+                is_success = self._is_success(run_result.outcome)
+                iteration = LoopIteration(
+                    iteration_number=i,
+                    run_id=run_result.run_id,
+                    plan_id=run_result.plan.plan_id if run_result.plan else "",
+                    reflection_id=ref_report.id,
+                    memory_id=mem_entry.id,
+                    planning_decision_id=run_result.planning_decision.id
+                    if getattr(run_result, "planning_decision", None)
+                    else None,
+                    finished_at=iter_finish,
+                    duration_ms=(time.monotonic() - iter_start) * 1000,
+                    success=is_success,
+                )
+                iterations.append(iteration)
+                break
+
+            # 6. Evaluate Completion
             state = LoopState.REPLANNING
             decision = self._completion.evaluate(run_result, ref_report, i, context.max_iterations)
-
-            # 5. Check for Human Approval Requirement
+            print(f"Decision: continue={decision.continue_loop}, action={decision.action.value}, reason={decision.reason}")
+            # 7. Check for Human Approval Requirement
             if decision.requires_human:
                 state = LoopState.WAITING_APPROVAL
                 outcome = LoopOutcome.WAITING_APPROVAL
@@ -92,11 +128,7 @@ class AutonomousLoopRuntime:
 
                 # Record the iteration
                 iter_finish = datetime.now(UTC)
-                is_success = (
-                    run_result.outcome == "success"
-                    or getattr(run_result.outcome, "value", None) == "success"
-                    or str(run_result.outcome).lower().endswith("success")
-                )
+                is_success = self._is_success(run_result.outcome)
                 iteration = LoopIteration(
                     iteration_number=i,
                     run_id=run_result.run_id,
@@ -126,22 +158,35 @@ class AutonomousLoopRuntime:
                     pending_approval_id=pending_approval_id,
                 )
 
-            # 6. Recovery handling
+            # 8. Recovery handling
             if decision.action.value == "replan":
                 recovery_action = self._recovery.evaluate(run_result, decision)
                 if recovery_action.action_type == RecoveryActionType.ABORT:
                     state = LoopState.ABORTED
                     outcome = LoopOutcome.FAILED
                     final_decision = decision
+                    # Record the iteration and break
+                    iter_finish = datetime.now(UTC)
+                    is_success = self._is_success(run_result.outcome)
+                    iteration = LoopIteration(
+                        iteration_number=i,
+                        run_id=run_result.run_id,
+                        plan_id=run_result.plan.plan_id if run_result.plan else "",
+                        reflection_id=ref_report.id,
+                        memory_id=mem_entry.id,
+                        planning_decision_id=run_result.planning_decision.id
+                        if getattr(run_result, "planning_decision", None)
+                        else None,
+                        finished_at=iter_finish,
+                        duration_ms=(time.monotonic() - iter_start) * 1000,
+                        success=is_success,
+                    )
+                    iterations.append(iteration)
                     break
 
-            # Record the iteration
+            # Record the iteration (normal flow)
             iter_finish = datetime.now(UTC)
-            is_success = (
-                run_result.outcome == "success"
-                or getattr(run_result.outcome, "value", None) == "success"
-                or str(run_result.outcome).lower().endswith("success")
-            )
+            is_success = self._is_success(run_result.outcome)
             iteration = LoopIteration(
                 iteration_number=i,
                 run_id=run_result.run_id,
@@ -157,7 +202,7 @@ class AutonomousLoopRuntime:
             )
             iterations.append(iteration)
 
-            # 7. Check termination
+            # 9. Check termination
             if not decision.continue_loop:
                 if decision.action.value == "stop":
                     state = LoopState.COMPLETED
@@ -178,7 +223,7 @@ class AutonomousLoopRuntime:
                 continue_loop=False,
                 reason="Max iterations reached without completion.",
                 action=CompletionAction.ESCALATE,
-                confidence=1.0,  # always valid
+                confidence=1.0,
             )
 
         total_duration = (time.monotonic() - start_time) * 1000
@@ -208,8 +253,6 @@ class AutonomousLoopRuntime:
         )
 
         if approved:
-            # In a real implementation, we would continue from where we left off.
-            # For this synchronous model, we just mark it as completed.
             return LoopResult(
                 loop_id=loop_result.loop_id,
                 state=LoopState.COMPLETED,
@@ -231,6 +274,25 @@ class AutonomousLoopRuntime:
                 summary="Loop aborted due to rejection.",
                 duration_ms=loop_result.duration_ms,
             )
+
+    def _get_plan_signature(self, plan: Any) -> str:
+        """Creates a deterministic signature of a plan to detect cycles."""
+        if not plan or not hasattr(plan, 'steps'):
+            return "no_plan"
+        return "|".join(sorted([step.capability_id for step in plan.steps]))
+
+    def _is_oscillating(self) -> bool:
+        """Detects if the last 4 plans form an A -> B -> A -> B cycle."""
+        if len(self._plan_history) < 4:
+            return False
+        return (self._plan_history[-1] == self._plan_history[-3] and
+                self._plan_history[-2] == self._plan_history[-4])
+
+    def _is_success(self, outcome: Any) -> bool:
+        """Helper to check if run outcome indicates success."""
+        return (outcome == "success"
+                or getattr(outcome, "value", None) == "success"
+                or str(outcome).lower().endswith("success"))
 
     def _calculate_metrics(
         self, iterations: list[LoopIteration], total_duration: float

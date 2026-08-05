@@ -1,0 +1,38 @@
+Project:
+  Personal Knowledge Base API
+
+Goal:
+  Engineer a production-ready, containerized REST API that allows a user to store, search, and manage personal knowledge base articles in Markdown format.
+
+Requirements:
+  - Backend Framework: FastAPI (Python 3.12)
+  - Database: SQLite with SQLAlchemy ORM
+  - Data Models:
+      - Article: id, title, content (Markdown), tags, created_at, updated_at
+  - REST API Endpoints:
+      - Create a new article
+      - Retrieve an article by ID
+      - List all articles (with pagination)
+      - Update an article's content or tags
+      - Delete an article
+      - Full-text search across article titles and content
+  - Features:
+      - Markdown support for content
+      - Tagging system (add/remove tags)
+      - Import/Export endpoint (JSON format)
+  - Testing: Comprehensive Pytest suite covering all endpoints and edge cases
+  - Documentation: Auto-generated OpenAPI docs accessible at /docs
+  - Containerization: Dockerfile and docker-compose.yml for easy deployment
+
+Constraints:
+  - Python 3.12
+  - FastAPI
+  - SQLite + SQLAlchemy
+  - No frontend UI (API only)
+  - Must be runnable via `docker compose up`
+
+Success Criteria:
+  - The API starts successfully using `docker compose up`.
+  - All Pytest tests pass with 100% coverage of the API endpoints.
+  - An article can be created, retrieved, updated, searched, and deleted via HTTP requests.
+  - The codebase is clean, typed, and documented.

@@ -8,15 +8,21 @@ from eag.adaptive.models import (
     PlanningRule,
 )
 from eag.adaptive.strategies import DefaultStrategy, StrategyRegistry
-from eag.chief.runtime.models import Plan, PlanStep
+from eag.chief.runtime.models import Plan, PlanStep, RunContext
+from eag.chief.runtime.planner import DefaultPlanner
 
 
 class AdaptivePlanner:
-    """Extends the Default Planner by applying rules from engineering experience."""
+    """Wraps a base planner and applies rules from engineering experience."""
 
-    def __init__(self, registry: StrategyRegistry | None = None) -> None:
+    def __init__(self, base_planner=None, registry: StrategyRegistry | None = None) -> None:
+        self._base_planner = base_planner if base_planner is not None else DefaultPlanner()
         self._registry = registry or StrategyRegistry()
         self._registry.register(DefaultStrategy())
+
+    def create_plan(self, context: RunContext) -> Plan:
+        """Delegates base plan generation to the wrapped planner."""
+        return self._base_planner.create_plan(context)
 
     def plan(
         self,
@@ -69,8 +75,6 @@ class AdaptivePlanner:
 
     def _matches_condition(self, condition: str, context: AdaptivePlanningContext) -> bool:
         """Evaluates a simple condition string against the context."""
-        # Very simple condition parser: "key == 'value'" or "key > 10"
-        # For production, this would be a proper expression evaluator
         try:
             if "==" in condition:
                 key, val = condition.split("==")
@@ -92,7 +96,6 @@ class AdaptivePlanner:
         self, action: str, steps: list[PlanStep], context: AdaptivePlanningContext
     ) -> bool:
         """Applies an action to the plan steps."""
-        # Action format: "insert_worker:capability" or "insert_step:title:capability"
         parts = action.split(":")
         if not parts:
             return False
@@ -101,7 +104,6 @@ class AdaptivePlanner:
 
         if cmd == "insert_worker" and len(parts) > 1:
             cap = parts[1]
-            # Insert before the last step (usually review)
             insert_idx = len(steps) - 1 if len(steps) > 0 else 0
             new_step = PlanStep(name=f"Adaptive {cap} Worker", capability_id=cap)
             steps.insert(insert_idx, new_step)
