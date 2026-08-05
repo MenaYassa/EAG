@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from types import MappingProxyType
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from eag.chief.runtime.enums import (
     RunOutcome,
@@ -14,6 +14,9 @@ from eag.chief.runtime.enums import (
     StepState,
     ValidationDecision,
 )
+
+if TYPE_CHECKING:
+    from eag.adaptive.models import PlanningDecision
 
 
 def _validate_mapping(value: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:
@@ -95,6 +98,7 @@ class RunResult:
     step_results: tuple[StepResult, ...] = ()
     summary: str = ""
     duration_ms: float = 0.0
+    planning_decision: "PlanningDecision | None" = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -25,6 +25,7 @@ from eag.chief.runtime.models import (
 )
 from eag.chief.runtime.scheduler import TaskScheduler
 from eag.events import EventBus
+from eag.memory import MemoryRuntime
 
 
 class Coordinator:
@@ -32,17 +33,26 @@ class Coordinator:
 
     def __init__(
         self,
-        planner,
+        planner,  # The standard base planner
         capability_runtime: CapabilityRuntime,
         validator,
         scheduler: TaskScheduler | None = None,
         event_bus: EventBus | None = None,
+        memory_runtime: MemoryRuntime | None = None,
+        adaptive_planner=None,  # Inject adaptive planner separately without strict type hint
     ) -> None:
         self._planner = planner
+        self._adaptive_planner = adaptive_planner
         self._capability_runtime = capability_runtime
         self._validator = validator
         self._scheduler = scheduler or TaskScheduler()
         self._event_bus = event_bus or EventBus()
+        self._memory = memory_runtime
+
+        # Lazy import breaks the circular dependency on startup
+        from eag.adaptive.analyzer import ExperienceAnalyzer
+
+        self._analyzer = ExperienceAnalyzer()
 
     def run(self, context: RunContext) -> RunResult:
         """Execute the full coordination pipeline."""
@@ -50,30 +60,54 @@ class Coordinator:
         run = ChiefRun(context=context, state=RunState.RECEIVED)
 
         try:
-            # 1. Planning
+            # 1. Planning (Orchestrated)
             run = self._transition(run, RunState.PLANNING, RunPhase.PLANNING)
             self._event_bus.publish(PlanningStarted(run_id=run.run_id))
             plan_start = time.monotonic()
-            plan = self._planner.create_plan(context)
+
+            base_plan = self._planner.create_plan(context)
+            final_plan = base_plan
+            planning_decision = None
+
+            if self._memory and self._adaptive_planner:
+                # Lazy import to avoid circular dependencies
+                from eag.adaptive.models import AdaptivePlanningContext
+
+                exp = self._memory.get_relevant_experience(context.goal_text)
+                if exp:
+                    experiences = (exp,)
+                    insights = self._analyzer.analyze(experiences)
+                    rules = self._generate_rules_from_insights(insights)
+
+                    adapt_ctx = AdaptivePlanningContext(
+                        goal=context.goal_text,
+                        experiences=experiences,
+                        insights=insights,
+                        rules=rules,
+                    )
+                    adaptive_plan, planning_decision = self._adaptive_planner.plan(
+                        adapt_ctx, base_plan
+                    )
+                    final_plan = adaptive_plan.final_plan
+
             planning_time = (time.monotonic() - plan_start) * 1000
-            run = self._update_run(run, plan=plan, state=RunState.READY)
+            run = self._update_run(run, plan=final_plan, state=RunState.READY)
             self._event_bus.publish(
                 PlanningCompleted(
-                    run_id=run.run_id, plan_id=plan.plan_id, step_count=len(plan.steps)
+                    run_id=run.run_id, plan_id=final_plan.plan_id, step_count=len(final_plan.steps)
                 )
             )
 
             # 2. Execution + Validation
             run = self._transition(run, RunState.EXECUTING, RunPhase.EXECUTION)
 
-            # Create CapabilityContext
             cap_context = CapabilityContext(
                 workspace_path=context.metadata.get("workspace_path"),
                 repository_path=context.metadata.get("repository_path"),
                 metadata=context.metadata,
             )
 
-            step_results, checkpoints = self._execute_plan(run, plan, cap_context)
+            step_results, checkpoints = self._execute_plan(run, final_plan, cap_context)
 
             exec_time = sum(r.duration_ms for r in step_results)
             run = self._update_run(run, step_results=step_results, checkpoints=checkpoints)
@@ -98,7 +132,7 @@ class Coordinator:
                 planning_time_ms=planning_time,
                 execution_time_ms=exec_time,
                 total_duration_ms=total_time,
-                steps_total=len(plan.steps),
+                steps_total=len(final_plan.steps),
                 steps_completed=sum(1 for r in step_results if r.success),
                 failures=sum(1 for r in step_results if not r.success),
             )
@@ -106,10 +140,11 @@ class Coordinator:
             return RunResult(
                 run_id=run.run_id,
                 outcome=outcome,
-                plan=plan,
+                plan=final_plan,
                 step_results=step_results,
                 summary=f"Completed {len(step_results)} steps. Outcome: {outcome.value}",
                 duration_ms=total_time,
+                planning_decision=planning_decision,
             )
 
         except Exception as e:
@@ -121,6 +156,23 @@ class Coordinator:
                 summary=f"Run failed: {e}",
                 duration_ms=(time.monotonic() - start_time) * 1000,
             )
+
+    def _generate_rules_from_insights(self, insights) -> tuple:
+        """Converts insights into deterministic planning rules dynamically."""
+        from eag.adaptive.enums import RulePriority
+        from eag.adaptive.models import PlanningRule
+
+        rules = []
+        for insight in insights:
+            cap_id = insight.category.value
+            rules.append(
+                PlanningRule(
+                    condition="has_insights == 'true'",
+                    action=f"insert_worker:{cap_id}",
+                    priority=RulePriority.HIGH,
+                )
+            )
+        return tuple(rules)
 
     def _execute_plan(
         self, run: ChiefRun, plan: Plan, cap_context: CapabilityContext
@@ -137,12 +189,10 @@ class Coordinator:
             self._event_bus.publish(ExecutionStarted(run_id=run.run_id, step_id=step.step_id))
             step_start = time.monotonic()
 
-            # Create CapabilityRequest
             cap_request = CapabilityRequest(
                 capability_id=step.capability_id, goal_text=step.name, parameters=step.metadata
             )
 
-            # Execute via CapabilityRuntime
             cap_result = self._capability_runtime.execute(cap_request, cap_context)
 
             result = StepResult(
@@ -158,7 +208,6 @@ class Coordinator:
                 ExecutionCompleted(run_id=run.run_id, step_id=step.step_id, success=result.success)
             )
 
-            # Validation
             self._event_bus.publish(ValidationStarted(run_id=run.run_id, step_id=step.step_id))
             decision = self._validator.validate(step, result, run)
             self._event_bus.publish(

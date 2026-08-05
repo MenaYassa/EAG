@@ -63,6 +63,21 @@ class WorkerManager:
 
         return available[0]
 
+    # Alias for backward compatibility with Chief integration loops
+    def find_best_worker_for_task(self, task) -> "Worker | None":
+        from eag.workers.models import WorkerTask
+
+        # If the legacy executor passes a raw string ID, wrap it in a dummy task
+        if isinstance(task, str):
+            task = WorkerTask(
+                id=task,
+                title="Legacy Execution",
+                required_capability="python",
+                description="Legacy execution",
+            )
+
+        return self.find_best_worker(task)
+
     def assign(self, worker_id: str, task_id: str) -> bool:
         """Assigns a task to a worker."""
         inst = self._get_instance(worker_id)
