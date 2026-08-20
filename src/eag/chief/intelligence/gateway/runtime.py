@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 
 from eag.chief.intelligence.enums import AIContextSize, AIReasoningLevel, AISpeed
 from eag.chief.intelligence.execution import (
@@ -20,6 +21,7 @@ from eag.chief.intelligence.gateway.errors import (
     GatewayError,
     GatewayErrorKind,
     PolicyValidationError,
+    PolicyViolation,
     SchemaValidationError,
 )
 from eag.chief.intelligence.gateway.events import (
@@ -214,6 +216,7 @@ class GatewayRuntime:
                     request_id=request.request_id,
                     trace_id=trace_id,
                     reason=str(error),
+                    violation=error.violation,
                 )
             )
             return self._failure(
@@ -225,6 +228,7 @@ class GatewayRuntime:
                 usage=usage,
                 trace=trace,
                 error=error,
+                policy_violation=error.violation,
             )
 
         self._event_bus.publish(
@@ -287,7 +291,11 @@ class GatewayRuntime:
                 max_tokens=request.policy.max_total_tokens,
                 timeout_ms=request.policy.timeout_ms,
                 retry_count=request.policy.max_attempts - 1,
-                response_schema=engineering_decision_json_schema(),
+                response_schema=engineering_decision_json_schema(
+                    require_grounding_references=(
+                        "snapshot_fingerprint" in request.context.truncation_metadata
+                    ),
+                ),
                 metadata={"request_id": request.request_id, "schema_version": request.schema_version},
             ),
         )
@@ -311,6 +319,7 @@ class GatewayRuntime:
         usage: GatewayUsage | None = None,
         trace: GatewayTrace | None = None,
         error: Exception | None = None,
+        policy_violation: PolicyViolation | None = None,
     ) -> EngineeringDecisionResult:
         provider_id = selection.provider.id if selection is not None else None
         model_id = selection.model.id if selection is not None else None
@@ -347,6 +356,7 @@ class GatewayRuntime:
             selection=selection,
             usage=usage or GatewayUsage(),
             trace=failure_trace,
+            policy_violation=policy_violation,
         )
 
 
@@ -398,15 +408,31 @@ def _prompt_for(request: EngineeringDecisionRequest) -> str:
         "known_constraints": request.context.known_constraints,
         "available_capabilities": request.allowed_capability_ids,
         "prior_evidence": request.context.prior_evidence,
+        "provenance": request.context.provenance,
+        "truncation_metadata": request.context.truncation_metadata,
         "schema_version": request.schema_version,
     }
+    grounding_instruction = ""
+    if "snapshot_fingerprint" in request.context.truncation_metadata:
+        grounding_instruction = (
+            "This is repository-aware context. Include the required grounding_references array using "
+            "only provenance IDs supplied in Context.provenance; never invent a provenance ID.\n"
+        )
     return (
         "Return only JSON matching the supplied schema. You are producing an advisory engineering "
         "decision, not executable instructions. Do not include commands, source code, tool calls, or "
         "capabilities outside the supplied allowlist.\n"
+        f"{grounding_instruction}"
         f"Goal: {request.goal}\n"
-        f"Context: {json.dumps(context, sort_keys=True)}"
+        f"Context: {json.dumps(context, sort_keys=True, default=_json_default)}"
     )
+
+
+def _json_default(value: object) -> object:
+    """Serialize immutable context mappings without retaining any unsupported raw objects."""
+    if isinstance(value, Mapping):
+        return dict(value)
+    raise TypeError(f"unsupported context value: {type(value).__name__}")
 
 
 def _trace_id(request_id: str) -> str:
@@ -414,6 +440,9 @@ def _trace_id(request_id: str) -> str:
 
 
 def _context_fingerprint(request: EngineeringDecisionRequest) -> str:
+    precomputed = request.context.truncation_metadata.get("context_fingerprint")
+    if isinstance(precomputed, str) and precomputed:
+        return precomputed
     safe_context = {
         "repository_identity": request.context.repository_identity,
         "available_capabilities": request.allowed_capability_ids,

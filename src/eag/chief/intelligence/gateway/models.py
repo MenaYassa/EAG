@@ -10,7 +10,7 @@ from types import MappingProxyType
 from typing import Any
 
 from eag.chief.intelligence.enums import RoutingPolicy
-from eag.chief.intelligence.gateway.errors import GatewayError
+from eag.chief.intelligence.gateway.errors import GatewayError, PolicyViolation
 from eag.chief.intelligence.models import AIRequirements, SelectionDecision
 
 ENGINEERING_DECISION_SCHEMA_VERSION = "1.0"
@@ -163,6 +163,7 @@ class EngineeringDecision:
     required_capabilities: tuple[str, ...]
     risks: tuple[EngineeringRisk, ...]
     confidence: float
+    grounding_references: tuple[str, ...] = ()
     schema_version: str = ENGINEERING_DECISION_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -178,6 +179,10 @@ class EngineeringDecision:
             raise ValueError("risks cannot be empty")
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError("confidence must be between 0.0 and 1.0")
+        if any(not reference.strip() for reference in self.grounding_references):
+            raise ValueError("grounding_references cannot contain empty values")
+        if len(set(self.grounding_references)) != len(self.grounding_references):
+            raise ValueError("grounding_references must be unique")
         if self.schema_version != ENGINEERING_DECISION_SCHEMA_VERSION:
             raise ValueError("unsupported engineering-decision schema version")
 
@@ -214,6 +219,7 @@ class EngineeringDecisionResult:
     error: GatewayError | None = None
     selection: SelectionDecision | None = None
     usage: GatewayUsage = field(default_factory=GatewayUsage)
+    policy_violation: PolicyViolation | None = None
 
     def __post_init__(self) -> None:
         if self.success and self.decision is None:
@@ -222,3 +228,5 @@ class EngineeringDecisionResult:
             raise ValueError("successful result cannot contain an error")
         if not self.success and self.error is None:
             raise ValueError("failed result requires a GatewayError")
+        if self.success and self.policy_violation is not None:
+            raise ValueError("successful result cannot contain a policy violation")

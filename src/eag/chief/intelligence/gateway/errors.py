@@ -1,4 +1,4 @@
-"""Normalized governed-gateway error contracts."""
+"""Safe gateway failure and deterministic policy-violation contracts."""
 
 from __future__ import annotations
 
@@ -19,6 +19,39 @@ class GatewayErrorKind(StrEnum):
     POLICY_REJECTED = "policy_rejected"
     BUDGET_EXCEEDED = "budget_exceeded"
     ALL_ATTEMPTS_FAILED = "all_attempts_failed"
+
+
+class PolicyViolationCode(StrEnum):
+    """Stable, content-safe policy rejection categories for future diagnostics."""
+
+    DECISION_SCHEMA_VERSION_UNACCEPTED = "decision_schema_version_unaccepted"
+    REQUIRED_CAPABILITY_OUTSIDE_ALLOWLIST = "required_capability_outside_allowlist"
+    DUPLICATE_STEP_ID = "duplicate_step_id"
+    STEP_CAPABILITY_OUTSIDE_ALLOWLIST = "step_capability_outside_allowlist"
+    DEPENDENCY_NOT_EARLIER_STEP = "dependency_not_earlier_step"
+    EXECUTABLE_PARAMETER_FORBIDDEN = "executable_parameter_forbidden"
+    REQUIRED_CAPABILITIES_MISMATCH = "required_capabilities_mismatch"
+    GROUNDING_REFERENCES_REQUIRED = "grounding_references_required"
+    GROUNDING_REFERENCE_UNKNOWN = "grounding_reference_unknown"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PolicyViolation:
+    """Safe structured metadata for a deterministic EngineeringDecision policy rejection.
+
+    It intentionally contains only stable validation metadata and structured decision identifiers.
+    It never contains raw provider content, prompts, repository source, credentials, or secrets.
+    """
+
+    code: PolicyViolationCode
+    stage: str
+    message: str
+    step_id: str | None = None
+    dependency_step_id: str | None = None
+    step_index: int | None = None
+    dependency_index: int | None = None
+    contract_version: str = "1.0"
+    schema_version: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44,3 +77,7 @@ class SchemaValidationError(GatewayValidationError):
 
 class PolicyValidationError(GatewayValidationError):
     """Raised when a schema-valid decision violates deterministic gateway policy."""
+
+    def __init__(self, violation: PolicyViolation) -> None:
+        super().__init__(violation.message)
+        self.violation = violation

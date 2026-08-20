@@ -10,6 +10,8 @@ from eag.chief.intelligence.gateway.errors import (
     GatewayErrorKind,
     GatewayValidationError,
     PolicyValidationError,
+    PolicyViolation,
+    PolicyViolationCode,
     SchemaValidationError,
 )
 from eag.chief.intelligence.gateway.models import (
@@ -54,6 +56,8 @@ __all__ = [
     "GatewayValidationError",
     "GovernedLLMGateway",
     "PolicyValidationError",
+    "PolicyViolation",
+    "PolicyViolationCode",
     "ProposedPlanStep",
     "RiskSeverity",
     "SchemaValidationError",

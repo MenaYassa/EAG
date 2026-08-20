@@ -23,6 +23,7 @@ from eag.chief.intelligence.gateway import (
     ENGINEERING_DECISION_SCHEMA_VERSION,
     DecisionToPlanTranslator,
     EngineeringContext,
+    EngineeringDecision,
     EngineeringDecisionRequest,
     EngineeringDecisionResult,
     GatewayError,
@@ -32,11 +33,17 @@ from eag.chief.intelligence.gateway import (
     GatewayTrace,
     GatewayUsage,
     PolicyValidationError,
+    PolicyViolationCode,
     SchemaValidationError,
+    engineering_decision_json_schema,
     parse_engineering_decision,
     validate_decision_policy,
 )
-from eag.chief.intelligence.gateway.events import GatewayCompleted, GatewayFailed
+from eag.chief.intelligence.gateway.events import (
+    GatewayCompleted,
+    GatewayFailed,
+    GatewayPolicyRejected,
+)
 from eag.chief.intelligence.models import AICapabilities, AITraits, ModelProfile, ProviderProfile
 from eag.chief.intelligence.runtime import IntelligenceRuntime
 from eag.config.settings import GatewaySettings
@@ -393,3 +400,183 @@ def test_result_requires_safe_failure_shape() -> None:
             error=error,
             trace=GatewayTrace(trace_id="trace", request_id="request"),
         )
+
+
+def test_repository_aware_schema_requires_grounding_while_legacy_schema_does_not() -> None:
+    """G2.2 citations are strict only for fingerprinted repository-aware decision requests."""
+    legacy_schema = engineering_decision_json_schema()
+    repository_schema = engineering_decision_json_schema(require_grounding_references=True)
+
+    assert "grounding_references" not in legacy_schema["properties"]
+    assert "grounding_references" not in legacy_schema["required"]
+    assert "grounding_references" in repository_schema["properties"]
+    assert "grounding_references" in repository_schema["required"]
+
+
+def test_repository_aware_decision_rejects_missing_or_unknown_grounding_references() -> None:
+    """G2.2 citations must be nonempty and resolve to provider-safe supplied provenance IDs."""
+    request = EngineeringDecisionRequest(
+        goal="Plan a repository-aware documentation change.",
+        context=EngineeringContext(
+            available_capabilities=("repository", "workspace"),
+            provenance={
+                "file:src/routes.py": "source_analysis",
+                "symbol:article_app.routes.get_articles": "index",
+                "snapshot_fingerprint": "safe-snapshot",
+            },
+            truncation_metadata={"snapshot_fingerprint": "safe-snapshot"},
+        ),
+        allowed_capability_ids=("repository", "workspace"),
+    )
+    missing = parse_engineering_decision(json.dumps(valid_payload()))
+    unknown = parse_engineering_decision(
+        json.dumps(valid_payload(grounding_references=["file:outside.py"]))
+    )
+    accepted = parse_engineering_decision(
+        json.dumps(
+            valid_payload(
+                grounding_references=[
+                    "file:src/routes.py",
+                    "symbol:article_app.routes.get_articles",
+                ]
+            )
+        )
+    )
+
+    with pytest.raises(PolicyValidationError, match="requires grounding"):
+        validate_decision_policy(missing, request)
+    with pytest.raises(PolicyValidationError, match="absent from supplied context provenance"):
+        validate_decision_policy(unknown, request)
+    validate_decision_policy(accepted, request)
+
+
+def _decision_with_steps(steps: list[dict[str, object]]) -> EngineeringDecision:
+    payload = valid_payload(ordered_plan=steps)
+    return parse_engineering_decision(json.dumps(payload))
+
+
+def _step(
+    step_id: str,
+    *,
+    capability_id: str = "repository",
+    dependencies: list[str] | None = None,
+    title: str = "Safe planning step",
+) -> dict[str, object]:
+    return {
+        "step_id": step_id,
+        "title": title,
+        "capability_id": capability_id,
+        "dependencies": dependencies or [],
+        "parameters": {},
+        "expected_evidence": ["Safe evidence"],
+    }
+
+
+def test_policy_observability_accepts_valid_dependency_graph_without_violation() -> None:
+    decision = _decision_with_steps(
+        [
+            _step("inspect"),
+            _step("document", capability_id="workspace", dependencies=["inspect"]),
+        ]
+    )
+
+    validate_decision_policy(decision, make_request())
+
+
+def test_policy_observability_rejects_later_dependency_with_exact_safe_metadata() -> None:
+    decision = _decision_with_steps(
+        [
+            _step("document", capability_id="workspace", dependencies=["inspect"]),
+            _step("inspect"),
+        ]
+    )
+
+    with pytest.raises(PolicyValidationError) as raised:
+        validate_decision_policy(decision, make_request())
+
+    violation = raised.value.violation
+    assert violation.code == PolicyViolationCode.DEPENDENCY_NOT_EARLIER_STEP
+    assert violation.stage == "policy_validation"
+    assert violation.step_id == "document"
+    assert violation.dependency_step_id == "inspect"
+    assert violation.step_index == 0
+    assert violation.dependency_index == 1
+    assert violation.schema_version == ENGINEERING_DECISION_SCHEMA_VERSION
+
+
+def test_policy_observability_rejects_unknown_dependency_with_no_target_ordinal() -> None:
+    decision = _decision_with_steps([_step("document", dependencies=["missing"])])
+
+    with pytest.raises(PolicyValidationError) as raised:
+        validate_decision_policy(decision, make_request())
+
+    violation = raised.value.violation
+    assert violation.code == PolicyViolationCode.DEPENDENCY_NOT_EARLIER_STEP
+    assert violation.step_id == "document"
+    assert violation.dependency_step_id == "missing"
+    assert violation.step_index == 0
+    assert violation.dependency_index is None
+
+
+def test_policy_observability_rejects_self_dependency_with_current_target_ordinal() -> None:
+    decision = _decision_with_steps([_step("inspect", dependencies=["inspect"])])
+
+    with pytest.raises(PolicyValidationError) as raised:
+        validate_decision_policy(decision, make_request())
+
+    violation = raised.value.violation
+    assert violation.code == PolicyViolationCode.DEPENDENCY_NOT_EARLIER_STEP
+    assert violation.step_id == "inspect"
+    assert violation.dependency_step_id == "inspect"
+    assert violation.step_index == 0
+    assert violation.dependency_index == 0
+
+
+def test_policy_observability_preserves_duplicate_earlier_dependency_behavior() -> None:
+    decision = _decision_with_steps(
+        [
+            _step("inspect"),
+            _step("document", capability_id="workspace", dependencies=["inspect", "inspect"]),
+        ]
+    )
+
+    validate_decision_policy(decision, make_request())
+
+
+def test_gateway_retains_sanitized_future_dependency_diagnostic_without_provider_body() -> None:
+    payload = valid_payload(
+        interpreted_goal="provider-body-never-retained",
+        proposed_approach="provider-body-never-retained",
+        ordered_plan=[
+            _step(
+                "document",
+                capability_id="workspace",
+                dependencies=["inspect"],
+                title="provider-body-never-retained",
+            ),
+            _step("inspect"),
+        ],
+    )
+    provider = FakeProvider(responses={"primary": json.dumps(payload)})
+    gateway, event_bus = make_gateway(provider)
+    rejections: list[GatewayPolicyRejected] = []
+    event_bus.subscribe(GatewayPolicyRejected, rejections.append)
+
+    result = gateway.decide(make_request())
+
+    assert result.success is False
+    assert result.decision is None
+    assert result.error is not None
+    assert result.error.kind == GatewayErrorKind.POLICY_REJECTED
+    assert result.policy_violation is not None
+    assert result.policy_violation.code == PolicyViolationCode.DEPENDENCY_NOT_EARLIER_STEP
+    assert result.policy_violation.step_id == "document"
+    assert result.policy_violation.dependency_step_id == "inspect"
+    assert result.policy_violation.step_index == 0
+    assert result.policy_violation.dependency_index == 1
+    assert result.policy_violation.contract_version == "1.0"
+    assert result.policy_violation.schema_version == ENGINEERING_DECISION_SCHEMA_VERSION
+    assert rejections[-1].violation == result.policy_violation
+    assert rejections[-1].reason == "plan dependency must reference an earlier proposed step"
+    assert "provider-body-never-retained" not in repr(result.policy_violation)
+    assert "provider-body-never-retained" not in repr(rejections[-1])

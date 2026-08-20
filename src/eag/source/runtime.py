@@ -14,13 +14,19 @@ from eag.source.events import (
 )
 from eag.source.metrics import AnalysisMetrics
 from eag.source.models import (
+    AnalysisDiagnostic,
     AnalysisResult,
+    Dependency,
+    DependencyKind,
     Diagnostic,
     ModuleIdentity,
     SourceDocument,
     SourceFileIdentity,
     SourceHealth,
+    SourceLocation,
     SourceMetrics,
+    Symbol,
+    SymbolIdentity,
 )
 from eag.source.python.provider import PythonSourceProvider
 from eag.source.registry import SourceRegistry
@@ -124,26 +130,78 @@ class SourceRuntime:
                 doc = self.parse(path, content)
                 _diagnostics = self.validate(doc)
 
-                # Construct a valid AnalysisResult for fallback providers
+                # Project existing parser output into the established semantic result model.
+                # This is a SourceRuntime adapter, not a second parser or indexer.
+                absolute_path = path.resolve()
+                relative_path = PurePosixPath(
+                    absolute_path.relative_to(repository_root.resolve()).as_posix()
+                )
+                module_name = relative_path.with_suffix("").as_posix().replace("/", ".")
+                symbols = tuple(
+                    Symbol(
+                        identity=SymbolIdentity(
+                            qualified_name=symbol.qualified_name,
+                            module=module_name,
+                            kind=symbol.kind,
+                        ),
+                        location=SourceLocation(
+                            path=relative_path,
+                            line=max(symbol.location.line, 1),
+                            column=max(symbol.location.column, 0),
+                            end_line=max(symbol.location.end_line, symbol.location.line, 1),
+                            end_column=max(symbol.location.end_column, 0),
+                        ),
+                        visibility=symbol.visibility,
+                    )
+                    for symbol in doc.symbols
+                )
+                dependencies = tuple(
+                    Dependency(
+                        source=module_name,
+                        target=import_model.module,
+                        kind=DependencyKind.IMPORT,
+                        resolved=False,
+                    )
+                    for import_model in doc.imports
+                    if import_model.module
+                )
+                diagnostics = tuple(
+                    AnalysisDiagnostic(
+                        severity=diagnostic.severity,
+                        message=diagnostic.message,
+                        location=SourceLocation(
+                            path=relative_path,
+                            line=max(diagnostic.location.line, 1),
+                            column=max(diagnostic.location.column, 0),
+                            end_line=max(
+                                diagnostic.location.end_line,
+                                diagnostic.location.line,
+                                1,
+                            ),
+                            end_column=max(diagnostic.location.end_column, 0),
+                        ),
+                        rule=diagnostic.rule,
+                        provider=diagnostic.provider,
+                    )
+                    for diagnostic in doc.diagnostics
+                )
                 result = AnalysisResult(
                     identity=SourceFileIdentity(
-                        absolute_path=path.resolve(),
-                        repository_path=PurePosixPath(path.name),
+                        absolute_path=absolute_path,
+                        repository_path=relative_path,
                         language=doc.language,
                         fingerprint=doc.checksum,
                     ),
-                    module=ModuleIdentity(
-                        name=path.stem,
-                        path=PurePosixPath(path.name),
-                    ),
-                    symbols=(),
-                    dependencies=(),
+                    module=ModuleIdentity(name=module_name, path=relative_path),
+                    symbols=symbols,
+                    dependencies=dependencies,
+                    diagnostics=diagnostics,
                     metrics=AnalysisMetrics(
                         lines=len(content.splitlines()),
                         blank_lines=0,
                         comment_lines=0,
-                        symbols=len(doc.symbols),
-                        dependencies=len(doc.imports),
+                        symbols=len(symbols),
+                        dependencies=len(dependencies),
                     ),
                     semantic_relationships=(),
                 )

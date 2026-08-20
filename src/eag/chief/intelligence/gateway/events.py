@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from eag.chief.intelligence.events import IntelligenceEvent
-from eag.chief.intelligence.gateway.errors import GatewayErrorKind
+from eag.chief.intelligence.gateway.errors import GatewayErrorKind, PolicyViolation
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62,6 +62,7 @@ class GatewayResponseValidated(GatewayEvent):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GatewayPolicyRejected(GatewayEvent):
     reason: str
+    violation: PolicyViolation
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

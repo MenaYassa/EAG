@@ -412,6 +412,8 @@ class PythonSymbolVisitor(ast.NodeVisitor):
 class PythonSourceProvider:
     """Concrete SourceProvider implementation using Python's ast module."""
 
+    extensions = frozenset({".py"})
+
     @property
     def language(self) -> Language:
         return Language.PYTHON
