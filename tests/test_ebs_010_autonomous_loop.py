@@ -19,7 +19,7 @@ from eag.autonomous import (
     RecoveryPolicy,
 )
 from eag.capability import CapabilityRegistry, CapabilityRuntime, WorkspaceCapability
-from eag.chief.runtime import ChiefRuntime, DefaultValidator, RuntimeRegistry
+from eag.chief.runtime import ChiefRuntime, Coordinator, DefaultValidator
 from eag.chief.runtime.planner import DefaultPlanner
 from eag.memory import InMemoryStorage, MemoryRuntime
 from eag.reflection import DefaultReflectionEngine, ReflectionRuntime
@@ -55,21 +55,17 @@ def create_environment(tmp_path: Path):
     memory_runtime = MemoryRuntime(storage=InMemoryStorage(), event_bus=event_bus)
     reflection_runtime = ReflectionRuntime(engine=DefaultReflectionEngine(), event_bus=event_bus)
 
-    # Setup planners – AdaptivePlanner takes no args in this version
     base_planner = DefaultPlanner()
-    adaptive_planner = AdaptivePlanner()  # no base_planner argument
-
-    registry = RuntimeRegistry()
-    # Direct assignment (no public register method)
-    registry._components["planner:default"] = base_planner
-    registry._components["planner:adaptive"] = adaptive_planner
-    registry._components["validator:default"] = DefaultValidator()
-
-    chief_runtime = ChiefRuntime(registry=registry, event_bus=event_bus)
-    # Inject dependencies (the AutonomousLoopRuntime will wire these)
-    chief_runtime._coordinator_memory = memory_runtime
-    chief_runtime._coordinator_capability = cap_runtime
-    chief_runtime._coordinator_reflection = reflection_runtime
+    adaptive_planner = AdaptivePlanner(base_planner=base_planner)
+    coordinator = Coordinator(
+        planner=base_planner,
+        adaptive_planner=adaptive_planner,
+        capability_runtime=cap_runtime,
+        validator=DefaultValidator(),
+        event_bus=event_bus,
+        memory_runtime=memory_runtime,
+    )
+    chief_runtime = ChiefRuntime(event_bus=event_bus, coordinator=coordinator)
 
     return event_bus, cap_runtime, memory_runtime, reflection_runtime, chief_runtime
 
@@ -87,7 +83,6 @@ class TestEBS010AutonomousLoop:
             chief_runtime=chief_runtime,
             reflection_runtime=reflection_runtime,
             memory_runtime=memory_runtime,
-            capability_runtime=cap_runtime,
             event_bus=event_bus,
         )
 
@@ -133,7 +128,6 @@ class TestEBS010AutonomousLoop:
             chief_runtime=chief_runtime,
             reflection_runtime=reflection_runtime,
             memory_runtime=memory_runtime,
-            capability_runtime=cap_runtime,
             completion_engine=RecoveryCompletion(),
             event_bus=event_bus,
         )
@@ -168,7 +162,6 @@ class TestEBS010AutonomousLoop:
             chief_runtime=chief_runtime,
             reflection_runtime=reflection_runtime,
             memory_runtime=memory_runtime,
-            capability_runtime=cap_runtime,
             completion_engine=NeedsApprovalCompletion(),
             event_bus=event_bus,
         )

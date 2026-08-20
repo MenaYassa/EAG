@@ -10,6 +10,10 @@ from eag.autonomous.enums import (
     RecoveryActionType,
     RecoveryPolicy,
 )
+from eag.autonomous.factory import (
+    AutonomousEngineeringComposition,
+    create_autonomous_engineering_composition,
+)
 from eag.autonomous.models import (
     ApprovalRequest,
     LoopContext,
@@ -40,7 +44,9 @@ __all__ = [
     "RecoveryAction",
     # Components
     "ApprovalRuntime",
+    "AutonomousEngineeringComposition",
     "AutonomousLoopRuntime",
     "CompletionEngine",
     "RecoveryEngine",
+    "create_autonomous_engineering_composition",
 ]

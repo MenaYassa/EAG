@@ -1,6 +1,6 @@
 """Comprehensive tests for Recovery, Approval, and Loop Hardening (Sprint 9.4 D, E)."""
 
-from dataclasses import dataclass, field
+from dataclasses import FrozenInstanceError, dataclass, field
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -25,7 +25,7 @@ from eag.autonomous import (
     RecoveryPolicy,
 )
 from eag.capability import CapabilityRegistry, CapabilityRuntime, WorkspaceCapability
-from eag.chief.runtime import ChiefRuntime, Coordinator, DefaultValidator, RuntimeRegistry
+from eag.chief.runtime import ChiefRuntime, Coordinator, DefaultValidator
 from eag.chief.runtime.enums import RunOutcome
 from eag.chief.runtime.planner import DefaultPlanner
 from eag.memory import InMemoryStorage, MemoryRuntime
@@ -79,39 +79,17 @@ def chief_runtime(
     cap_reg.register(WorkspaceCapability(ws_runtime))
     cap_runtime = CapabilityRuntime(registry=cap_reg)
 
-    # 1. Instantiate pure planners & validator
     base_planner = DefaultPlanner()
-    adaptive_planner = AdaptivePlanner()
-    validator = DefaultValidator()
-
-    # 2. Wire directly via Coordinator
+    adaptive_planner = AdaptivePlanner(base_planner=base_planner)
     coordinator = Coordinator(
         planner=base_planner,
         adaptive_planner=adaptive_planner,
         capability_runtime=cap_runtime,
-        validator=validator,
+        validator=DefaultValidator(),
         event_bus=event_bus,
         memory_runtime=memory_runtime,
     )
-
-    # 3. Setup RuntimeRegistry
-    registry = RuntimeRegistry()
-    registry._components["planner:default"] = base_planner
-    registry._components["planner:adaptive"] = adaptive_planner
-    registry._components["validator:default"] = validator
-
-    # 4. Construct ChiefRuntime & inject coordinator + runtime dependencies
-    chief = ChiefRuntime(registry=registry, event_bus=event_bus)
-    chief._coordinator = coordinator
-    chief._coordinator_memory = memory_runtime
-    chief._coordinator_capability = cap_runtime
-
-    return chief
-
-
-@pytest.fixture
-def capability_runtime(chief_runtime: ChiefRuntime) -> CapabilityRuntime:
-    return chief_runtime._coordinator_capability
+    return ChiefRuntime(event_bus=event_bus, coordinator=coordinator)
 
 
 @pytest.fixture
@@ -129,15 +107,31 @@ def loop_runtime(
     chief_runtime: ChiefRuntime,
     reflection_runtime: ReflectionRuntime,
     memory_runtime: MemoryRuntime,
-    capability_runtime: CapabilityRuntime,
     event_bus: MockEventBus,
 ) -> AutonomousLoopRuntime:
     return AutonomousLoopRuntime(
         chief_runtime=chief_runtime,
         reflection_runtime=reflection_runtime,
         memory_runtime=memory_runtime,
-        capability_runtime=capability_runtime,
         event_bus=event_bus,
+    )
+
+
+def with_loop_dependencies(
+    loop_runtime: AutonomousLoopRuntime,
+    *,
+    chief_runtime: Any | None = None,
+    reflection_runtime: Any | None = None,
+    memory_runtime: Any | None = None,
+    completion_engine: CompletionEngine | None = None,
+) -> AutonomousLoopRuntime:
+    """Rebuild a loop through public construction for a focused behavioral test."""
+    return AutonomousLoopRuntime(
+        chief_runtime=chief_runtime or loop_runtime.chief_runtime,
+        reflection_runtime=reflection_runtime or loop_runtime.reflection_runtime,
+        memory_runtime=memory_runtime or loop_runtime.memory_runtime,
+        completion_engine=completion_engine or loop_runtime.completion_engine,
+        event_bus=loop_runtime.event_bus,
     )
 
 
@@ -239,7 +233,7 @@ class TestRecoveryEngine:
 
     def test_recovery_action_immutable(self) -> None:
         a = RecoveryAction(action_type=RecoveryActionType.RETRY)
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             a.action_type = RecoveryActionType.ABORT  # type: ignore[misc]
 
     def test_recovery_action_defaults(self) -> None:
@@ -301,7 +295,7 @@ class TestApprovalRuntime:
 
     def test_approval_request_immutable(self) -> None:
         req = ApprovalRequest(loop_id="l", iteration=1, reason="r")
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             req.state = ApprovalState.APPROVED  # type: ignore[misc]
 
     def test_approval_request_defaults(self) -> None:
@@ -353,7 +347,7 @@ class TestLoopRecoveryAndApproval:
                     requires_human=True,
                 )
 
-        loop_runtime._completion = NeedsApprovalCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeedsApprovalCompletion())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -374,7 +368,7 @@ class TestLoopRecoveryAndApproval:
                     requires_human=True,
                 )
 
-        loop_runtime._completion = NeedsApprovalCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeedsApprovalCompletion())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         paused_result = loop_runtime.execute(ctx)
@@ -396,7 +390,7 @@ class TestLoopRecoveryAndApproval:
                     requires_human=True,
                 )
 
-        loop_runtime._completion = NeedsApprovalCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeedsApprovalCompletion())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         paused_result = loop_runtime.execute(ctx)
@@ -426,12 +420,14 @@ class TestLoopRecoveryAndApproval:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = FailThenSucceedCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=FailThenSucceedCompletion())
 
         # Dynamically return a initial attempt followed by success
         mock_fail = MockRunResult(outcome=RunOutcome.FAILURE)
         mock_success = MockRunResult(outcome=RunOutcome.SUCCESS)
-        loop_runtime._chief.execute_goal = MagicMock(side_effect=[mock_fail, mock_success])
+        chief_runtime = MagicMock()
+        chief_runtime.execute_goal = MagicMock(side_effect=[mock_fail, mock_success])
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=chief_runtime)
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -451,7 +447,7 @@ class TestLoopRecoveryAndApproval:
                     recovery_policy=RecoveryPolicy.ABORT,
                 )
 
-        loop_runtime._completion = CriticalCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=CriticalCompletion())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -471,7 +467,7 @@ class TestLoopRecoveryAndApproval:
                     recovery_policy=RecoveryPolicy.RETRY,
                 )
 
-        loop_runtime._completion = AlwaysFailCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=AlwaysFailCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -489,7 +485,7 @@ class TestLoopRecoveryAndApproval:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         completed_result = loop_runtime.execute(ctx)
@@ -517,7 +513,7 @@ class TestLoopRecoveryAndApproval:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ReplanCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ReplanCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -542,11 +538,13 @@ class TestLoopRecoveryAndApproval:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ThreeIterCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ThreeIterCompletion())
 
         # Ensure Chief returns successful run results so iterations count as successful
         mock_success = MockRunResult(outcome=RunOutcome.SUCCESS)
-        loop_runtime._chief.execute_goal = MagicMock(return_value=mock_success)
+        chief_runtime = MagicMock()
+        chief_runtime.execute_goal = MagicMock(return_value=mock_success)
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=chief_runtime)
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -589,8 +587,8 @@ class TestLoopRecoveryAndApproval:
             def _coordinator_memory(self, val):
                 pass
 
-        loop_runtime._chief = FlakyChief()
-        loop_runtime._completion = FailFirstCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=FlakyChief())
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=FailFirstCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -607,7 +605,9 @@ class TestLoopRecoveryAndApproval:
             def reflect(self, context):
                 raise RuntimeError("Reflection failed")
 
-        loop_runtime._reflection._engine = FailingReflection()
+        reflection_runtime = ReflectionRuntime(engine=FailingReflection(), event_bus=loop_runtime.event_bus)
+
+        loop_runtime = with_loop_dependencies(loop_runtime, reflection_runtime=reflection_runtime)
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
 
@@ -627,8 +627,7 @@ class TestLoopRecoveryAndApproval:
             def statistics(self):
                 return type("S", (), {"total_runs": 0})()
 
-        loop_runtime._memory = FailingMemory()
-        loop_runtime._chief._coordinator_memory = loop_runtime._memory
+        loop_runtime = with_loop_dependencies(loop_runtime, memory_runtime=FailingMemory())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
 
@@ -648,7 +647,7 @@ class TestLoopRecoveryAndApproval:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = DeterministicCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=DeterministicCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result1 = loop_runtime.execute(ctx)

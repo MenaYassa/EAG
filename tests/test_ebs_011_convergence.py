@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
-
 from eag.adaptive import AdaptivePlanner
 from eag.autonomous import (
     AutonomousLoopRuntime,
@@ -18,7 +16,12 @@ from eag.autonomous import (
     LoopState,
 )
 from eag.capability import CapabilityRegistry, CapabilityRuntime, WorkspaceCapability
-from eag.chief.runtime import ChiefRuntime, Coordinator, DefaultValidator, RunResult, RuntimeRegistry
+from eag.chief.runtime import (
+    ChiefRuntime,
+    Coordinator,
+    DefaultValidator,
+    RunResult,
+)
 from eag.chief.runtime.enums import RunOutcome
 from eag.chief.runtime.planner import DefaultPlanner
 from eag.memory import InMemoryStorage, MemoryRuntime
@@ -94,7 +97,7 @@ class TestEBS011Convergence:
         reflection_runtime = ReflectionRuntime(engine=reflection_engine, event_bus=event_bus)
 
         base_planner = DefaultPlanner()
-        adaptive_planner = AdaptivePlanner()
+        adaptive_planner = AdaptivePlanner(base_planner=base_planner)
         validator = DefaultValidator()
 
         coordinator = Coordinator(
@@ -106,15 +109,7 @@ class TestEBS011Convergence:
             memory_runtime=memory_runtime,
         )
 
-        registry = RuntimeRegistry()
-        registry._components["planner:default"] = base_planner
-        registry._components["planner:adaptive"] = adaptive_planner
-        registry._components["validator:default"] = validator
-
-        chief_runtime = ChiefRuntime(registry=registry, event_bus=event_bus)
-        chief_runtime._coordinator = coordinator
-        chief_runtime._coordinator_memory = memory_runtime
-        chief_runtime._coordinator_capability = cap_runtime
+        chief_runtime = ChiefRuntime(event_bus=event_bus, coordinator=coordinator)
 
         iteration_counter = [0]
 
@@ -147,7 +142,6 @@ class TestEBS011Convergence:
             chief_runtime=chief_runtime,
             reflection_runtime=reflection_runtime,
             memory_runtime=memory_runtime,
-            capability_runtime=cap_runtime,
             completion_engine=ConvergenceCompletionEngine(),
             event_bus=event_bus,
         )

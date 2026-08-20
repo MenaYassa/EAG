@@ -204,6 +204,9 @@ class GitTool(Tool):
         result = subprocess.run(
             [
                 "git",
+                "-c",
+                "color.ui=false",
+                "--no-pager",
                 "-C",
                 str(self._workspace),
                 "rev-parse",
@@ -221,6 +224,9 @@ class GitTool(Tool):
         """Run a Git command inside the workspace."""
         command = (
             "git",
+            "-c",
+            "color.ui=false",
+            "--no-pager",
             "-C",
             str(self._workspace),
             *arguments,

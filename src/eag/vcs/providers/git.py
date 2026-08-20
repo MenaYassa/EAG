@@ -16,7 +16,7 @@ class GitProvider:
     def _run(self, args: list[str], cwd: Path, check: bool = True) -> str:
         try:
             result = subprocess.run(
-                ["git"] + args,
+                ["git", "-c", "color.ui=false", "--no-pager"] + args,
                 cwd=cwd,
                 capture_output=True,
                 text=True,

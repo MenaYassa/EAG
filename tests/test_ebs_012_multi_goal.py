@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
-
 from eag.adaptive import AdaptivePlanner
 from eag.autonomous import (
     AutonomousLoopRuntime,
@@ -17,7 +15,12 @@ from eag.autonomous import (
     LoopOutcome,
 )
 from eag.capability import CapabilityRegistry, CapabilityRuntime, WorkspaceCapability
-from eag.chief.runtime import ChiefRuntime, Coordinator, DefaultValidator, RuntimeRegistry, RunResult
+from eag.chief.runtime import (
+    ChiefRuntime,
+    Coordinator,
+    DefaultValidator,
+    RunResult,
+)
 from eag.chief.runtime.enums import RunOutcome
 from eag.chief.runtime.planner import DefaultPlanner
 from eag.memory import InMemoryStorage, MemoryRuntime
@@ -54,7 +57,7 @@ class TestEBS012MultiGoal:
         reflection_runtime = ReflectionRuntime(engine=DefaultReflectionEngine(), event_bus=event_bus)
 
         base_planner = DefaultPlanner()
-        adaptive_planner = AdaptivePlanner()
+        adaptive_planner = AdaptivePlanner(base_planner=base_planner)
         validator = DefaultValidator()
 
         coordinator = Coordinator(
@@ -66,15 +69,7 @@ class TestEBS012MultiGoal:
             memory_runtime=memory_runtime,
         )
 
-        registry = RuntimeRegistry()
-        registry._components["planner:default"] = base_planner
-        registry._components["planner:adaptive"] = adaptive_planner
-        registry._components["validator:default"] = validator
-
-        chief_runtime = ChiefRuntime(registry=registry, event_bus=event_bus)
-        chief_runtime._coordinator = coordinator
-        chief_runtime._coordinator_memory = memory_runtime
-        chief_runtime._coordinator_capability = cap_runtime
+        chief_runtime = ChiefRuntime(event_bus=event_bus, coordinator=coordinator)
 
         # Mock successful execution output for both goal runs
         mock_success = RunResult(
@@ -92,7 +87,6 @@ class TestEBS012MultiGoal:
             chief_runtime=chief_runtime,
             reflection_runtime=reflection_runtime,
             memory_runtime=memory_runtime,
-            capability_runtime=cap_runtime,
             completion_engine=ImmediateStopCompletion(),
             event_bus=event_bus,
         )

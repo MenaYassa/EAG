@@ -1,6 +1,6 @@
 """Comprehensive tests for the Autonomous Engineering Loop (Sprint 9.4)."""
 
-from dataclasses import dataclass, field
+from dataclasses import FrozenInstanceError, dataclass, field
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -24,9 +24,9 @@ from eag.autonomous import (
 from eag.capability import CapabilityRegistry, CapabilityRuntime, WorkspaceCapability
 from eag.chief.runtime import (
     ChiefRuntime,
+    Coordinator,
     DefaultValidator,
     RunOutcome,
-    RuntimeRegistry,
 )
 from eag.chief.runtime.planner import DefaultPlanner
 from eag.memory import InMemoryStorage, MemoryRuntime
@@ -130,21 +130,16 @@ def chief_runtime(
     cap_runtime = CapabilityRuntime(registry=cap_reg)
 
     base_planner = DefaultPlanner()
-    adaptive_planner = AdaptivePlanner()
-
-    registry = RuntimeRegistry()
-    registry.register_planner("default", adaptive_planner)
-    registry.register_validator("default", DefaultValidator())
-
-    chief = ChiefRuntime(registry=registry, event_bus=event_bus)
-    chief._coordinator_memory = memory_runtime
-    chief._coordinator_capability = cap_runtime
-    return chief
-
-
-@pytest.fixture
-def capability_runtime(chief_runtime: ChiefRuntime) -> CapabilityRuntime:
-    return chief_runtime._coordinator_capability
+    adaptive_planner = AdaptivePlanner(base_planner=base_planner)
+    coordinator = Coordinator(
+        planner=base_planner,
+        adaptive_planner=adaptive_planner,
+        capability_runtime=cap_runtime,
+        validator=DefaultValidator(),
+        event_bus=event_bus,
+        memory_runtime=memory_runtime,
+    )
+    return ChiefRuntime(event_bus=event_bus, coordinator=coordinator)
 
 
 @pytest.fixture
@@ -152,15 +147,31 @@ def loop_runtime(
     chief_runtime: ChiefRuntime,
     reflection_runtime: ReflectionRuntime,
     memory_runtime: MemoryRuntime,
-    capability_runtime: CapabilityRuntime,
     event_bus: MockEventBus,
 ) -> AutonomousLoopRuntime:
     return AutonomousLoopRuntime(
         chief_runtime=chief_runtime,
         reflection_runtime=reflection_runtime,
         memory_runtime=memory_runtime,
-        capability_runtime=capability_runtime,
         event_bus=event_bus,
+    )
+
+
+def with_loop_dependencies(
+    loop_runtime: AutonomousLoopRuntime,
+    *,
+    chief_runtime: Any | None = None,
+    reflection_runtime: ReflectionRuntime | None = None,
+    memory_runtime: MemoryRuntime | None = None,
+    completion_engine: CompletionEngine | None = None,
+) -> AutonomousLoopRuntime:
+    """Rebuild a loop through its public construction contract for a test."""
+    return AutonomousLoopRuntime(
+        chief_runtime=chief_runtime or loop_runtime.chief_runtime,
+        reflection_runtime=reflection_runtime or loop_runtime.reflection_runtime,
+        memory_runtime=memory_runtime or loop_runtime.memory_runtime,
+        completion_engine=completion_engine or loop_runtime.completion_engine,
+        event_bus=loop_runtime.event_bus,
     )
 
 
@@ -185,7 +196,7 @@ class TestAutonomousModels:
 
     def test_loop_context_immutable(self) -> None:
         c = LoopContext(goal="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             c.goal = "new"  # type: ignore[misc]
 
     def test_loop_iteration_defaults(self) -> None:
@@ -205,7 +216,7 @@ class TestAutonomousModels:
         it = LoopIteration(
             iteration_number=1, run_id="r", plan_id="p", reflection_id="ref", memory_id="m"
         )
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             it.run_id = "new"  # type: ignore[misc]
 
     def test_loop_decision_defaults(self) -> None:
@@ -219,7 +230,7 @@ class TestAutonomousModels:
 
     def test_loop_decision_immutable(self) -> None:
         d = LoopDecision(continue_loop=True, reason="ok")
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             d.reason = "new"  # type: ignore[misc]
 
     def test_loop_metrics_defaults(self) -> None:
@@ -228,7 +239,7 @@ class TestAutonomousModels:
 
     def test_loop_metrics_immutable(self) -> None:
         m = LoopMetrics()
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             m.total_iterations = 5  # type: ignore[misc]
 
     def test_loop_result_defaults(self) -> None:
@@ -238,7 +249,7 @@ class TestAutonomousModels:
 
     def test_loop_result_immutable(self) -> None:
         r = LoopResult(loop_id="l", state=LoopState.COMPLETED, outcome=LoopOutcome.FINISHED)
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             r.state = LoopState.FAILED  # type: ignore[misc]
 
     def test_loop_state_values(self) -> None:
@@ -533,7 +544,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Perfect", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = PerfectCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=PerfectCompletion())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -559,7 +570,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = FlakyCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=FlakyCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -576,7 +587,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=True, reason="Keep going", action=CompletionAction.CONTINUE
                 )
 
-        loop_runtime._completion = NeverStopCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeverStopCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=2, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -606,7 +617,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = RecoveryCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=RecoveryCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -626,7 +637,7 @@ class TestAutonomousLoopRuntime:
                     recovery_policy=RecoveryPolicy.ABORT,
                 )
 
-        loop_runtime._completion = CriticalCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=CriticalCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -652,7 +663,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = StopAt3Completion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=StopAt3Completion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -681,7 +692,7 @@ class TestAutonomousLoopRuntime:
             def _coordinator_memory(self, val):
                 pass
 
-        loop_runtime._chief = SuccessChief()
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=SuccessChief())
 
         class TwoIterCompletion(CompletionEngine):
             def __init__(self):
@@ -697,7 +708,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = TwoIterCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=TwoIterCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -722,7 +733,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ReplanCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ReplanCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -739,7 +750,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -756,7 +767,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -773,7 +784,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -790,7 +801,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -806,7 +817,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -822,7 +833,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=True, reason="Continue", action=CompletionAction.CONTINUE
                 )
 
-        loop_runtime._completion = NeverStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeverStop())
 
         ctx = LoopContext(goal="Test", max_iterations=3, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -846,7 +857,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = TwoIterCompletion()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=TwoIterCompletion())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         loop_runtime.execute(ctx)
@@ -865,7 +876,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -884,7 +895,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -906,7 +917,7 @@ class TestAutonomousLoopRuntime:
             def _coordinator_memory(self, val):
                 pass
 
-        loop_runtime._chief = FailingChief()
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=FailingChief())
 
         class StopOnFailure(CompletionEngine):
             def evaluate(self, run, ref, iter, max_iter):
@@ -915,7 +926,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Failed", action=CompletionAction.ESCALATE
                 )
 
-        loop_runtime._completion = StopOnFailure()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=StopOnFailure())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -932,7 +943,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         loop_runtime.execute(ctx)
@@ -948,7 +959,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -964,7 +975,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -980,7 +991,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -996,7 +1007,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1012,7 +1023,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1028,7 +1039,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1044,7 +1055,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1060,7 +1071,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1076,7 +1087,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1101,7 +1112,7 @@ class TestAutonomousLoopRuntime:
             def _coordinator_memory(self, val):
                 pass
 
-        loop_runtime._chief = SuccessChief()
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=SuccessChief())
 
         class ImmediateStop(CompletionEngine):
             def evaluate(self, run, ref, iter, max_iter):
@@ -1109,7 +1120,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1126,7 +1137,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Custom", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = CustomEngine()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=CustomEngine())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1142,7 +1153,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=True, reason="More", action=CompletionAction.CONTINUE
                 )
 
-        loop_runtime._completion = NeverStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeverStop())
 
         ctx = LoopContext(goal="Test", max_iterations=1, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1167,7 +1178,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = StopAt5()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=StopAt5())
 
         ctx = LoopContext(goal="Test", max_iterations=10, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1196,7 +1207,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=True, reason="More", action=CompletionAction.CONTINUE
                 )
 
-        loop_runtime._completion = NeverStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=NeverStop())
 
         ctx = LoopContext(goal="Test", max_iterations=2, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1213,7 +1224,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1230,7 +1241,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Bad", action=CompletionAction.ESCALATE
                 )
 
-        loop_runtime._completion = ImmediateEscalate()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateEscalate())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1255,7 +1266,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ThreeIter()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ThreeIter())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         loop_runtime.execute(ctx)
@@ -1279,7 +1290,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ThreeIter()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ThreeIter())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1304,7 +1315,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ThreeIter()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ThreeIter())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1321,7 +1332,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Custom Reason", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1337,7 +1348,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1353,7 +1364,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP, confidence=0.4
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1372,7 +1383,7 @@ class TestAutonomousLoopRuntime:
                     recovery_policy=RecoveryPolicy.ABORT,
                 )
 
-        loop_runtime._completion = ImmediateEscalate()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateEscalate())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1399,7 +1410,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ContinueThenStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ContinueThenStop())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1418,7 +1429,7 @@ class TestAutonomousLoopRuntime:
                     requires_human=True,
                 )
 
-        loop_runtime._completion = RequiresApproval()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=RequiresApproval())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1434,7 +1445,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ImmediateStop()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ImmediateStop())
 
         ctx = LoopContext(goal="Test", metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1476,8 +1487,8 @@ class TestAutonomousLoopRuntime:
             def _coordinator_memory(self, val):
                 pass
 
-        loop_runtime._chief = FlakyChief()
-        loop_runtime._completion = FailThenSucceed()
+        loop_runtime = with_loop_dependencies(loop_runtime, chief_runtime=FlakyChief())
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=FailThenSucceed())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)
@@ -1502,7 +1513,7 @@ class TestAutonomousLoopRuntime:
                     continue_loop=False, reason="Done", action=CompletionAction.STOP
                 )
 
-        loop_runtime._completion = ReplanTwice()
+        loop_runtime = with_loop_dependencies(loop_runtime, completion_engine=ReplanTwice())
 
         ctx = LoopContext(goal="Test", max_iterations=5, metadata={"workspace_path": tmp_path})
         result = loop_runtime.execute(ctx)

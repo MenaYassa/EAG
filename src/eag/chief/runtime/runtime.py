@@ -10,13 +10,22 @@ from eag.events import EventBus
 
 
 class ChiefRuntime:
-    """The central orchestrator for EAG engineering workflows."""
+    """The central orchestrator for EAG engineering workflows.
+
+    A Chief may own a precomposed :class:`Coordinator` for the canonical
+    autonomous path. Legacy direct callers may continue to provide a runtime
+    registry and a per-call ``CapabilityRuntime``.
+    """
 
     def __init__(
-        self, registry: RuntimeRegistry | None = None, event_bus: EventBus | None = None
+        self,
+        registry: RuntimeRegistry | None = None,
+        event_bus: EventBus | None = None,
+        coordinator: Coordinator | None = None,
     ) -> None:
         self._registry = registry or RuntimeRegistry()
         self._event_bus = event_bus or EventBus()
+        self._coordinator = coordinator
         self._state = RunState.CREATED
 
     @property
@@ -27,6 +36,11 @@ class ChiefRuntime:
     def registry(self) -> RuntimeRegistry:
         return self._registry
 
+    @property
+    def coordinator(self) -> Coordinator | None:
+        """Return the publicly supplied canonical Coordinator, if any."""
+        return self._coordinator
+
     def execute_goal(
         self,
         context: RunContext,
@@ -34,33 +48,31 @@ class ChiefRuntime:
         capability_runtime: CapabilityRuntime | None = None,
         validator_name: str = "default",
     ) -> RunResult:
-        """Execute a goal through the full Chief pipeline."""
+        """Execute a goal through the full Chief pipeline.
 
-        # 1. PRESERVED FIX: Catch illegal terminal states on brand-new runs
-        if self._state.is_terminal:
-            if not getattr(self, "_has_run", False):
-                raise ChiefRuntimeError(f"Runtime is in terminal state: {self._state.value}")
+        A precomposed Coordinator takes precedence for the canonical
+        autonomous route. Without one, the original registry-driven,
+        per-call capability-runtime behavior is preserved.
+        """
 
-        # 2. PRESERVED FIX: Mark that this runtime has officially executed a run
+        if self._state.is_terminal and not getattr(self, "_has_run", False):
+            raise ChiefRuntimeError(f"Runtime is in terminal state: {self._state.value}")
+
         self._has_run = True
-
-        # 3. Reset state for the new run
         self._state = RunState.CREATED
 
-        planner = self._registry.get_planner(planner_name)
-        validator = self._registry.get_validator(validator_name)
-
-        # NEW LOGIC: Require CapabilityRuntime
-        if capability_runtime is None:
-            raise ChiefRuntimeError("CapabilityRuntime must be provided")
-
-        # NEW LOGIC: Pass capability_runtime instead of executor
-        coordinator = Coordinator(
-            planner=planner,
-            capability_runtime=capability_runtime,
-            validator=validator,
-            event_bus=self._event_bus,
-        )
+        coordinator = self._coordinator
+        if coordinator is None:
+            planner = self._registry.get_planner(planner_name)
+            validator = self._registry.get_validator(validator_name)
+            if capability_runtime is None:
+                raise ChiefRuntimeError("CapabilityRuntime must be provided")
+            coordinator = Coordinator(
+                planner=planner,
+                capability_runtime=capability_runtime,
+                validator=validator,
+                event_bus=self._event_bus,
+            )
 
         self._state = RunState.EXECUTING
         result = coordinator.run(context)

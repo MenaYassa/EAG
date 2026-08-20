@@ -1,5 +1,6 @@
 """Comprehensive hardening tests for the Repository Platform."""
 
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -151,6 +152,31 @@ class TestBranchManagement:
         runtime.create_branch("feature")
         branches = runtime._provider.list_branches(runtime.repository)
         assert "feature" in branches
+
+    def test_list_branches_ignores_forced_color_configuration(
+        self, runtime: RepositoryRuntime
+    ) -> None:
+        """Provider branch output remains plain when the repository forces colour."""
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(runtime.repository.root),
+                "config",
+                "color.ui",
+                "always",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        provider = GitProvider()
+        provider.create_branch(runtime.repository, "feature")
+
+        branches = provider.list_branches(runtime.repository)
+
+        assert "feature" in branches
+        assert all("\x1b[" not in branch for branch in branches)
 
     def test_duplicate_branch_raises(self, runtime: RepositoryRuntime) -> None:
         runtime.create_branch("feature")

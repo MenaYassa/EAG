@@ -199,6 +199,20 @@ def test_git_diff(
     assert "+# Changed" in diff.patch
 
 
+def test_git_diff_ignores_forced_color_configuration(
+    git_repository: Path,
+) -> None:
+    """Machine-readable GitTool output must remain plain under forced colour."""
+    run_git(git_repository, "config", "color.ui", "always")
+    (git_repository / "README.md").write_text("# Changed\n", encoding="utf-8")
+
+    patch = GitTool(workspace=git_repository).diff().patch
+
+    assert "\x1b[" not in patch
+    assert "-# Example" in patch
+    assert "+# Changed" in patch
+
+
 def test_git_branch(
     git_repository: Path,
 ) -> None:
