@@ -100,6 +100,7 @@ class TestLiteLLMProvider:
             messages=[{"role": "user", "content": "Hello"}],
             temperature=0.7,
             max_tokens=1000,
+            timeout=30.0,
             api_key="test_key",
         )
 
@@ -126,6 +127,30 @@ class TestLiteLLMProvider:
         _, kwargs = mock_litellm.completion.call_args
         assert kwargs["temperature"] == 0.1
         assert kwargs["max_tokens"] == 50
+
+    @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
+    def test_execute_passes_strict_response_schema(self, mock_litellm, provider: LiteLLMProvider) -> None:
+        mock_litellm.completion.return_value = mock_litellm_response()
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"ok": {"type": "boolean"}},
+            "required": ["ok"],
+        }
+        context = ExecutionContext(
+            prompt="Return JSON.",
+            model_id="gpt-4o",
+            provider_id="litellm",
+            options=ExecutionOptions(response_schema=schema),
+        )
+
+        provider.execute(context)
+
+        _, kwargs = mock_litellm.completion.call_args
+        assert kwargs["response_format"] == {
+            "type": "json_schema",
+            "json_schema": {"name": "engineering_decision", "strict": True, "schema": schema},
+        }
 
     @patch("eag.chief.intelligence.execution.providers.litellm_provider.litellm")
     def test_runtime_integration_success(self, mock_litellm, runtime: ExecutionRuntime) -> None:

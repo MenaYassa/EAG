@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,23 @@ class KernelSettings(BaseModel):
     )
 
 
+class GatewaySettings(BaseModel):
+    """Configuration for an explicitly enabled governed LLM gateway."""
+
+    model_config = ConfigDict(frozen=True)
+
+    enabled: bool = False
+    provider_id: str = "litellm"
+    model_id: str = "gpt-5-mini"
+    api_key: SecretStr | None = None
+    api_base: str | None = None
+    timeout_ms: int = 30_000
+    max_attempts: int = 2
+    max_total_tokens: int = 8_000
+    max_estimated_cost: float = 1.0
+    allow_fallback: bool = True
+
+
 class Settings(BaseSettings):
     """Root EAG application settings."""
 
@@ -59,4 +76,8 @@ class Settings(BaseSettings):
 
     logging: LoggingSettings = Field(
         default_factory=LoggingSettings,
+    )
+
+    gateway: GatewaySettings = Field(
+        default_factory=GatewaySettings,
     )

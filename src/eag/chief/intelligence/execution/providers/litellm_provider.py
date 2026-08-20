@@ -92,7 +92,18 @@ class LiteLLMProvider:
                 "messages": [{"role": "user", "content": context.prompt}],
                 "temperature": context.options.temperature,
                 "max_tokens": context.options.max_tokens,
+                "timeout": context.options.timeout_ms / 1000,
             }
+
+            if context.options.response_schema is not None:
+                kwargs["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "engineering_decision",
+                        "strict": True,
+                        "schema": dict(context.options.response_schema),
+                    },
+                }
 
             if self._api_key:
                 kwargs["api_key"] = self._api_key

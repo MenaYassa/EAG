@@ -32,10 +32,17 @@ class ExecutionOptions:
     retry_count: int = 2
     retry_strategy: RetryStrategy = RetryStrategy.EXPONENTIAL
     stream: bool = False
+    response_schema: Mapping[str, Any] | None = field(default=None, hash=False)
     metadata: Mapping[str, Any] = field(default_factory=dict, hash=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "metadata", _validate_mapping(self.metadata, "metadata"))
+        if self.response_schema is not None:
+            object.__setattr__(
+                self,
+                "response_schema",
+                _validate_mapping(self.response_schema, "response_schema"),
+            )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
