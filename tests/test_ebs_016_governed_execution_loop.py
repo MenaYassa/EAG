@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from eag.governed_execution import (
+    DeterministicVerifier,
     ExecutionBudget,
     ExecutionEvidenceKind,
     ExecutionEvidenceRef,
@@ -10,6 +13,12 @@ from eag.governed_execution import (
     GovernedExecutionState,
     GovernedExecutionStateMachine,
     GovernedExecutionStopReason,
+    ObjectiveCompletionPolicy,
+    ObjectiveStatus,
+    VerificationCheck,
+    VerificationRequest,
+    VerificationSpecification,
+    VerificationStatus,
 )
 
 
@@ -124,3 +133,45 @@ def test_ebs_016_deterministic_governed_execution_ledger_contract() -> None:
         ExecutionEvidenceKind.VERIFICATION,
         ExecutionEvidenceKind.REFLECTION,
     }
+
+
+class _CompletedMutation:
+    value = "completed"
+
+
+@dataclass(frozen=True, slots=True)
+class _CompletedReceiptFixture:
+    """Minimal immutable G2.3.1 receipt evidence surface consumed by G2.4.2."""
+
+    mutation_id: str
+    run_id: str
+    target_path: str
+    result: _CompletedMutation
+    verification_passed: bool = True
+
+
+def test_ebs_016_mutation_success_does_not_establish_objective_success(tmp_path) -> None:
+    """A bounded trusted assertion, not an LLM claim, decides objective success."""
+    (tmp_path / "article.txt").write_text("draft\\n", encoding="utf-8")
+    receipt = _CompletedReceiptFixture(
+        mutation_id="receipt-016",
+        run_id="ebs-016-verification",
+        target_path="article.txt",
+        result=_CompletedMutation(),
+    )
+    request = VerificationRequest(
+        run_id=receipt.run_id,
+        receipt=receipt,
+        specification=VerificationSpecification(
+            target_path="article.txt",
+            check=VerificationCheck.EXACT_CONTENT,
+            expected_content="published\\n",
+        ),
+    )
+
+    result = DeterministicVerifier(workspace_root=tmp_path).verify(request)
+    objective = ObjectiveCompletionPolicy.assess(receipt, result)
+
+    assert receipt.verification_passed is True
+    assert result.status is VerificationStatus.FAILED
+    assert objective.status is ObjectiveStatus.NOT_SATISFIED

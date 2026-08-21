@@ -23,6 +23,22 @@ from eag.governed_execution.state_machine import (
     LEGAL_TRANSITIONS,
     GovernedExecutionStateMachine,
 )
+from eag.governed_execution.verification import (
+    VERIFICATION_CONTRACT_VERSION,
+    DeterministicVerifier,
+    ObjectiveAssessment,
+    ObjectiveCompletionPolicy,
+    ObjectiveFailureCode,
+    ObjectiveStatus,
+    VerificationCheck,
+    VerificationEvidence,
+    VerificationFailureCode,
+    VerificationRequest,
+    VerificationRequestError,
+    VerificationResult,
+    VerificationSpecification,
+    VerificationStatus,
+)
 
 __all__ = [
     "ExecutionBudget",
@@ -40,4 +56,18 @@ __all__ = [
     "IllegalTransitionError",
     "LEGAL_TRANSITIONS",
     "TransitionResult",
+    "VERIFICATION_CONTRACT_VERSION",
+    "VerificationCheck",
+    "VerificationEvidence",
+    "VerificationFailureCode",
+    "VerificationRequest",
+    "VerificationRequestError",
+    "VerificationResult",
+    "VerificationSpecification",
+    "VerificationStatus",
+    "DeterministicVerifier",
+    "ObjectiveAssessment",
+    "ObjectiveCompletionPolicy",
+    "ObjectiveFailureCode",
+    "ObjectiveStatus",
 ]
