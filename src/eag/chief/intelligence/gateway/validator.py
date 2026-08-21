@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from eag.chief.intelligence.gateway.errors import (
@@ -17,6 +18,8 @@ from eag.chief.intelligence.gateway.models import (
     EngineeringDecision,
     EngineeringDecisionRequest,
     EngineeringRisk,
+    MutationIntent,
+    MutationIntentPolicy,
     ProposedPlanStep,
     RiskSeverity,
 )
@@ -31,15 +34,29 @@ _DECISION_FIELDS = {
     "confidence",
     "grounding_references",
     "schema_version",
+    "mutation_intents",
 }
 _STEP_FIELDS = {"step_id", "title", "capability_id", "dependencies", "parameters", "expected_evidence"}
 _RISK_FIELDS = {"description", "severity", "mitigation"}
+_MUTATION_INTENT_FIELDS = {
+    "intent_id",
+    "step_id",
+    "target_path",
+    "operation",
+    "proposed_content",
+    "rationale",
+    "grounding_references",
+    "dependencies",
+    "preservation_requirement_ids",
+    "schema_version",
+}
 _FORBIDDEN_PARAMETER_KEYS = {"command", "shell", "code", "script", "tool_call", "tool_calls"}
 
 
 def engineering_decision_json_schema(
     *,
     require_grounding_references: bool = False,
+    mutation_intent_policy: MutationIntentPolicy | None = None,
 ) -> dict[str, Any]:
     """Return the strict decision schema, optionally requiring G2.2 provenance citations."""
     properties: dict[str, Any] = {
@@ -102,6 +119,54 @@ def engineering_decision_json_schema(
             "items": {"type": "string", "minLength": 1},
         }
         required.append("grounding_references")
+    if mutation_intent_policy is not None:
+        properties["mutation_intents"] = {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "intent_id": {"type": "string", "minLength": 1},
+                    "step_id": {"type": "string", "minLength": 1},
+                    "target_path": {"type": "string", "minLength": 1},
+                    "operation": {"type": "string", "enum": list(mutation_intent_policy.allowed_operations)},
+                    "proposed_content": {"type": "string"},
+                    "rationale": {"type": "string", "minLength": 1},
+                    "grounding_references": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {"type": "string", "minLength": 1},
+                    },
+                    "dependencies": {"type": "array", "maxItems": 0, "items": {"type": "string"}},
+                    "preservation_requirement_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                requirement.requirement_id
+                                for requirement in mutation_intent_policy.preservation_requirements
+                            ],
+                        },
+                    },
+                    "schema_version": {"type": "string", "const": mutation_intent_policy.schema_version},
+                },
+                "required": [
+                    "intent_id",
+                    "step_id",
+                    "target_path",
+                    "operation",
+                    "proposed_content",
+                    "rationale",
+                    "grounding_references",
+                    "dependencies",
+                    "preservation_requirement_ids",
+                    "schema_version",
+                ],
+            },
+        }
+        required.append("mutation_intents")
     return {
         "type": "object",
         "additionalProperties": False,
@@ -121,7 +186,7 @@ def parse_engineering_decision(content: str) -> EngineeringDecision:
         raise SchemaValidationError("decision response must be a JSON object")
     _require_fields(
         payload,
-        required=_DECISION_FIELDS - {"grounding_references"},
+        required=_DECISION_FIELDS - {"grounding_references", "mutation_intents"},
         allowed=_DECISION_FIELDS,
         name="decision",
     )
@@ -129,6 +194,10 @@ def parse_engineering_decision(content: str) -> EngineeringDecision:
     try:
         steps = tuple(_parse_step(item) for item in _as_list(payload["ordered_plan"], "ordered_plan"))
         risks = tuple(_parse_risk(item) for item in _as_list(payload["risks"], "risks"))
+        mutation_intents = tuple(
+            _parse_mutation_intent(item)
+            for item in _as_list(payload.get("mutation_intents", []), "mutation_intents")
+        )
         assumptions = tuple(_as_string(item, "assumptions item") for item in _as_list(payload["assumptions"], "assumptions"))
         required_capabilities = tuple(
             _as_string(item, "required_capabilities item")
@@ -150,6 +219,7 @@ def parse_engineering_decision(content: str) -> EngineeringDecision:
             risks=risks,
             confidence=float(confidence),
             grounding_references=grounding_references,
+            mutation_intents=mutation_intents,
             schema_version=_as_string(payload["schema_version"], "schema_version"),
         )
     except (KeyError, TypeError, ValueError) as error:
@@ -248,6 +318,7 @@ def validate_decision_policy(
             message="decision grounding reference is absent from supplied context provenance",
             decision=decision,
         )
+    _validate_mutation_intents(decision, request, known_provenance)
 
 
 def _policy_error(
@@ -301,6 +372,36 @@ def _parse_step(value: object) -> ProposedPlanStep:
     )
 
 
+def _parse_mutation_intent(value: object) -> MutationIntent:
+    if not isinstance(value, Mapping):
+        raise SchemaValidationError("mutation intent must be a JSON object")
+    _require_exact_fields(value, _MUTATION_INTENT_FIELDS, "mutation intent")
+    return MutationIntent(
+        intent_id=_as_string(value["intent_id"], "mutation intent id"),
+        step_id=_as_string(value["step_id"], "mutation intent step id"),
+        target_path=_as_string(value["target_path"], "mutation intent target path"),
+        operation=_as_string(value["operation"], "mutation intent operation"),
+        proposed_content=_as_string(value["proposed_content"], "mutation intent proposed content"),
+        rationale=_as_string(value["rationale"], "mutation intent rationale"),
+        grounding_references=tuple(
+            _as_string(item, "mutation intent grounding reference")
+            for item in _as_list(value["grounding_references"], "mutation intent grounding references")
+        ),
+        dependencies=tuple(
+            _as_string(item, "mutation intent dependency")
+            for item in _as_list(value["dependencies"], "mutation intent dependencies")
+        ),
+        preservation_requirement_ids=tuple(
+            _as_string(item, "mutation intent preservation requirement")
+            for item in _as_list(
+                value["preservation_requirement_ids"],
+                "mutation intent preservation requirements",
+            )
+        ),
+        schema_version=_as_string(value["schema_version"], "mutation intent schema version"),
+    )
+
+
 def _parse_risk(value: object) -> EngineeringRisk:
     if not isinstance(value, Mapping):
         raise SchemaValidationError("risk items must be JSON objects")
@@ -346,6 +447,118 @@ def _as_string(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise SchemaValidationError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _validate_mutation_intents(
+    decision: EngineeringDecision,
+    request: EngineeringDecisionRequest,
+    known_provenance: set[str],
+) -> None:
+    policy = request.mutation_intent_policy
+    intents = decision.mutation_intents
+    if policy is None:
+        if intents:
+            raise _policy_error(
+                code=PolicyViolationCode.MUTATION_INTENT_CAPABILITY_MISMATCH,
+                message="mutation intent mode is not enabled for this request",
+                decision=decision,
+            )
+        return
+    if len(intents) != 1:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_COUNT_INVALID,
+            message="mutation intent mode requires exactly one mutation intent",
+            decision=decision,
+        )
+    intent = intents[0]
+    steps = {step.step_id: step for step in decision.ordered_plan}
+    step = steps.get(intent.step_id)
+    if step is None:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_STEP_UNKNOWN,
+            message="mutation intent must reference an existing proposed step",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    if step.capability_id != policy.capability_id:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_CAPABILITY_MISMATCH,
+            message="mutation intent step must use the configured mutation capability",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    if step.dependencies or intent.dependencies:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_STEP_DEPENDENCIES_FORBIDDEN,
+            message="mutation intent dependencies are not supported in the first slice",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    if intent.operation not in policy.allowed_operations:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_OPERATION_UNSUPPORTED,
+            message="mutation intent operation is not allowed",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    _validate_mutation_target(intent, decision)
+    _validate_preservation_bindings(intent, decision, policy)
+    if intent.content_bytes > policy.max_content_bytes:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_CONTENT_TOO_LARGE,
+            message="mutation intent proposed content exceeds the configured limit",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    if not set(intent.grounding_references).issubset(known_provenance):
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_GROUNDING_UNKNOWN,
+            message="mutation intent grounding reference is absent from supplied context provenance",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+
+
+def _validate_preservation_bindings(
+    intent: MutationIntent,
+    decision: EngineeringDecision,
+    policy: MutationIntentPolicy,
+) -> None:
+    required_ids = {requirement.requirement_id for requirement in policy.preservation_requirements}
+    declared_ids = set(intent.preservation_requirement_ids)
+    if not declared_ids.issubset(required_ids):
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_PRESERVATION_BINDING_INVALID,
+            message="mutation intent declares an unknown preservation requirement",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+    if declared_ids != required_ids:
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_PRESERVATION_BINDING_MISSING,
+            message="mutation intent must declare every configured preservation requirement",
+            decision=decision,
+            step_id=intent.step_id,
+        )
+
+
+def _validate_mutation_target(intent: MutationIntent, decision: EngineeringDecision) -> None:
+    raw = intent.target_path
+    path = PurePosixPath(raw)
+    if (
+        Path(raw).is_absolute()
+        or path.is_absolute()
+        or not path.parts
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or "\x00" in raw
+        or any("\\" in part for part in path.parts)
+    ):
+        raise _policy_error(
+            code=PolicyViolationCode.MUTATION_INTENT_TARGET_INVALID,
+            message="mutation intent target path is invalid",
+            decision=decision,
+            step_id=intent.step_id,
+        )
 
 
 def _validate_parameters(

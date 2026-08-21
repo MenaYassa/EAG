@@ -32,6 +32,7 @@ from eag.chief.intelligence.gateway import (
     GatewayRuntime,
     GatewayTrace,
     GatewayUsage,
+    MutationIntentPolicy,
     PolicyValidationError,
     PolicyViolationCode,
     SchemaValidationError,
@@ -580,3 +581,59 @@ def test_gateway_retains_sanitized_future_dependency_diagnostic_without_provider
     assert rejections[-1].reason == "plan dependency must reference an earlier proposed step"
     assert "provider-body-never-retained" not in repr(result.policy_violation)
     assert "provider-body-never-retained" not in repr(rejections[-1])
+
+
+def test_gateway_accepts_one_opt_in_typed_mutation_intent_as_advisory_data() -> None:
+    payload = valid_payload(
+        ordered_plan=[
+            {
+                "step_id": "mutate-article",
+                "title": "Propose one governed article mutation",
+                "capability_id": "governed_mutation",
+                "dependencies": [],
+                "parameters": {},
+                "expected_evidence": ["One proposal candidate"],
+            }
+        ],
+        required_capabilities=["governed_mutation"],
+        grounding_references=["file:article.py"],
+        mutation_intents=[
+            {
+                "intent_id": "intent-1",
+                "step_id": "mutate-article",
+                "target_path": "article.py",
+                "operation": "modify_file",
+                "proposed_content": 'def article_payload(title: str) -> dict[str, str]:\n    return {"title": title, "status": "draft"}\n',
+                "rationale": "Add one fixture status field.",
+                "grounding_references": ["file:article.py"],
+                "dependencies": [],
+                "preservation_requirement_ids": [],
+                "schema_version": "1.0",
+            }
+        ],
+    )
+    provider = FakeProvider(responses={"primary": json.dumps(payload)})
+    gateway, _ = make_gateway(provider)
+    request = EngineeringDecisionRequest(
+        goal="Propose one governed mutation only.",
+        context=EngineeringContext(
+            available_capabilities=("governed_mutation",),
+            provenance={
+                "file:article.py": "source",
+                "snapshot_fingerprint": "snapshot",
+                "context_fingerprint": "context",
+            },
+            truncation_metadata={"snapshot_fingerprint": "snapshot", "context_fingerprint": "context"},
+        ),
+        allowed_capability_ids=("governed_mutation",),
+        mutation_intent_policy=MutationIntentPolicy(allowed_operations=("modify_file",)),
+    )
+
+    result = gateway.decide(request)
+
+    assert result.success is True
+    assert result.decision is not None
+    assert len(result.decision.mutation_intents) == 1
+    assert result.decision.mutation_intents[0].target_path == "article.py"
+    assert result.decision.mutation_intents[0].operation == "modify_file"
+    assert provider.calls == ["primary"]

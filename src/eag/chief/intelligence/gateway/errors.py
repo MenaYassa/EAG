@@ -33,6 +33,17 @@ class PolicyViolationCode(StrEnum):
     REQUIRED_CAPABILITIES_MISMATCH = "required_capabilities_mismatch"
     GROUNDING_REFERENCES_REQUIRED = "grounding_references_required"
     GROUNDING_REFERENCE_UNKNOWN = "grounding_reference_unknown"
+    MUTATION_INTENT_CAPABILITY_MISMATCH = "mutation_intent_capability_mismatch"
+    MUTATION_INTENT_COUNT_INVALID = "mutation_intent_count_invalid"
+    MUTATION_INTENT_STEP_UNKNOWN = "mutation_intent_step_unknown"
+    MUTATION_INTENT_STEP_DEPENDENCIES_FORBIDDEN = "mutation_intent_step_dependencies_forbidden"
+    MUTATION_INTENT_OPERATION_UNSUPPORTED = "mutation_intent_operation_unsupported"
+    MUTATION_INTENT_TARGET_INVALID = "mutation_intent_target_invalid"
+    MUTATION_INTENT_CONTENT_INVALID = "mutation_intent_content_invalid"
+    MUTATION_INTENT_CONTENT_TOO_LARGE = "mutation_intent_content_too_large"
+    MUTATION_INTENT_GROUNDING_UNKNOWN = "mutation_intent_grounding_unknown"
+    MUTATION_INTENT_PRESERVATION_BINDING_INVALID = "mutation_intent_preservation_binding_invalid"
+    MUTATION_INTENT_PRESERVATION_BINDING_MISSING = "mutation_intent_preservation_binding_missing"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

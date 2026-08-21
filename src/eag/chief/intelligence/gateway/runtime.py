@@ -295,6 +295,7 @@ class GatewayRuntime:
                     require_grounding_references=(
                         "snapshot_fingerprint" in request.context.truncation_metadata
                     ),
+                    mutation_intent_policy=request.mutation_intent_policy,
                 ),
                 metadata={"request_id": request.request_id, "schema_version": request.schema_version},
             ),
@@ -411,6 +412,20 @@ def _prompt_for(request: EngineeringDecisionRequest) -> str:
         "provenance": request.context.provenance,
         "truncation_metadata": request.context.truncation_metadata,
         "schema_version": request.schema_version,
+        "mutation_intent_policy": (
+            {
+                "capability_id": request.mutation_intent_policy.capability_id,
+                "allowed_operations": request.mutation_intent_policy.allowed_operations,
+                "max_content_bytes": request.mutation_intent_policy.max_content_bytes,
+                "preservation_requirement_ids": tuple(
+                    requirement.requirement_id
+                    for requirement in request.mutation_intent_policy.preservation_requirements
+                ),
+                "schema_version": request.mutation_intent_policy.schema_version,
+            }
+            if request.mutation_intent_policy is not None
+            else None
+        ),
     }
     grounding_instruction = ""
     if "snapshot_fingerprint" in request.context.truncation_metadata:
@@ -418,11 +433,24 @@ def _prompt_for(request: EngineeringDecisionRequest) -> str:
             "This is repository-aware context. Include the required grounding_references array using "
             "only provenance IDs supplied in Context.provenance; never invent a provenance ID.\n"
         )
+    mutation_instruction = ""
+    if request.mutation_intent_policy is not None:
+        mutation_instruction = (
+            "Mutation-intent mode is enabled. Return exactly one mutation_intents entry matching the "
+            "schema and the trusted operation allowlist. The entry is advisory only: it must use one "
+            "governed_mutation plan step with no dependencies, a relative target path, full replacement "
+            "UTF-8 content in proposed_content, and only supplied grounding references. It must declare "
+            "every configured preservation_requirement_id and retain each bound leading source region "
+            "verbatim in proposed_content. Do not omit, relocate, merge, or repair protected source text. "
+            "Do not include "
+            "workspace roots, fingerprints, policy versions, authorization state, commands, Git, shell, "
+            "network, credentials, tests, or additional mutations.\n"
+        )
     return (
         "Return only JSON matching the supplied schema. You are producing an advisory engineering "
         "decision, not executable instructions. Do not include commands, source code, tool calls, or "
-        "capabilities outside the supplied allowlist.\n"
-        f"{grounding_instruction}"
+        "capabilities outside the supplied allowlist except the schema-authorized mutation intent content.\n"
+        f"{grounding_instruction}{mutation_instruction}"
         f"Goal: {request.goal}\n"
         f"Context: {json.dumps(context, sort_keys=True, default=_json_default)}"
     )
