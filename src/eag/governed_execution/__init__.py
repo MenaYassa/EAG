@@ -19,6 +19,25 @@ from eag.governed_execution.models import (
     GovernedExecutionContext,
     TransitionResult,
 )
+from eag.governed_execution.reflection import (
+    GOVERNED_REFLECTION_CONTRACT_VERSION,
+    GovernedMemoryEvidence,
+    GovernedMemoryProvenance,
+    GovernedReflectionAdapter,
+    GovernedReflectionError,
+    GovernedReflectionInput,
+    GovernedReflectionOutcome,
+)
+from eag.governed_execution.replanning import (
+    REPLANNING_CONTRACT_VERSION,
+    FreshIterationArtifacts,
+    ReplanningAction,
+    ReplanningError,
+    ReplanningInput,
+    ReplanningOutcome,
+    ReplanningPolicy,
+    ReplanningReasonCode,
+)
 from eag.governed_execution.state_machine import (
     LEGAL_TRANSITIONS,
     GovernedExecutionStateMachine,
@@ -45,6 +64,14 @@ __all__ = [
     "ExecutionEvidenceKind",
     "ExecutionEvidenceRef",
     "ExecutionTransitionRecord",
+    "FreshIterationArtifacts",
+    "GOVERNED_REFLECTION_CONTRACT_VERSION",
+    "GovernedMemoryEvidence",
+    "GovernedMemoryProvenance",
+    "GovernedReflectionAdapter",
+    "GovernedReflectionError",
+    "GovernedReflectionInput",
+    "GovernedReflectionOutcome",
     "GovernedExecutionContext",
     "GovernedExecutionEvent",
     "GovernedExecutionStarted",
@@ -70,4 +97,11 @@ __all__ = [
     "ObjectiveCompletionPolicy",
     "ObjectiveFailureCode",
     "ObjectiveStatus",
+    "REPLANNING_CONTRACT_VERSION",
+    "ReplanningAction",
+    "ReplanningError",
+    "ReplanningInput",
+    "ReplanningOutcome",
+    "ReplanningPolicy",
+    "ReplanningReasonCode",
 ]

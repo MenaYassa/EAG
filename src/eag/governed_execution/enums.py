@@ -58,6 +58,8 @@ class ExecutionEvidenceKind(StrEnum):
     MUTATION_RECEIPT = "mutation_receipt"
     VERIFICATION = "verification"
     REFLECTION = "reflection"
+    MEMORY = "memory"
+    REPLANNING = "replanning"
 
 
 __all__ = [
