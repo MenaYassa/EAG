@@ -34,6 +34,10 @@ class SessionRejectionReason(StrEnum):
     RUNTIME_UNAVAILABLE = "runtime_unavailable"
     SESSION_CONSUMED = "session_consumed"
     SESSION_UNKNOWN = "session_unknown"
+    REPLAY_LEDGER_UNAVAILABLE = "replay_ledger_unavailable"
+    REPLAY_LEDGER_CORRUPT = "replay_ledger_corrupt"
+    REPLAY_LEDGER_CONFLICT = "replay_ledger_conflict"
+    REPLAY_LEDGER_ISOLATION_MISMATCH = "replay_ledger_isolation_mismatch"
 
 
 def _require_non_empty(value: str, field_name: str) -> str:

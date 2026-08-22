@@ -37,6 +37,7 @@ from eag.governed_runtime.models import (
 from eag.governed_session import (
     ControlledRuntimeSession,
     ControlledRuntimeSessionGate,
+    FileDurableSessionReplayLedger,
     RuntimeAvailability,
 )
 
@@ -190,7 +191,11 @@ def invocation_fixture(tmp_path: Path, *, identity: str) -> InvocationFixture:
             max_estimated_cost=0.1,
         ),
     )
-    gate = ControlledRuntimeSessionGate()
+    ledger_root = tmp_path / "replay-ledger"
+    ledger_root.mkdir()
+    gate = ControlledRuntimeSessionGate(
+        replay_ledger=FileDurableSessionReplayLedger(control_root=ledger_root)
+    )
     admission = gate.create_session(
         activation_receipt=admit_governed_activation(activation_request),
         activation_request=activation_request,

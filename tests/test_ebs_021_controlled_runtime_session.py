@@ -17,6 +17,7 @@ from eag.governed_activation import (
 from eag.governed_runtime.models import GovernedExecutionRequest
 from eag.governed_session import (
     ControlledRuntimeSessionGate,
+    FileDurableSessionReplayLedger,
     RuntimeAvailability,
     SessionDisposition,
     SessionRejectionReason,
@@ -36,6 +37,12 @@ class _CountingAuditObserver:
         del result
         self.terminal_record_calls += 1
         return object()
+
+
+def _ledger(tmp_path: Path) -> FileDurableSessionReplayLedger:
+    ledger_root = tmp_path / "replay-ledger"
+    ledger_root.mkdir(exist_ok=True)
+    return FileDurableSessionReplayLedger(control_root=ledger_root)
 
 
 def _fixture(tmp_path: Path, *, identity: str) -> tuple[
@@ -98,7 +105,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
 ) -> None:
     activation, runtime_request, observer, availability = _fixture(tmp_path / "primary", identity="primary")
     approved_receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate()
+    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "primary"))
 
     created = gate.create_session(
         activation_receipt=approved_receipt,
@@ -123,7 +130,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         audit_observer=observer,
         runtime_availability=availability,
     )
-    gate_b = ControlledRuntimeSessionGate()
+    gate_b = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "primary"))
     activation_replay = gate_b.create_session(
         activation_receipt=approved_receipt,
         activation_request=activation,
@@ -144,7 +151,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         tmp_path / "stale", identity="stale"
     )
     stale_receipt = admit_governed_activation(stale_activation)
-    stale_gate = ControlledRuntimeSessionGate()
+    stale_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "stale"))
     stale_created = stale_gate.create_session(
         activation_receipt=stale_receipt,
         activation_request=stale_activation,
@@ -186,7 +193,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
             max_estimated_cost=0.1,
         ),
     )
-    policy_gate = ControlledRuntimeSessionGate()
+    policy_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "policy"))
     policy_created = policy_gate.create_session(
         activation_receipt=policy_receipt,
         activation_request=policy_activation,
@@ -219,7 +226,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         ),
         audit_observer=isolation_observer,
     )
-    isolation_gate = ControlledRuntimeSessionGate()
+    isolation_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "isolation"))
     isolation_created = isolation_gate.create_session(
         activation_receipt=isolation_receipt,
         activation_request=isolation_activation,
@@ -241,7 +248,9 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         tmp_path / "missing-audit", identity="missing-audit"
     )
     missing_receipt = admit_governed_activation(missing_activation)
-    missing_audit = ControlledRuntimeSessionGate().create_session(
+    missing_audit = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "missing-audit")
+    ).create_session(
         activation_receipt=missing_receipt,
         activation_request=missing_activation,
         runtime_request=missing_request,

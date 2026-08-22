@@ -16,6 +16,7 @@ from eag.governed_activation import (
 from eag.governed_runtime.models import GovernedExecutionRequest
 from eag.governed_session import (
     ControlledRuntimeSessionGate,
+    FileDurableSessionReplayLedger,
     RuntimeAvailability,
     SessionDisposition,
     SessionRejectionReason,
@@ -91,10 +92,16 @@ def _bindings(tmp_path: Path) -> tuple[
     return activation, runtime_request, observer, RuntimeAvailability(runtime_id="governed-runtime", available=True)
 
 
+def _ledger(tmp_path: Path) -> FileDurableSessionReplayLedger:
+    ledger_root = tmp_path / "replay-ledger"
+    ledger_root.mkdir(exist_ok=True)
+    return FileDurableSessionReplayLedger(control_root=ledger_root)
+
+
 def _approved_session(tmp_path: Path):
     activation, request, observer, availability = _bindings(tmp_path)
     receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate()
+    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path))
     admission = gate.create_session(
         activation_receipt=receipt,
         activation_request=activation,
@@ -132,7 +139,7 @@ def test_approved_activation_creates_and_consumes_one_nonexecuting_runtime_start
 def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_creation(tmp_path: Path) -> None:
     activation, request, observer, availability = _bindings(tmp_path)
     receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate()
+    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path))
 
     missing = gate.create_session(
         activation_receipt=None,

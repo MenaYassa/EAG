@@ -1,10 +1,10 @@
-"""Pure, single-use admission gate for a future existing governed-runtime start."""
+"""Single-use admission gate for a future existing governed-runtime start with durable replay claims."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from threading import RLock
+from pathlib import Path
 
 from eag.chief.intelligence.gateway.models import GatewayPolicy, MutationIntentPolicy
 from eag.governed_activation import (
@@ -15,6 +15,15 @@ from eag.governed_activation import (
 )
 from eag.governed_audit.recorder import GovernedExecutionAuditObserver
 from eag.governed_runtime.models import GovernedExecutionRequest
+from eag.governed_session.ledger import (
+    DurableReplayLedgerRecord,
+    DurableSessionReplayLedger,
+    ReplayLedgerClaim,
+    ReplayLedgerClaimDisposition,
+    ReplayLedgerCorruptionError,
+    ReplayLedgerEntryKind,
+    ReplayLedgerUnavailableError,
+)
 from eag.governed_session.models import (
     ControlledRuntimeSession,
     ControlledSessionAdmission,
@@ -24,14 +33,18 @@ from eag.governed_session.models import (
     SessionRejectionReason,
 )
 
-_PROCESS_DOMAIN_LOCK = RLock()
-_PROCESS_DOMAIN_SESSIONS: dict[str, ControlledRuntimeSession] = {}
-_PROCESS_DOMAIN_ACTIVATION_IDS: set[str] = set()
-_PROCESS_DOMAIN_CONSUMED_SESSION_IDS: set[str] = set()
-
 
 class ControlledRuntimeSessionGate:
-    """Bind one approved activation to one process-wide, non-executing start permit."""
+    """Bind one approved activation to one durable, non-executing runtime-start permit."""
+
+    def __init__(self, *, replay_ledger: DurableSessionReplayLedger) -> None:
+        if not callable(getattr(replay_ledger, "claim", None)) or not callable(
+            getattr(replay_ledger, "read", None)
+        ):
+            raise TypeError("replay_ledger must expose claim(record) and read(entry_kind, identity_key)")
+        if not isinstance(getattr(replay_ledger, "control_root", None), Path):
+            raise TypeError("replay_ledger must expose a Path control_root")
+        self._replay_ledger = replay_ledger
 
     def create_session(
         self,
@@ -42,7 +55,7 @@ class ControlledRuntimeSessionGate:
         audit_observer: GovernedExecutionAuditObserver | None,
         runtime_availability: RuntimeAvailability | None,
     ) -> ControlledSessionAdmission:
-        """Create one immutable start session after pure binding validation; no runtime is invoked."""
+        """Create one immutable start session after validation and durable activation claim; no runtime runs."""
         rejection = _binding_rejection(
             activation_receipt=activation_receipt,
             activation_request=activation_request,
@@ -52,22 +65,35 @@ class ControlledRuntimeSessionGate:
         )
         if rejection is not None:
             return _rejected(rejection)
+        ledger_rejection = _ledger_isolation_rejection(self._replay_ledger, activation_request)
+        if ledger_rejection is not None:
+            return _rejected(ledger_rejection)
         assert activation_receipt is not None
         assert audit_observer is not None
         assert runtime_availability is not None
-        activation_id = activation_receipt.decision.activation_id
-        with _PROCESS_DOMAIN_LOCK:
-            if activation_id in _PROCESS_DOMAIN_ACTIVATION_IDS:
-                return _rejected(SessionRejectionReason.ACTIVATION_RECEIPT_REPLAYED)
-            session = _session_for(
-                activation_receipt,
-                activation_request,
-                runtime_request,
-                audit_observer,
-                runtime_availability,
-            )
-            _PROCESS_DOMAIN_SESSIONS[session.session_id] = session
-            _PROCESS_DOMAIN_ACTIVATION_IDS.add(activation_id)
+        activation_record = _activation_record_for(activation_receipt)
+        activation_claim, claim_rejection = _claim(self._replay_ledger, activation_record)
+        if claim_rejection is not None:
+            return _rejected(claim_rejection)
+        assert activation_claim is not None
+        if activation_claim.disposition is ReplayLedgerClaimDisposition.ALREADY_CLAIMED:
+            return _rejected(SessionRejectionReason.ACTIVATION_RECEIPT_REPLAYED)
+        if activation_claim.disposition is ReplayLedgerClaimDisposition.CONFLICT:
+            return _rejected(SessionRejectionReason.REPLAY_LEDGER_CONFLICT)
+
+        session = _session_for(
+            activation_receipt,
+            activation_request,
+            runtime_request,
+            audit_observer,
+            runtime_availability,
+        )
+        session_claim, claim_rejection = _claim(self._replay_ledger, _issued_record_for(session))
+        if claim_rejection is not None:
+            return _rejected(claim_rejection)
+        assert session_claim is not None
+        if session_claim.disposition is not ReplayLedgerClaimDisposition.CLAIMED:
+            return _rejected(SessionRejectionReason.REPLAY_LEDGER_CONFLICT)
         return ControlledSessionAdmission(
             session=session,
             decision=ControlledSessionDecision(
@@ -88,45 +114,104 @@ class ControlledRuntimeSessionGate:
         audit_observer: GovernedExecutionAuditObserver | None,
         runtime_availability: RuntimeAvailability | None,
     ) -> ControlledSessionDecision:
-        """Consume a bound session once and return only a non-executing start permit or refusal."""
+        """Consume a bound durable session once and return only a start decision or refusal."""
         if not isinstance(session, ControlledRuntimeSession):
             raise TypeError("session must be a ControlledRuntimeSession")
-        with _PROCESS_DOMAIN_LOCK:
-            stored = _PROCESS_DOMAIN_SESSIONS.get(session.session_id)
-            if stored is None:
-                return _rejected(SessionRejectionReason.SESSION_UNKNOWN).decision
-            if stored != session:
-                return _rejected(SessionRejectionReason.REQUEST_IDENTITY_MISMATCH).decision
-            if session.session_id in _PROCESS_DOMAIN_CONSUMED_SESSION_IDS:
-                return _rejected(SessionRejectionReason.SESSION_CONSUMED).decision
-            rejection = _binding_rejection(
-                activation_receipt=activation_receipt,
-                activation_request=activation_request,
-                runtime_request=runtime_request,
-                audit_observer=audit_observer,
-                runtime_availability=runtime_availability,
-            )
-            if rejection is not None:
-                return _rejected(rejection).decision
-            assert activation_receipt is not None
-            assert audit_observer is not None
-            assert runtime_availability is not None
-            expected = _session_for(
-                activation_receipt,
-                activation_request,
-                runtime_request,
-                audit_observer,
-                runtime_availability,
-            )
-            if expected != session:
-                return _rejected(_session_mismatch_reason(session, expected)).decision
-            _PROCESS_DOMAIN_CONSUMED_SESSION_IDS.add(session.session_id)
+        rejection = _binding_rejection(
+            activation_receipt=activation_receipt,
+            activation_request=activation_request,
+            runtime_request=runtime_request,
+            audit_observer=audit_observer,
+            runtime_availability=runtime_availability,
+        )
+        if rejection is not None:
+            return _rejected(rejection).decision
+        ledger_rejection = _ledger_isolation_rejection(self._replay_ledger, activation_request)
+        if ledger_rejection is not None:
+            return _rejected(ledger_rejection).decision
+        assert activation_receipt is not None
+        assert audit_observer is not None
+        assert runtime_availability is not None
+        expected = _session_for(
+            activation_receipt,
+            activation_request,
+            runtime_request,
+            audit_observer,
+            runtime_availability,
+        )
+        if expected != session:
+            return _rejected(_session_mismatch_reason(session, expected)).decision
+        issued_record = _issued_record_for(session)
+        stored_issue, read_rejection = _read(self._replay_ledger, issued_record)
+        if read_rejection is not None:
+            return _rejected(read_rejection).decision
+        if stored_issue is None:
+            return _rejected(SessionRejectionReason.SESSION_UNKNOWN).decision
+        if stored_issue != issued_record:
+            return _rejected(SessionRejectionReason.REPLAY_LEDGER_CONFLICT).decision
+        consumed_claim, claim_rejection = _claim(self._replay_ledger, _consumed_record_for(session))
+        if claim_rejection is not None:
+            return _rejected(claim_rejection).decision
+        assert consumed_claim is not None
+        if consumed_claim.disposition is ReplayLedgerClaimDisposition.ALREADY_CLAIMED:
+            return _rejected(SessionRejectionReason.SESSION_CONSUMED).decision
+        if consumed_claim.disposition is ReplayLedgerClaimDisposition.CONFLICT:
+            return _rejected(SessionRejectionReason.REPLAY_LEDGER_CONFLICT).decision
         return ControlledSessionDecision(
             disposition=SessionDisposition.RUNTIME_START_ALLOWED,
             session_id=session.session_id,
             execution_id=session.execution_id,
             run_id=session.run_id,
         )
+
+
+def _claim(
+    ledger: DurableSessionReplayLedger,
+    record: DurableReplayLedgerRecord,
+) -> tuple[ReplayLedgerClaim | None, SessionRejectionReason | None]:
+    try:
+        return ledger.claim(record), None
+    except ReplayLedgerCorruptionError:
+        return None, SessionRejectionReason.REPLAY_LEDGER_CORRUPT
+    except ReplayLedgerUnavailableError:
+        return None, SessionRejectionReason.REPLAY_LEDGER_UNAVAILABLE
+
+
+def _read(
+    ledger: DurableSessionReplayLedger,
+    expected: DurableReplayLedgerRecord,
+) -> tuple[DurableReplayLedgerRecord | None, SessionRejectionReason | None]:
+    try:
+        return ledger.read(entry_kind=expected.entry_kind, identity_key=expected.identity_key), None
+    except ReplayLedgerCorruptionError:
+        return None, SessionRejectionReason.REPLAY_LEDGER_CORRUPT
+    except ReplayLedgerUnavailableError:
+        return None, SessionRejectionReason.REPLAY_LEDGER_UNAVAILABLE
+
+
+def _ledger_isolation_rejection(
+    ledger: DurableSessionReplayLedger,
+    activation_request: GovernedActivationRequest,
+) -> SessionRejectionReason | None:
+    try:
+        control_root = ledger.control_root.resolve()
+        isolation = activation_request.isolation
+        workspace_root = isolation.workspace_root.resolve() if isolation.workspace_root is not None else None
+        source_root = (
+            isolation.source_repository_root.resolve()
+            if isolation.source_repository_root is not None
+            else None
+        )
+        audit_root = isolation.audit_root.resolve() if isolation.audit_root is not None else None
+    except OSError:
+        return SessionRejectionReason.REPLAY_LEDGER_UNAVAILABLE
+    if workspace_root is None or source_root is None or audit_root is None:
+        return SessionRejectionReason.ISOLATION_BINDING_MISMATCH
+    if control_root in (workspace_root, source_root, audit_root) or any(
+        control_root.is_relative_to(root) for root in (workspace_root, source_root, audit_root)
+    ):
+        return SessionRejectionReason.REPLAY_LEDGER_ISOLATION_MISMATCH
+    return None
 
 
 def _binding_rejection(
@@ -170,6 +255,30 @@ def _binding_rejection(
     ):
         return SessionRejectionReason.ISOLATION_BINDING_MISMATCH
     return None
+
+
+def _activation_record_for(receipt: GovernedActivationReceipt) -> DurableReplayLedgerRecord:
+    return DurableReplayLedgerRecord(
+        entry_kind=ReplayLedgerEntryKind.ACTIVATION_CLAIMED,
+        identity_key=receipt.decision.activation_id,
+        binding_digest=_receipt_digest(receipt),
+    )
+
+
+def _issued_record_for(session: ControlledRuntimeSession) -> DurableReplayLedgerRecord:
+    return DurableReplayLedgerRecord(
+        entry_kind=ReplayLedgerEntryKind.SESSION_ISSUED,
+        identity_key=session.session_id,
+        binding_digest=_session_binding_digest(session),
+    )
+
+
+def _consumed_record_for(session: ControlledRuntimeSession) -> DurableReplayLedgerRecord:
+    return DurableReplayLedgerRecord(
+        entry_kind=ReplayLedgerEntryKind.SESSION_CONSUMED,
+        identity_key=session.session_id,
+        binding_digest=_session_binding_digest(session),
+    )
 
 
 def _session_for(
@@ -319,6 +428,23 @@ def _runtime_request_digest(request: GovernedExecutionRequest) -> str:
             "repository_path": str(request.repository_path.resolve()),
             "run_id": request.run_id,
             "workspace_root": str(request.workspace_root.resolve()),
+        }
+    )
+
+
+def _session_binding_digest(session: ControlledRuntimeSession) -> str:
+    return _digest(
+        {
+            "activation_id": session.activation_id,
+            "activation_receipt_digest": session.activation_receipt_digest,
+            "audit_observer_identity": session.audit_observer_identity,
+            "execution_id": session.execution_id,
+            "isolation_binding_digest": session.isolation_binding_digest,
+            "provider_policy_digest": session.provider_policy_digest,
+            "request_digest": session.request_digest,
+            "run_id": session.run_id,
+            "runtime_id": session.runtime_id,
+            "session_id": session.session_id,
         }
     )
 
