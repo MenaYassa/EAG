@@ -19,6 +19,10 @@ from eag.chief.intelligence.gateway.mutation_workflow import (
     GovernedWorkflowLifecycleRefused,
 )
 from eag.chief.runtime.models import Plan, PlanStep
+from eag.governed_audit.recorder import (
+    AuditPersistenceRequiredError,
+    GovernedExecutionAuditObserver,
+)
 from eag.governed_execution.authority import (
     FreshIterationAuthority,
     validate_fresh_authority,
@@ -125,6 +129,7 @@ class GovernedEngineeringExecutionRuntime:
         verification_specification_factory: VerificationSpecificationFactory,
         reflection_runtime: ReflectionRuntime,
         adaptive_planner: AdaptivePlanner,
+        audit_observer: GovernedExecutionAuditObserver | None = None,
     ) -> None:
         self._state_machine = state_machine
         self._context_factory = context_factory
@@ -134,12 +139,20 @@ class GovernedEngineeringExecutionRuntime:
         self._verification_specification_factory = verification_specification_factory
         self._reflection_runtime = reflection_runtime
         self._adaptive_planner = adaptive_planner
+        self._audit_observer = audit_observer
 
     def execute(self, request: GovernedExecutionRequest) -> GovernedExecutionResult:
         """Execute at most two serial governed iterations for one explicit workspace."""
         if not isinstance(request, GovernedExecutionRequest):
             raise TypeError("request must be a GovernedExecutionRequest")
         workspace_key = str(request.workspace_root.resolve())
+        if self._audit_observer is not None:
+            try:
+                self._audit_observer.preflight(request.workspace_root)
+            except Exception as error:
+                raise AuditPersistenceRequiredError(
+                    "required audit observation could not be prepared before execution"
+                ) from error
         with self._workspace_lock(workspace_key):
             context = GovernedExecutionContext(
                 execution_id=request.execution_id,
@@ -161,7 +174,7 @@ class GovernedEngineeringExecutionRuntime:
                 if state is not None:
                     artifacts.append(state.context_bundle.artifact)
                 if context.state.is_terminal:
-                    return GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+                    return self._terminal_result(context, artifacts)
                 assert state is not None
                 assert state.workflow_result is not None
                 assert state.workflow_result.receipt is not None
@@ -180,7 +193,7 @@ class GovernedEngineeringExecutionRuntime:
                         stop_reason=GovernedExecutionStopReason.SUCCESS,
                         evidence=(state.verification.evidence_ref,),
                     )
-                    return GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+                    return self._terminal_result(context, artifacts)
 
                 if iteration == 2:
                     self._validate_complete_iteration(replanning_input, state)
@@ -190,7 +203,7 @@ class GovernedEngineeringExecutionRuntime:
                         stop_reason=GovernedExecutionStopReason.VERIFICATION_FAILED,
                         evidence=(state.verification.evidence_ref,),
                     )
-                    return GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+                    return self._terminal_result(context, artifacts)
 
                 context, replanning_input = self._recover(
                     request,
@@ -199,7 +212,7 @@ class GovernedEngineeringExecutionRuntime:
                     objective=objective,
                 )
                 if context.state.is_terminal:
-                    return GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+                    return self._terminal_result(context, artifacts)
                 previous_authority = state.authority
                 if previous_authority is None:
                     context = self._transition(
@@ -207,9 +220,25 @@ class GovernedEngineeringExecutionRuntime:
                         GovernedExecutionState.FAILED,
                         stop_reason=GovernedExecutionStopReason.UNRECOVERABLE,
                     )
-                    return GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+                    return self._terminal_result(context, artifacts)
 
             raise GovernedExecutionRuntimeError("serial runtime exceeded the fixed two-iteration bound")
+
+    def _terminal_result(
+        self,
+        context: GovernedExecutionContext,
+        artifacts: list[IterationContextArtifact],
+    ) -> GovernedExecutionResult:
+        """Return a terminal result only after optional required audit recording succeeds."""
+        result = GovernedExecutionResult(context=context, iteration_artifacts=tuple(artifacts))
+        if self._audit_observer is not None:
+            try:
+                self._audit_observer.record_terminal_result(result)
+            except Exception as error:
+                raise AuditPersistenceRequiredError(
+                    "terminal execution result could not be persisted to the required audit store"
+                ) from error
+        return result
 
     def _execute_iteration(
         self,

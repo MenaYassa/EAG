@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from eag.adaptive import AdaptivePlanner
 from eag.chief.intelligence.gateway.mutation_workflow import GovernedDecisionMutationWorkflow
+from eag.governed_audit.recorder import GovernedExecutionAuditObserver
 from eag.governed_execution.state_machine import GovernedExecutionStateMachine
 from eag.governed_execution.verification import DeterministicVerifier
 from eag.governed_runtime.models import VerificationSpecificationFactory
@@ -25,6 +26,7 @@ def create_governed_engineering_execution_runtime(
     verification_specification_factory: VerificationSpecificationFactory,
     reflection_runtime: ReflectionRuntime,
     adaptive_planner: AdaptivePlanner,
+    audit_observer: GovernedExecutionAuditObserver | None = None,
 ) -> GovernedEngineeringExecutionRuntime:
     """Return the explicit G2.4.4 composition; no legacy factory calls this function."""
     return GovernedEngineeringExecutionRuntime(
@@ -36,6 +38,7 @@ def create_governed_engineering_execution_runtime(
         verification_specification_factory=verification_specification_factory,
         reflection_runtime=reflection_runtime,
         adaptive_planner=adaptive_planner,
+        audit_observer=audit_observer,
     )
 
 

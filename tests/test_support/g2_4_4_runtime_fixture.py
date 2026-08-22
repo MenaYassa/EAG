@@ -25,6 +25,7 @@ from eag.chief.intelligence.gateway.context import ContextAssemblyRequest
 from eag.chief.intelligence.gateway.mutation_workflow import GovernedDecisionMutationWorkflow
 from eag.context import ContextSecurityPolicy
 from eag.events import EventBus
+from eag.governed_audit.recorder import GovernedExecutionAuditObserver
 from eag.governed_execution import (
     DeterministicVerifier,
     ExecutionBudget,
@@ -185,6 +186,7 @@ def runtime_fixture(
     *,
     contents: tuple[str, str],
     fail_first_only: bool,
+    audit_observer: GovernedExecutionAuditObserver | None = None,
 ) -> tuple[
     GovernedEngineeringExecutionRuntime,
     ScriptedGateway,
@@ -217,6 +219,7 @@ def runtime_fixture(
         verification_specification_factory=verification_factory,
         reflection_runtime=ReflectionRuntime(ReflectionEngine(), EventBus()),
         adaptive_planner=AdaptivePlanner(),
+        audit_observer=audit_observer,
     )
     return runtime, gateway, context_factory, request_factory, verification_factory
 
