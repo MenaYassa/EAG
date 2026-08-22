@@ -1,5 +1,11 @@
 """G2.4.1 deterministic governed execution state-machine foundation."""
 
+from eag.governed_execution.authority import (
+    FRESH_ITERATION_AUTHORITY_CONTRACT_VERSION,
+    FreshIterationAuthority,
+    FreshIterationAuthorityError,
+    validate_fresh_authority,
+)
 from eag.governed_execution.enums import (
     ExecutionEvidenceKind,
     GovernedExecutionState,
@@ -61,6 +67,9 @@ from eag.governed_execution.verification import (
 
 __all__ = [
     "ExecutionBudget",
+    "FRESH_ITERATION_AUTHORITY_CONTRACT_VERSION",
+    "FreshIterationAuthority",
+    "FreshIterationAuthorityError",
     "ExecutionEvidenceKind",
     "ExecutionEvidenceRef",
     "ExecutionTransitionRecord",
@@ -92,6 +101,7 @@ __all__ = [
     "VerificationResult",
     "VerificationSpecification",
     "VerificationStatus",
+    "validate_fresh_authority",
     "DeterministicVerifier",
     "ObjectiveAssessment",
     "ObjectiveCompletionPolicy",

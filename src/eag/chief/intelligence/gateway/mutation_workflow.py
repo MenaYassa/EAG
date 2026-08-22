@@ -1,9 +1,10 @@
-"""Public composition seam for one governed decision-derived mutation attempt."""
+"""Public one-operation governed decision-to-mutation workflow."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol, runtime_checkable
 
 from eag.chief.intelligence.gateway.models import (
     EngineeringDecisionRequest,
@@ -16,7 +17,14 @@ from eag.chief.intelligence.gateway.mutation_translation import (
     TrustedWorkspaceState,
 )
 from eag.chief.intelligence.gateway.protocol import GovernedLLMGateway
-from eag.mutation import ChangeProposal, GovernedMutationRuntime, MutationReceipt, MutationResult
+from eag.mutation import (
+    ChangeProposal,
+    GovernedMutationRuntime,
+    MutationAuthorization,
+    MutationPolicyError,
+    MutationReceipt,
+    MutationResult,
+)
 
 
 class GovernedMutationFailureStage(StrEnum):
@@ -31,6 +39,36 @@ class GovernedMutationFailureStage(StrEnum):
     AUTHORIZATION_REJECTED = "authorization_rejected"
     MUTATION_FAILED = "mutation_failed"
     VERIFICATION_FAILED = "verification_failed"
+
+
+class GovernedWorkflowLifecycleRefused(RuntimeError):
+    """Raised by an optional composition observer before an effectful workflow stage."""
+
+
+@runtime_checkable
+class GovernedMutationLifecycleObserver(Protocol):
+    """Optional precondition gate for an external lifecycle owner, not telemetry.
+
+    Raising ``GovernedWorkflowLifecycleRefused`` prevents the corresponding
+    gateway, translation, authorization, or mutation stage. With no observer,
+    `execute` preserves the original workflow sequence.
+    """
+
+    def before_deciding(self, request: EngineeringDecisionRequest) -> None: ...
+
+    def before_proposing(
+        self,
+        request: EngineeringDecisionRequest,
+        result: EngineeringDecisionResult,
+    ) -> None: ...
+
+    def before_authorizing(self, proposal: ChangeProposal) -> None: ...
+
+    def before_mutating(
+        self,
+        proposal: ChangeProposal,
+        authorization: MutationAuthorization,
+    ) -> None: ...
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -73,8 +111,61 @@ class GovernedDecisionMutationWorkflow:
         *,
         run_id: str,
         trusted_state: TrustedWorkspaceState,
+        observer: GovernedMutationLifecycleObserver | None = None,
     ) -> GovernedDecisionMutationResult:
-        """Run one governed decision attempt through translation and existing mutation gates."""
+        """Run one governed attempt through existing translation and mutation gates."""
+        if observer is None:
+            return self._execute_default(request, run_id=run_id, trusted_state=trusted_state)
+        observer.before_deciding(request)
+        gateway_result = self._gateway.decide(request)
+        if not gateway_result.success:
+            return GovernedDecisionMutationResult(
+                gateway_result=gateway_result,
+                failure_stage=_gateway_failure_stage(gateway_result),
+            )
+        observer.before_proposing(request, gateway_result)
+        try:
+            proposal = self._translator.translate(
+                gateway_result,
+                request,
+                run_id=run_id,
+                trusted_state=trusted_state,
+            )
+        except MutationTranslationError as error:
+            return GovernedDecisionMutationResult(
+                gateway_result=gateway_result,
+                failure_stage=GovernedMutationFailureStage.TRANSLATION_FAILURE,
+                translation_violation=error.violation,
+            )
+        observer.before_authorizing(proposal)
+        try:
+            validated = self._mutation_runtime.validate(proposal)
+        except MutationPolicyError:
+            receipt = self._mutation_runtime.execute(proposal)
+            return GovernedDecisionMutationResult(
+                gateway_result=gateway_result,
+                proposal=proposal,
+                receipt=receipt,
+                failure_stage=_receipt_failure_stage(receipt),
+            )
+        authorization = self._mutation_runtime.authorize(validated)
+        observer.before_mutating(proposal, authorization)
+        receipt = self._mutation_runtime.mutate(validated, authorization)
+        return GovernedDecisionMutationResult(
+            gateway_result=gateway_result,
+            proposal=proposal,
+            receipt=receipt,
+            failure_stage=_receipt_failure_stage(receipt),
+        )
+
+    def _execute_default(
+        self,
+        request: EngineeringDecisionRequest,
+        *,
+        run_id: str,
+        trusted_state: TrustedWorkspaceState,
+    ) -> GovernedDecisionMutationResult:
+        """The original default gateway → translation → runtime.execute behavior."""
         gateway_result = self._gateway.decide(request)
         if not gateway_result.success:
             return GovernedDecisionMutationResult(
@@ -124,3 +215,12 @@ def _receipt_failure_stage(receipt: MutationReceipt) -> GovernedMutationFailureS
     if receipt.result is MutationResult.REJECTED:
         return GovernedMutationFailureStage.POLICY_REJECTED
     return GovernedMutationFailureStage.MUTATION_FAILED
+
+
+__all__ = [
+    "GovernedDecisionMutationResult",
+    "GovernedDecisionMutationWorkflow",
+    "GovernedMutationFailureStage",
+    "GovernedMutationLifecycleObserver",
+    "GovernedWorkflowLifecycleRefused",
+]
