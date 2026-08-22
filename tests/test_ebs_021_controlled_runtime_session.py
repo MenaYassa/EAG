@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from test_support.g2_4_9_approval_fixture import (
+    approval_gate,
+    durable_approval_store,
+    record_approval_for,
+)
+
 from eag.chief.intelligence.gateway.models import GatewayPolicy, MutationIntentPolicy
 from eag.governed_activation import (
     CallerActivationConfirmation,
@@ -105,10 +111,24 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
 ) -> None:
     activation, runtime_request, observer, availability = _fixture(tmp_path / "primary", identity="primary")
     approved_receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "primary"))
+    primary_approval = approval_gate(durable_approval_store(tmp_path / "primary" / "approval-store"))
+    primary_approval_receipt = record_approval_for(
+        primary_approval,
+        approval_id="ebs-021-primary-approval",
+        activation_receipt=approved_receipt,
+        activation_request=activation,
+        runtime_request=runtime_request,
+        audit_observer=observer,
+        runtime_availability=availability,
+    )
+    gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "primary"),
+        approval_gate=primary_approval,
+    )
 
     created = gate.create_session(
         activation_receipt=approved_receipt,
+        approval_receipt=primary_approval_receipt,
         activation_request=activation,
         runtime_request=runtime_request,
         audit_observer=observer,
@@ -125,14 +145,19 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     )
     no_activation = gate.create_session(
         activation_receipt=None,
+        approval_receipt=None,
         activation_request=activation,
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=availability,
     )
-    gate_b = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "primary"))
+    gate_b = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "primary"),
+        approval_gate=approval_gate(durable_approval_store(tmp_path / "primary" / "approval-store")),
+    )
     activation_replay = gate_b.create_session(
         activation_receipt=approved_receipt,
+        approval_receipt=primary_approval_receipt,
         activation_request=activation,
         runtime_request=runtime_request,
         audit_observer=observer,
@@ -151,9 +176,23 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         tmp_path / "stale", identity="stale"
     )
     stale_receipt = admit_governed_activation(stale_activation)
-    stale_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "stale"))
+    stale_approval = approval_gate(durable_approval_store(tmp_path / "stale" / "approval-store"))
+    stale_approval_receipt = record_approval_for(
+        stale_approval,
+        approval_id="ebs-021-stale-approval",
+        activation_receipt=stale_receipt,
+        activation_request=stale_activation,
+        runtime_request=stale_request,
+        audit_observer=stale_observer,
+        runtime_availability=stale_availability,
+    )
+    stale_gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "stale"),
+        approval_gate=stale_approval,
+    )
     stale_created = stale_gate.create_session(
         activation_receipt=stale_receipt,
+        approval_receipt=stale_approval_receipt,
         activation_request=stale_activation,
         runtime_request=stale_request,
         audit_observer=stale_observer,
@@ -193,9 +232,23 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
             max_estimated_cost=0.1,
         ),
     )
-    policy_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "policy"))
+    policy_approval = approval_gate(durable_approval_store(tmp_path / "policy" / "approval-store"))
+    policy_approval_receipt = record_approval_for(
+        policy_approval,
+        approval_id="ebs-021-policy-approval",
+        activation_receipt=policy_receipt,
+        activation_request=policy_activation,
+        runtime_request=policy_request,
+        audit_observer=policy_observer,
+        runtime_availability=policy_availability,
+    )
+    policy_gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "policy"),
+        approval_gate=policy_approval,
+    )
     policy_created = policy_gate.create_session(
         activation_receipt=policy_receipt,
+        approval_receipt=policy_approval_receipt,
         activation_request=policy_activation,
         runtime_request=policy_request,
         audit_observer=policy_observer,
@@ -226,9 +279,23 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         ),
         audit_observer=isolation_observer,
     )
-    isolation_gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path / "isolation"))
+    isolation_approval = approval_gate(durable_approval_store(tmp_path / "isolation" / "approval-store"))
+    isolation_approval_receipt = record_approval_for(
+        isolation_approval,
+        approval_id="ebs-021-isolation-approval",
+        activation_receipt=isolation_receipt,
+        activation_request=isolation_activation,
+        runtime_request=isolation_request,
+        audit_observer=isolation_observer,
+        runtime_availability=isolation_availability,
+    )
+    isolation_gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path / "isolation"),
+        approval_gate=isolation_approval,
+    )
     isolation_created = isolation_gate.create_session(
         activation_receipt=isolation_receipt,
+        approval_receipt=isolation_approval_receipt,
         activation_request=isolation_activation,
         runtime_request=isolation_request,
         audit_observer=isolation_observer,
@@ -249,9 +316,11 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     )
     missing_receipt = admit_governed_activation(missing_activation)
     missing_audit = ControlledRuntimeSessionGate(
-        replay_ledger=_ledger(tmp_path / "missing-audit")
+        replay_ledger=_ledger(tmp_path / "missing-audit"),
+        approval_gate=approval_gate(durable_approval_store(tmp_path / "missing-audit" / "approval-store")),
     ).create_session(
         activation_receipt=missing_receipt,
+        approval_receipt=None,
         activation_request=missing_activation,
         runtime_request=missing_request,
         audit_observer=None,

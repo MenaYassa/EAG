@@ -40,6 +40,11 @@ from eag.governed_session import (
     FileDurableSessionReplayLedger,
     RuntimeAvailability,
 )
+from test_support.g2_4_9_approval_fixture import (
+    approval_gate,
+    durable_approval_store,
+    record_approval_for,
+)
 
 
 @dataclass
@@ -191,13 +196,26 @@ def invocation_fixture(tmp_path: Path, *, identity: str) -> InvocationFixture:
             max_estimated_cost=0.1,
         ),
     )
+    activation_receipt = admit_governed_activation(activation_request)
+    approval = approval_gate(durable_approval_store(tmp_path / "approval-store"))
+    approval_receipt = record_approval_for(
+        approval,
+        approval_id=f"g247-approval-{identity_key}",
+        activation_receipt=activation_receipt,
+        activation_request=activation_request,
+        runtime_request=runtime_request,
+        audit_observer=observer,
+        runtime_availability=availability,
+    )
     ledger_root = tmp_path / "replay-ledger"
     ledger_root.mkdir()
     gate = ControlledRuntimeSessionGate(
-        replay_ledger=FileDurableSessionReplayLedger(control_root=ledger_root)
+        replay_ledger=FileDurableSessionReplayLedger(control_root=ledger_root),
+        approval_gate=approval,
     )
     admission = gate.create_session(
-        activation_receipt=admit_governed_activation(activation_request),
+        activation_receipt=activation_receipt,
+        approval_receipt=approval_receipt,
         activation_request=activation_request,
         runtime_request=runtime_request,
         audit_observer=observer,
@@ -207,7 +225,7 @@ def invocation_fixture(tmp_path: Path, *, identity: str) -> InvocationFixture:
     runtime = CountingRuntime(result=terminal_result(runtime_request))
     invocation_request = ControlledRuntimeInvocationRequest(
         session=admission.session,
-        activation_receipt=admit_governed_activation(activation_request),
+        activation_receipt=activation_receipt,
         activation_request=activation_request,
         runtime_request=runtime_request,
         audit_observer=observer,

@@ -10,6 +10,11 @@ from test_support.g2_4_8_replay_ledger_fixture import (
     durable_ledger,
     session_bindings,
 )
+from test_support.g2_4_9_approval_fixture import (
+    approval_gate,
+    durable_approval_store,
+    record_approval_for,
+)
 
 from eag.governed_session import (
     ControlledRuntimeSessionGate,
@@ -20,9 +25,24 @@ from eag.governed_session import (
 )
 
 
-def _create_session(gate: ControlledRuntimeSessionGate, bindings):
+def _approval_for(bindings):
+    gate = approval_gate(durable_approval_store(bindings.control_root.parent / "approval-store"))
+    receipt = record_approval_for(
+        gate,
+        approval_id=f"g248-approval-{bindings.runtime_request.execution_id}",
+        activation_receipt=bindings.activation_receipt,
+        activation_request=bindings.activation_request,
+        runtime_request=bindings.runtime_request,
+        audit_observer=bindings.audit_observer,
+        runtime_availability=bindings.runtime_availability,
+    )
+    return gate, receipt
+
+
+def _create_session(gate: ControlledRuntimeSessionGate, bindings, approval_receipt):
     admission = gate.create_session(
         activation_receipt=bindings.activation_receipt,
+        approval_receipt=approval_receipt,
         activation_request=bindings.activation_request,
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
@@ -47,14 +67,22 @@ def test_consumed_session_and_activation_receipt_remain_refused_after_gate_recre
     tmp_path: Path,
 ) -> None:
     bindings = session_bindings(tmp_path, identity="durable-replay")
-    gate_a = ControlledRuntimeSessionGate(replay_ledger=durable_ledger(bindings.control_root))
-    session = _create_session(gate_a, bindings)
+    approval, approval_receipt = _approval_for(bindings)
+    gate_a = ControlledRuntimeSessionGate(
+        replay_ledger=durable_ledger(bindings.control_root),
+        approval_gate=approval,
+    )
+    session = _create_session(gate_a, bindings, approval_receipt)
     allowed = _consume(gate_a, session, bindings)
 
-    gate_b = ControlledRuntimeSessionGate(replay_ledger=durable_ledger(bindings.control_root))
+    gate_b = ControlledRuntimeSessionGate(
+        replay_ledger=durable_ledger(bindings.control_root),
+        approval_gate=approval_gate(durable_approval_store(bindings.control_root.parent / "approval-store")),
+    )
     consumed_replay = _consume(gate_b, session, bindings)
     activation_replay = gate_b.create_session(
         activation_receipt=bindings.activation_receipt,
+        approval_receipt=approval_receipt,
         activation_request=bindings.activation_request,
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
@@ -70,10 +98,13 @@ def test_consumed_session_and_activation_receipt_remain_refused_after_gate_recre
 
 def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp_path: Path) -> None:
     unavailable_bindings = session_bindings(tmp_path / "unavailable", identity="unavailable")
+    unavailable_approval, unavailable_approval_receipt = _approval_for(unavailable_bindings)
     unavailable = ControlledRuntimeSessionGate(
-        replay_ledger=UnavailableReplayLedger(control_root=unavailable_bindings.control_root)
+        replay_ledger=UnavailableReplayLedger(control_root=unavailable_bindings.control_root),
+        approval_gate=unavailable_approval,
     ).create_session(
         activation_receipt=unavailable_bindings.activation_receipt,
+        approval_receipt=unavailable_approval_receipt,
         activation_request=unavailable_bindings.activation_request,
         runtime_request=unavailable_bindings.runtime_request,
         audit_observer=unavailable_bindings.audit_observer,
@@ -82,8 +113,12 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
 
     corrupt_bindings = session_bindings(tmp_path / "corrupt", identity="corrupt")
     corrupt_ledger = durable_ledger(corrupt_bindings.control_root)
-    corrupt_gate = ControlledRuntimeSessionGate(replay_ledger=corrupt_ledger)
-    corrupt_session = _create_session(corrupt_gate, corrupt_bindings)
+    corrupt_approval, corrupt_approval_receipt = _approval_for(corrupt_bindings)
+    corrupt_gate = ControlledRuntimeSessionGate(
+        replay_ledger=corrupt_ledger,
+        approval_gate=corrupt_approval,
+    )
+    corrupt_session = _create_session(corrupt_gate, corrupt_bindings, corrupt_approval_receipt)
     issued_record = corrupt_ledger.read(
         entry_kind=ReplayLedgerEntryKind.SESSION_ISSUED,
         identity_key=corrupt_session.session_id,
@@ -102,8 +137,13 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
             binding_digest="0" * 64,
         )
     )
-    conflict = ControlledRuntimeSessionGate(replay_ledger=conflict_ledger).create_session(
+    conflict_approval, conflict_approval_receipt = _approval_for(conflict_bindings)
+    conflict = ControlledRuntimeSessionGate(
+        replay_ledger=conflict_ledger,
+        approval_gate=conflict_approval,
+    ).create_session(
         activation_receipt=conflict_bindings.activation_receipt,
+        approval_receipt=conflict_approval_receipt,
         activation_request=conflict_bindings.activation_request,
         runtime_request=conflict_bindings.runtime_request,
         audit_observer=conflict_bindings.audit_observer,
@@ -118,18 +158,25 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
 
 def test_altered_session_and_control_root_inside_workspace_are_refused(tmp_path: Path) -> None:
     bindings = session_bindings(tmp_path / "altered", identity="altered")
-    gate = ControlledRuntimeSessionGate(replay_ledger=durable_ledger(bindings.control_root))
-    session = _create_session(gate, bindings)
+    approval, approval_receipt = _approval_for(bindings)
+    gate = ControlledRuntimeSessionGate(
+        replay_ledger=durable_ledger(bindings.control_root),
+        approval_gate=approval,
+    )
+    session = _create_session(gate, bindings, approval_receipt)
     altered = _consume(gate, replace(session, runtime_id="altered-runtime"), bindings)
 
     isolated = session_bindings(tmp_path / "isolated", identity="isolated")
     workspace_root = isolated.activation_request.isolation.workspace_root
     assert workspace_root is not None
+    isolated_approval, isolated_approval_receipt = _approval_for(isolated)
     unsafe_gate = ControlledRuntimeSessionGate(
-        replay_ledger=durable_ledger(workspace_root)
+        replay_ledger=durable_ledger(workspace_root),
+        approval_gate=isolated_approval,
     )
     unsafe = unsafe_gate.create_session(
         activation_receipt=isolated.activation_receipt,
+        approval_receipt=isolated_approval_receipt,
         activation_request=isolated.activation_request,
         runtime_request=isolated.runtime_request,
         audit_observer=isolated.audit_observer,

@@ -13,6 +13,11 @@ from eag.governed_activation import (
     GovernedActivationRequest,
     ProviderExecutionPolicy,
 )
+from eag.governed_approval.gate import GovernedApprovalGate
+from eag.governed_approval.models import (
+    GovernedApprovalReceipt,
+    GovernedApprovalRejectionReason,
+)
 from eag.governed_audit.recorder import GovernedExecutionAuditObserver
 from eag.governed_runtime.models import GovernedExecutionRequest
 from eag.governed_session.ledger import (
@@ -37,19 +42,28 @@ from eag.governed_session.models import (
 class ControlledRuntimeSessionGate:
     """Bind one approved activation to one durable, non-executing runtime-start permit."""
 
-    def __init__(self, *, replay_ledger: DurableSessionReplayLedger) -> None:
+    def __init__(
+        self,
+        *,
+        replay_ledger: DurableSessionReplayLedger,
+        approval_gate: GovernedApprovalGate,
+    ) -> None:
         if not callable(getattr(replay_ledger, "claim", None)) or not callable(
             getattr(replay_ledger, "read", None)
         ):
             raise TypeError("replay_ledger must expose claim(record) and read(entry_kind, identity_key)")
         if not isinstance(getattr(replay_ledger, "control_root", None), Path):
             raise TypeError("replay_ledger must expose a Path control_root")
+        if not isinstance(approval_gate, GovernedApprovalGate):
+            raise TypeError("approval_gate must be a GovernedApprovalGate")
         self._replay_ledger = replay_ledger
+        self._approval_gate = approval_gate
 
     def create_session(
         self,
         *,
         activation_receipt: GovernedActivationReceipt | None,
+        approval_receipt: GovernedApprovalReceipt | None,
         activation_request: GovernedActivationRequest,
         runtime_request: GovernedExecutionRequest,
         audit_observer: GovernedExecutionAuditObserver | None,
@@ -71,6 +85,16 @@ class ControlledRuntimeSessionGate:
         assert activation_receipt is not None
         assert audit_observer is not None
         assert runtime_availability is not None
+        approval_rejection = self._approval_gate.validate_for_session(
+            approval_receipt=approval_receipt,
+            activation_receipt=activation_receipt,
+            activation_request=activation_request,
+            runtime_request=runtime_request,
+            audit_observer=audit_observer,
+            runtime_availability=runtime_availability,
+        )
+        if approval_rejection is not None:
+            return _rejected(_approval_session_rejection(approval_rejection))
         activation_record = _activation_record_for(activation_receipt)
         activation_claim, claim_rejection = _claim(self._replay_ledger, activation_record)
         if claim_rejection is not None:
@@ -163,6 +187,28 @@ class ControlledRuntimeSessionGate:
             execution_id=session.execution_id,
             run_id=session.run_id,
         )
+
+
+def _approval_session_rejection(
+    reason: GovernedApprovalRejectionReason,
+) -> SessionRejectionReason:
+    mapping = {
+        GovernedApprovalRejectionReason.MISSING_APPROVAL: SessionRejectionReason.MISSING_HUMAN_APPROVAL,
+        GovernedApprovalRejectionReason.APPROVAL_DENIED: SessionRejectionReason.HUMAN_APPROVAL_DENIED,
+        GovernedApprovalRejectionReason.APPROVAL_UNKNOWN: SessionRejectionReason.HUMAN_APPROVAL_UNKNOWN,
+        GovernedApprovalRejectionReason.APPROVAL_BINDING_MISMATCH: (
+            SessionRejectionReason.HUMAN_APPROVAL_BINDING_MISMATCH
+        ),
+        GovernedApprovalRejectionReason.APPROVAL_STORE_UNAVAILABLE: (
+            SessionRejectionReason.HUMAN_APPROVAL_STORE_UNAVAILABLE
+        ),
+        GovernedApprovalRejectionReason.APPROVAL_STORE_CORRUPT: (
+            SessionRejectionReason.HUMAN_APPROVAL_STORE_CORRUPT
+        ),
+        GovernedApprovalRejectionReason.APPROVAL_ID_DUPLICATE: SessionRejectionReason.HUMAN_APPROVAL_CONFLICT,
+        GovernedApprovalRejectionReason.APPROVAL_ID_CONFLICT: SessionRejectionReason.HUMAN_APPROVAL_CONFLICT,
+    }
+    return mapping[reason]
 
 
 def _claim(

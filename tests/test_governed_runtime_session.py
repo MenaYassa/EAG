@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from test_support.g2_4_9_approval_fixture import (
+    approval_gate,
+    durable_approval_store,
+    record_approval_for,
+)
+
 from eag.chief.intelligence.gateway.models import GatewayPolicy, MutationIntentPolicy
 from eag.governed_activation import (
     CallerActivationConfirmation,
@@ -101,20 +107,34 @@ def _ledger(tmp_path: Path) -> FileDurableSessionReplayLedger:
 def _approved_session(tmp_path: Path):
     activation, request, observer, availability = _bindings(tmp_path)
     receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path))
-    admission = gate.create_session(
+    approval = approval_gate(durable_approval_store(tmp_path / "approval-store"))
+    approval_receipt = record_approval_for(
+        approval,
+        approval_id=f"session-approval-{tmp_path.name}",
         activation_receipt=receipt,
         activation_request=activation,
         runtime_request=request,
         audit_observer=observer,
         runtime_availability=availability,
     )
+    gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path),
+        approval_gate=approval,
+    )
+    admission = gate.create_session(
+        activation_receipt=receipt,
+        approval_receipt=approval_receipt,
+        activation_request=activation,
+        runtime_request=request,
+        audit_observer=observer,
+        runtime_availability=availability,
+    )
     assert admission.session is not None
-    return gate, admission.session, receipt, activation, request, observer, availability
+    return gate, admission.session, receipt, approval_receipt, activation, request, observer, availability
 
 
 def test_approved_activation_creates_and_consumes_one_nonexecuting_runtime_start_permit(tmp_path: Path) -> None:
-    gate, session, receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
 
     start = gate.consume_for_runtime_start(
         session=session,
@@ -139,10 +159,15 @@ def test_approved_activation_creates_and_consumes_one_nonexecuting_runtime_start
 def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_creation(tmp_path: Path) -> None:
     activation, request, observer, availability = _bindings(tmp_path)
     receipt = admit_governed_activation(activation)
-    gate = ControlledRuntimeSessionGate(replay_ledger=_ledger(tmp_path))
+    approval = approval_gate(durable_approval_store(tmp_path / "approval-store"))
+    gate = ControlledRuntimeSessionGate(
+        replay_ledger=_ledger(tmp_path),
+        approval_gate=approval,
+    )
 
     missing = gate.create_session(
         activation_receipt=None,
+        approval_receipt=None,
         activation_request=activation,
         runtime_request=request,
         audit_observer=observer,
@@ -150,6 +175,7 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
     )
     unavailable = gate.create_session(
         activation_receipt=receipt,
+        approval_receipt=None,
         activation_request=activation,
         runtime_request=request,
         audit_observer=observer,
@@ -162,7 +188,7 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
 
 
 def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None:
-    gate, session, receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
 
     first = gate.consume_for_runtime_start(
         session=session,
@@ -182,6 +208,7 @@ def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None
     )
     second_session = gate.create_session(
         activation_receipt=receipt,
+        approval_receipt=approval_receipt,
         activation_request=activation,
         runtime_request=request,
         audit_observer=observer,
@@ -194,7 +221,7 @@ def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None
 
 
 def test_changed_policy_isolation_or_audit_binding_is_refused_before_runtime_start(tmp_path: Path) -> None:
-    gate, session, receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
     changed_policy = GovernedExecutionRequest(
         goal=request.goal,
         workspace_root=request.workspace_root,

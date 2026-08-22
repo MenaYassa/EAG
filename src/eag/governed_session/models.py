@@ -38,6 +38,13 @@ class SessionRejectionReason(StrEnum):
     REPLAY_LEDGER_CORRUPT = "replay_ledger_corrupt"
     REPLAY_LEDGER_CONFLICT = "replay_ledger_conflict"
     REPLAY_LEDGER_ISOLATION_MISMATCH = "replay_ledger_isolation_mismatch"
+    MISSING_HUMAN_APPROVAL = "missing_human_approval"
+    HUMAN_APPROVAL_DENIED = "human_approval_denied"
+    HUMAN_APPROVAL_UNKNOWN = "human_approval_unknown"
+    HUMAN_APPROVAL_BINDING_MISMATCH = "human_approval_binding_mismatch"
+    HUMAN_APPROVAL_STORE_UNAVAILABLE = "human_approval_store_unavailable"
+    HUMAN_APPROVAL_STORE_CORRUPT = "human_approval_store_corrupt"
+    HUMAN_APPROVAL_CONFLICT = "human_approval_conflict"
 
 
 def _require_non_empty(value: str, field_name: str) -> str:
