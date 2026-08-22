@@ -45,6 +45,8 @@ from eag.governed_runtime.models import GovernedExecutionRequest
 from eag.governed_session import (
     ControlledRuntimeSession,
     ControlledRuntimeSessionGate,
+    ControlledSessionReadinessEvidence,
+    ControlledSessionReadinessGate,
     FileDurableSessionReplayLedger,
     RuntimeAvailability,
     SessionDisposition,
@@ -71,6 +73,7 @@ class ControlledChainFixture:
     approval_gate: GovernedApprovalGate
     approval_receipt: GovernedApprovalReceipt
     session_gate: ControlledRuntimeSessionGate
+    readiness_evidence: ControlledSessionReadinessEvidence
     session: ControlledRuntimeSession
     runtime_request: GovernedExecutionRequest
     runtime_availability: RuntimeAvailability
@@ -179,11 +182,21 @@ def _chain_fixture(tmp_path: Path, *, label: str) -> ControlledChainFixture:
     )
     events.append("approval_recorded")
 
+    readiness_evidence = ControlledSessionReadinessEvidence(
+        custody_request=custody_request,
+        custody_attestation=custody_admission.attestation,
+        composition_manifest=manifest,
+        composition_attestation=composition_admission.attestation,
+    )
     replay_root = tmp_path / "session-replay-control"
     replay_root.mkdir()
     session_gate = ControlledRuntimeSessionGate(
         replay_ledger=FileDurableSessionReplayLedger(control_root=replay_root),
         approval_gate=approval,
+        readiness_gate=ControlledSessionReadinessGate(
+            custody_gate=custody_gate,
+            composition_gate=composition_gate,
+        ),
     )
     session_admission = session_gate.create_session(
         activation_receipt=activation_receipt,
@@ -192,6 +205,7 @@ def _chain_fixture(tmp_path: Path, *, label: str) -> ControlledChainFixture:
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=runtime_availability,
+        readiness_evidence=readiness_evidence,
     )
     assert session_admission.session is not None
     events.append("session_created")
@@ -218,6 +232,7 @@ def _chain_fixture(tmp_path: Path, *, label: str) -> ControlledChainFixture:
         approval_gate=approval,
         approval_receipt=approval_receipt,
         session_gate=session_gate,
+        readiness_evidence=readiness_evidence,
         session=session_admission.session,
         runtime_request=runtime_request,
         runtime_availability=runtime_availability,
@@ -266,6 +281,7 @@ def test_ebs_027_controlled_chain_rehearsal_is_ordered_single_dispatch_and_fail_
         runtime_request=missing_approval.runtime_request,
         audit_observer=missing_approval.audit_observer,
         runtime_availability=missing_approval.runtime_availability,
+        readiness_evidence=missing_approval.readiness_evidence,
     )
 
     invalid_activation = _chain_fixture(tmp_path / "invalid-activation", label="invalid-activation")

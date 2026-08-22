@@ -40,6 +40,7 @@ def _session_gate(tmp_path: Path, bindings):
     gate = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(tmp_path / "replay-ledger"),
         approval_gate=approval,
+        readiness_gate=bindings.readiness_gate,
     )
     return gate, approval, receipt
 
@@ -52,6 +53,7 @@ def _create(gate, bindings, approval_receipt):
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
         runtime_availability=bindings.runtime_availability,
+        readiness_evidence=bindings.readiness_evidence,
     )
 
 
@@ -64,6 +66,7 @@ def test_approved_immutable_receipt_is_durable_and_allows_only_existing_session_
     recreated_gate = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(tmp_path / "replay-ledger"),
         approval_gate=recreated_approval,
+        readiness_gate=bindings.readiness_gate,
     )
 
     validation = recreated_approval.validate_for_session(
@@ -164,6 +167,7 @@ def test_denial_and_exact_request_policy_isolation_and_runtime_bindings_fail_clo
     denied_gate = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(tmp_path / "denied" / "replay-ledger"),
         approval_gate=denied_approval,
+        readiness_gate=denied_bindings.readiness_gate,
     )
     denied = denied_gate.create_session(
         activation_receipt=denied_bindings.activation_receipt,
@@ -172,6 +176,7 @@ def test_denial_and_exact_request_policy_isolation_and_runtime_bindings_fail_clo
         runtime_request=denied_bindings.runtime_request,
         audit_observer=denied_bindings.audit_observer,
         runtime_availability=denied_bindings.runtime_availability,
+        readiness_evidence=denied_bindings.readiness_evidence,
     )
 
     assert changed_request_reason is GovernedApprovalRejectionReason.APPROVAL_BINDING_MISMATCH
@@ -217,6 +222,7 @@ def test_duplicate_corrupt_and_unavailable_approval_storage_fail_closed(tmp_path
         approval_gate=approval_gate(
             UnavailableGovernedApprovalStore(control_root=tmp_path / "unavailable" / "offline-store")
         ),
+        readiness_gate=unavailable_bindings.readiness_gate,
     )
     unavailable = unavailable_gate.create_session(
         activation_receipt=unavailable_bindings.activation_receipt,
@@ -225,6 +231,7 @@ def test_duplicate_corrupt_and_unavailable_approval_storage_fail_closed(tmp_path
         runtime_request=unavailable_bindings.runtime_request,
         audit_observer=unavailable_bindings.audit_observer,
         runtime_availability=unavailable_bindings.runtime_availability,
+        readiness_evidence=unavailable_bindings.readiness_evidence,
     )
 
     assert duplicate.reason is GovernedApprovalRejectionReason.APPROVAL_ID_DUPLICATE

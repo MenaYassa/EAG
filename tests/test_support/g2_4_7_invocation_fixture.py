@@ -45,6 +45,7 @@ from test_support.g2_4_9_approval_fixture import (
     durable_approval_store,
     record_approval_for,
 )
+from test_support.g2_4_13_readiness_fixture import readiness_fixture
 
 
 @dataclass
@@ -207,11 +208,19 @@ def invocation_fixture(tmp_path: Path, *, identity: str) -> InvocationFixture:
         audit_observer=observer,
         runtime_availability=availability,
     )
+    readiness = readiness_fixture(
+        tmp_path,
+        identity=f"g247-{identity_key}",
+        activation_request=activation_request,
+        runtime_request=runtime_request,
+        runtime_availability=availability,
+    )
     ledger_root = tmp_path / "replay-ledger"
     ledger_root.mkdir()
     gate = ControlledRuntimeSessionGate(
         replay_ledger=FileDurableSessionReplayLedger(control_root=ledger_root),
         approval_gate=approval,
+        readiness_gate=readiness.gate,
     )
     admission = gate.create_session(
         activation_receipt=activation_receipt,
@@ -220,6 +229,7 @@ def invocation_fixture(tmp_path: Path, *, identity: str) -> InvocationFixture:
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     assert admission.session is not None
     runtime = CountingRuntime(result=terminal_result(runtime_request))

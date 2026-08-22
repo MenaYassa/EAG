@@ -37,6 +37,11 @@ from eag.governed_session.models import (
     SessionDisposition,
     SessionRejectionReason,
 )
+from eag.governed_session.readiness import ControlledSessionReadinessGate
+from eag.governed_session.readiness_models import (
+    ControlledSessionReadinessEvidence,
+    ReadinessRejectionReason,
+)
 
 
 class ControlledRuntimeSessionGate:
@@ -47,6 +52,7 @@ class ControlledRuntimeSessionGate:
         *,
         replay_ledger: DurableSessionReplayLedger,
         approval_gate: GovernedApprovalGate,
+        readiness_gate: ControlledSessionReadinessGate,
     ) -> None:
         if not callable(getattr(replay_ledger, "claim", None)) or not callable(
             getattr(replay_ledger, "read", None)
@@ -56,8 +62,11 @@ class ControlledRuntimeSessionGate:
             raise TypeError("replay_ledger must expose a Path control_root")
         if not isinstance(approval_gate, GovernedApprovalGate):
             raise TypeError("approval_gate must be a GovernedApprovalGate")
+        if not isinstance(readiness_gate, ControlledSessionReadinessGate):
+            raise TypeError("readiness_gate must be a ControlledSessionReadinessGate")
         self._replay_ledger = replay_ledger
         self._approval_gate = approval_gate
+        self._readiness_gate = readiness_gate
 
     def create_session(
         self,
@@ -68,6 +77,7 @@ class ControlledRuntimeSessionGate:
         runtime_request: GovernedExecutionRequest,
         audit_observer: GovernedExecutionAuditObserver | None,
         runtime_availability: RuntimeAvailability | None,
+        readiness_evidence: ControlledSessionReadinessEvidence | None,
     ) -> ControlledSessionAdmission:
         """Create one immutable start session after validation and durable activation claim; no runtime runs."""
         rejection = _binding_rejection(
@@ -85,6 +95,14 @@ class ControlledRuntimeSessionGate:
         assert activation_receipt is not None
         assert audit_observer is not None
         assert runtime_availability is not None
+        readiness = self._readiness_gate.validate_for_session(
+            evidence=readiness_evidence,
+            activation_request=activation_request,
+            runtime_request=runtime_request,
+            runtime_availability=runtime_availability,
+        )
+        if readiness.decision.reason is not None:
+            return _rejected(_readiness_session_rejection(readiness.decision.reason))
         approval_rejection = self._approval_gate.validate_for_session(
             approval_receipt=approval_receipt,
             activation_receipt=activation_receipt,
@@ -187,6 +205,36 @@ class ControlledRuntimeSessionGate:
             execution_id=session.execution_id,
             run_id=session.run_id,
         )
+
+
+def _readiness_session_rejection(reason: ReadinessRejectionReason) -> SessionRejectionReason:
+    mapping = {
+        ReadinessRejectionReason.MISSING_WORKSPACE_CUSTODY_EVIDENCE: (
+            SessionRejectionReason.MISSING_WORKSPACE_CUSTODY_EVIDENCE
+        ),
+        ReadinessRejectionReason.WORKSPACE_CUSTODY_BINDING_MISMATCH: (
+            SessionRejectionReason.WORKSPACE_CUSTODY_BINDING_MISMATCH
+        ),
+        ReadinessRejectionReason.WORKSPACE_CUSTODY_STORE_UNAVAILABLE: (
+            SessionRejectionReason.WORKSPACE_CUSTODY_STORE_UNAVAILABLE
+        ),
+        ReadinessRejectionReason.WORKSPACE_CUSTODY_STORE_CORRUPT: (
+            SessionRejectionReason.WORKSPACE_CUSTODY_STORE_CORRUPT
+        ),
+        ReadinessRejectionReason.MISSING_RUNTIME_COMPOSITION_EVIDENCE: (
+            SessionRejectionReason.MISSING_RUNTIME_COMPOSITION_EVIDENCE
+        ),
+        ReadinessRejectionReason.RUNTIME_COMPOSITION_BINDING_MISMATCH: (
+            SessionRejectionReason.RUNTIME_COMPOSITION_BINDING_MISMATCH
+        ),
+        ReadinessRejectionReason.RUNTIME_COMPOSITION_STORE_UNAVAILABLE: (
+            SessionRejectionReason.RUNTIME_COMPOSITION_STORE_UNAVAILABLE
+        ),
+        ReadinessRejectionReason.RUNTIME_COMPOSITION_STORE_CORRUPT: (
+            SessionRejectionReason.RUNTIME_COMPOSITION_STORE_CORRUPT
+        ),
+    }
+    return mapping[reason]
 
 
 def _approval_session_rejection(

@@ -16,6 +16,8 @@ from eag.governed_activation import (
 )
 from eag.governed_runtime.models import GovernedExecutionRequest
 from eag.governed_session import (
+    ControlledSessionReadinessEvidence,
+    ControlledSessionReadinessGate,
     DurableReplayLedgerRecord,
     FileDurableSessionReplayLedger,
     ReplayLedgerClaim,
@@ -23,6 +25,7 @@ from eag.governed_session import (
     ReplayLedgerUnavailableError,
     RuntimeAvailability,
 )
+from test_support.g2_4_13_readiness_fixture import readiness_fixture
 
 
 @dataclass
@@ -47,6 +50,8 @@ class SessionBindings:
     runtime_request: GovernedExecutionRequest
     audit_observer: CountingAuditObserver
     runtime_availability: RuntimeAvailability
+    readiness_gate: ControlledSessionReadinessGate
+    readiness_evidence: ControlledSessionReadinessEvidence
     control_root: Path
 
 
@@ -124,12 +129,22 @@ def session_bindings(tmp_path: Path, *, identity: str) -> SessionBindings:
             max_estimated_cost=0.1,
         ),
     )
+    runtime_availability = RuntimeAvailability(runtime_id="g248-runtime", available=True)
+    readiness = readiness_fixture(
+        tmp_path,
+        identity=f"g248-{identity}",
+        activation_request=activation_request,
+        runtime_request=runtime_request,
+        runtime_availability=runtime_availability,
+    )
     return SessionBindings(
         activation_request=activation_request,
         activation_receipt=admit_governed_activation(activation_request),
         runtime_request=runtime_request,
         audit_observer=observer,
-        runtime_availability=RuntimeAvailability(runtime_id="g248-runtime", available=True),
+        runtime_availability=runtime_availability,
+        readiness_gate=readiness.gate,
+        readiness_evidence=readiness.evidence,
         control_root=tmp_path / "control-plane",
     )
 

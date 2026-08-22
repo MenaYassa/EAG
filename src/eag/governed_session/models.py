@@ -45,6 +45,14 @@ class SessionRejectionReason(StrEnum):
     HUMAN_APPROVAL_STORE_UNAVAILABLE = "human_approval_store_unavailable"
     HUMAN_APPROVAL_STORE_CORRUPT = "human_approval_store_corrupt"
     HUMAN_APPROVAL_CONFLICT = "human_approval_conflict"
+    MISSING_WORKSPACE_CUSTODY_EVIDENCE = "missing_workspace_custody_evidence"
+    WORKSPACE_CUSTODY_BINDING_MISMATCH = "workspace_custody_binding_mismatch"
+    WORKSPACE_CUSTODY_STORE_UNAVAILABLE = "workspace_custody_store_unavailable"
+    WORKSPACE_CUSTODY_STORE_CORRUPT = "workspace_custody_store_corrupt"
+    MISSING_RUNTIME_COMPOSITION_EVIDENCE = "missing_runtime_composition_evidence"
+    RUNTIME_COMPOSITION_BINDING_MISMATCH = "runtime_composition_binding_mismatch"
+    RUNTIME_COMPOSITION_STORE_UNAVAILABLE = "runtime_composition_store_unavailable"
+    RUNTIME_COMPOSITION_STORE_CORRUPT = "runtime_composition_store_corrupt"
 
 
 def _require_non_empty(value: str, field_name: str) -> str:

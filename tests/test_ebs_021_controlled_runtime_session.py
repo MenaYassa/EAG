@@ -10,6 +10,7 @@ from test_support.g2_4_9_approval_fixture import (
     durable_approval_store,
     record_approval_for,
 )
+from test_support.g2_4_13_readiness_fixture import ReadinessFixture, readiness_fixture
 
 from eag.chief.intelligence.gateway.models import GatewayPolicy, MutationIntentPolicy
 from eag.governed_activation import (
@@ -56,6 +57,7 @@ def _fixture(tmp_path: Path, *, identity: str) -> tuple[
     GovernedExecutionRequest,
     _CountingAuditObserver,
     RuntimeAvailability,
+    ReadinessFixture,
 ]:
     source_root = tmp_path / "source-repository"
     source_root.mkdir(parents=True)
@@ -101,15 +103,21 @@ def _fixture(tmp_path: Path, *, identity: str) -> tuple[
             max_estimated_cost=0.1,
         ),
     )
-    return activation, runtime_request, observer, RuntimeAvailability(
-        runtime_id="governed-runtime", available=True
+    availability = RuntimeAvailability(runtime_id="governed-runtime", available=True)
+    readiness = readiness_fixture(
+        tmp_path,
+        identity=f"ebs-021-{identity}",
+        activation_request=activation,
+        runtime_request=runtime_request,
+        runtime_availability=availability,
     )
+    return activation, runtime_request, observer, availability, readiness
 
 
 def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_execution_free(
     tmp_path: Path,
 ) -> None:
-    activation, runtime_request, observer, availability = _fixture(tmp_path / "primary", identity="primary")
+    activation, runtime_request, observer, availability, readiness = _fixture(tmp_path / "primary", identity="primary")
     approved_receipt = admit_governed_activation(activation)
     primary_approval = approval_gate(durable_approval_store(tmp_path / "primary" / "approval-store"))
     primary_approval_receipt = record_approval_for(
@@ -124,6 +132,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "primary"),
         approval_gate=primary_approval,
+        readiness_gate=readiness.gate,
     )
 
     created = gate.create_session(
@@ -133,6 +142,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     assert created.session is not None
     allowed = gate.consume_for_runtime_start(
@@ -150,10 +160,12 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     gate_b = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "primary"),
         approval_gate=approval_gate(durable_approval_store(tmp_path / "primary" / "approval-store")),
+        readiness_gate=readiness.gate,
     )
     activation_replay = gate_b.create_session(
         activation_receipt=approved_receipt,
@@ -162,6 +174,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=runtime_request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     session_replay = gate_b.consume_for_runtime_start(
         session=created.session,
@@ -172,7 +185,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_availability=availability,
     )
 
-    stale_activation, stale_request, stale_observer, stale_availability = _fixture(
+    stale_activation, stale_request, stale_observer, stale_availability, stale_readiness = _fixture(
         tmp_path / "stale", identity="stale"
     )
     stale_receipt = admit_governed_activation(stale_activation)
@@ -189,6 +202,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     stale_gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "stale"),
         approval_gate=stale_approval,
+        readiness_gate=stale_readiness.gate,
     )
     stale_created = stale_gate.create_session(
         activation_receipt=stale_receipt,
@@ -197,6 +211,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=stale_request,
         audit_observer=stale_observer,
         runtime_availability=stale_availability,
+        readiness_evidence=stale_readiness.evidence,
     )
     assert stale_created.session is not None
     stale_refusal = stale_gate.consume_for_runtime_start(
@@ -211,7 +226,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_availability=stale_availability,
     )
 
-    policy_activation, policy_request, policy_observer, policy_availability = _fixture(
+    policy_activation, policy_request, policy_observer, policy_availability, policy_readiness = _fixture(
         tmp_path / "policy", identity="policy"
     )
     policy_receipt = admit_governed_activation(policy_activation)
@@ -245,6 +260,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     policy_gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "policy"),
         approval_gate=policy_approval,
+        readiness_gate=policy_readiness.gate,
     )
     policy_created = policy_gate.create_session(
         activation_receipt=policy_receipt,
@@ -253,6 +269,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=policy_request,
         audit_observer=policy_observer,
         runtime_availability=policy_availability,
+        readiness_evidence=policy_readiness.evidence,
     )
     assert policy_created.session is not None
     policy_refusal = policy_gate.consume_for_runtime_start(
@@ -264,7 +281,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_availability=policy_availability,
     )
 
-    isolation_activation, isolation_request, isolation_observer, isolation_availability = _fixture(
+    isolation_activation, isolation_request, isolation_observer, isolation_availability, isolation_readiness = _fixture(
         tmp_path / "isolation", identity="isolation"
     )
     isolation_receipt = admit_governed_activation(isolation_activation)
@@ -292,6 +309,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     isolation_gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "isolation"),
         approval_gate=isolation_approval,
+        readiness_gate=isolation_readiness.gate,
     )
     isolation_created = isolation_gate.create_session(
         activation_receipt=isolation_receipt,
@@ -300,6 +318,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=isolation_request,
         audit_observer=isolation_observer,
         runtime_availability=isolation_availability,
+        readiness_evidence=isolation_readiness.evidence,
     )
     assert isolation_created.session is not None
     isolation_refusal = isolation_gate.consume_for_runtime_start(
@@ -311,13 +330,14 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_availability=isolation_availability,
     )
 
-    missing_activation, missing_request, missing_observer, missing_availability = _fixture(
+    missing_activation, missing_request, missing_observer, missing_availability, missing_readiness = _fixture(
         tmp_path / "missing-audit", identity="missing-audit"
     )
     missing_receipt = admit_governed_activation(missing_activation)
     missing_audit = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path / "missing-audit"),
         approval_gate=approval_gate(durable_approval_store(tmp_path / "missing-audit" / "approval-store")),
+        readiness_gate=missing_readiness.gate,
     ).create_session(
         activation_receipt=missing_receipt,
         approval_receipt=None,
@@ -325,6 +345,7 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
         runtime_request=missing_request,
         audit_observer=None,
         runtime_availability=missing_availability,
+        readiness_evidence=missing_readiness.evidence,
     )
 
     assert created.decision.disposition is SessionDisposition.SESSION_CREATED
@@ -344,8 +365,8 @@ def test_ebs_021_controlled_runtime_session_is_activation_bound_single_use_and_e
     assert missing_observer.preflight_calls == 0
     assert not hasattr(gate, "execute")
     assert not hasattr(gate, "resume")
-    assert not (tmp_path / "subject-workspace").exists()
-    assert not (tmp_path / "audit-root").exists()
+    assert not any((tmp_path / "primary" / "subject-workspace").iterdir())
+    assert not any((tmp_path / "primary" / "audit-root").iterdir())
 
     real_provider_calls = 0
     mutations = 0

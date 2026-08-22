@@ -46,6 +46,7 @@ def _admit(gate: ControlledRuntimeSessionGate, bindings, approval_receipt):
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
         runtime_availability=bindings.runtime_availability,
+        readiness_evidence=bindings.readiness_evidence,
     )
     assert admission.session is not None
     return admission.session
@@ -70,6 +71,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     gate_a = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(success.control_root),
         approval_gate=success_approval,
+        readiness_gate=success.readiness_gate,
     )
     session = _admit(gate_a, success, success_approval_receipt)
     first_start = _consume(gate_a, session, success)
@@ -77,6 +79,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     gate_b = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(success.control_root),
         approval_gate=approval_gate(durable_approval_store(success.control_root.parent / "approval-store")),
+        readiness_gate=success.readiness_gate,
     )
     second_start = _consume(gate_b, session, success)
     activation_replay = gate_b.create_session(
@@ -86,6 +89,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
         runtime_request=success.runtime_request,
         audit_observer=success.audit_observer,
         runtime_availability=success.runtime_availability,
+        readiness_evidence=success.readiness_evidence,
     )
 
     unavailable = session_bindings(tmp_path / "unavailable", identity="unavailable")
@@ -93,6 +97,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     unavailable_result = ControlledRuntimeSessionGate(
         replay_ledger=UnavailableReplayLedger(control_root=unavailable.control_root),
         approval_gate=unavailable_approval,
+        readiness_gate=unavailable.readiness_gate,
     ).create_session(
         activation_receipt=unavailable.activation_receipt,
         approval_receipt=unavailable_approval_receipt,
@@ -100,6 +105,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
         runtime_request=unavailable.runtime_request,
         audit_observer=unavailable.audit_observer,
         runtime_availability=unavailable.runtime_availability,
+        readiness_evidence=unavailable.readiness_evidence,
     )
 
     corrupt = session_bindings(tmp_path / "corrupt", identity="corrupt")
@@ -108,6 +114,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     corrupt_gate = ControlledRuntimeSessionGate(
         replay_ledger=corrupt_ledger,
         approval_gate=corrupt_approval,
+        readiness_gate=corrupt.readiness_gate,
     )
     corrupt_session = _admit(corrupt_gate, corrupt, corrupt_approval_receipt)
     corrupt_path = next(corrupt.control_root.glob("session_issued-*.json"))
@@ -127,6 +134,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     conflict_result = ControlledRuntimeSessionGate(
         replay_ledger=conflict_ledger,
         approval_gate=conflict_approval,
+        readiness_gate=conflict.readiness_gate,
     ).create_session(
         activation_receipt=conflict.activation_receipt,
         approval_receipt=conflict_approval_receipt,
@@ -134,6 +142,7 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
         runtime_request=conflict.runtime_request,
         audit_observer=conflict.audit_observer,
         runtime_availability=conflict.runtime_availability,
+        readiness_evidence=conflict.readiness_evidence,
     )
 
     assert first_start.disposition is SessionDisposition.RUNTIME_START_ALLOWED
@@ -153,8 +162,8 @@ def test_ebs_023_durable_session_replay_ledger_is_cross_context_fail_closed_and_
     assert not hasattr(gate_a, "mutate")
     assert not hasattr(gate_a, "verify")
     assert not hasattr(gate_a, "resume")
-    assert not (tmp_path / "success" / "workspace").exists()
-    assert not (tmp_path / "success" / "audit").exists()
+    assert not any((tmp_path / "success" / "workspace").iterdir())
+    assert not any((tmp_path / "success" / "audit").iterdir())
 
     real_provider_calls = 0
     runtime_calls = 0

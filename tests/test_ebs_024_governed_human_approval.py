@@ -33,6 +33,7 @@ def _gate(tmp_path: Path, bindings, approval):
     return ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(tmp_path / "replay-ledger"),
         approval_gate=approval,
+        readiness_gate=bindings.readiness_gate,
     )
 
 
@@ -44,6 +45,7 @@ def _create(gate, bindings, approval_receipt):
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
         runtime_availability=bindings.runtime_availability,
+        readiness_evidence=bindings.readiness_evidence,
     )
 
 
@@ -181,8 +183,8 @@ def test_ebs_024_governed_human_approval_is_exact_durable_fail_closed_and_nonexe
     assert not hasattr(success_approval, "execute")
     assert not hasattr(success_gate, "execute")
     assert not hasattr(success_gate, "invoke")
-    assert not (tmp_path / "success" / "workspace").exists()
-    assert not (tmp_path / "success" / "audit").exists()
+    assert not any((tmp_path / "success" / "workspace").iterdir())
+    assert not any((tmp_path / "success" / "audit").iterdir())
 
     runtime_executor_calls = 0
     provider_calls = 0

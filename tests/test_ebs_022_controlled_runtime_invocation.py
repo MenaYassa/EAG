@@ -67,8 +67,8 @@ def test_ebs_022_controlled_runtime_invocation_is_single_dispatch_and_execution_
     assert not hasattr(success_invoker, "mutate")
     assert not hasattr(success_invoker, "verify")
     assert not hasattr(success_invoker, "resume")
-    assert not (tmp_path / "success" / "workspace").exists()
-    assert not (tmp_path / "success" / "audit").exists()
+    assert not any((tmp_path / "success" / "workspace").iterdir())
+    assert not any((tmp_path / "success" / "audit").iterdir())
 
     real_provider_calls = 0
     workspace_mutations = 0

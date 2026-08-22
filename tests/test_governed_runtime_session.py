@@ -10,6 +10,7 @@ from test_support.g2_4_9_approval_fixture import (
     durable_approval_store,
     record_approval_for,
 )
+from test_support.g2_4_13_readiness_fixture import readiness_fixture
 
 from eag.chief.intelligence.gateway.models import GatewayPolicy, MutationIntentPolicy
 from eag.governed_activation import (
@@ -117,9 +118,17 @@ def _approved_session(tmp_path: Path):
         audit_observer=observer,
         runtime_availability=availability,
     )
+    readiness = readiness_fixture(
+        tmp_path,
+        identity=f"session-{tmp_path.name}",
+        activation_request=activation,
+        runtime_request=request,
+        runtime_availability=availability,
+    )
     gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path),
         approval_gate=approval,
+        readiness_gate=readiness.gate,
     )
     admission = gate.create_session(
         activation_receipt=receipt,
@@ -128,13 +137,14 @@ def _approved_session(tmp_path: Path):
         runtime_request=request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     assert admission.session is not None
-    return gate, admission.session, receipt, approval_receipt, activation, request, observer, availability
+    return gate, admission.session, receipt, approval_receipt, activation, request, observer, availability, readiness.evidence
 
 
 def test_approved_activation_creates_and_consumes_one_nonexecuting_runtime_start_permit(tmp_path: Path) -> None:
-    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability, _ = _approved_session(tmp_path)
 
     start = gate.consume_for_runtime_start(
         session=session,
@@ -160,9 +170,17 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
     activation, request, observer, availability = _bindings(tmp_path)
     receipt = admit_governed_activation(activation)
     approval = approval_gate(durable_approval_store(tmp_path / "approval-store"))
+    readiness = readiness_fixture(
+        tmp_path,
+        identity=f"session-missing-{tmp_path.name}",
+        activation_request=activation,
+        runtime_request=request,
+        runtime_availability=availability,
+    )
     gate = ControlledRuntimeSessionGate(
         replay_ledger=_ledger(tmp_path),
         approval_gate=approval,
+        readiness_gate=readiness.gate,
     )
 
     missing = gate.create_session(
@@ -172,6 +190,7 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
         runtime_request=request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness.evidence,
     )
     unavailable = gate.create_session(
         activation_receipt=receipt,
@@ -180,6 +199,7 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
         runtime_request=request,
         audit_observer=observer,
         runtime_availability=RuntimeAvailability(runtime_id="governed-runtime", available=False),
+        readiness_evidence=readiness.evidence,
     )
 
     assert missing.decision.reason is SessionRejectionReason.MISSING_ACTIVATION_RECEIPT
@@ -188,7 +208,7 @@ def test_missing_receipt_and_unavailable_runtime_are_refused_before_session_crea
 
 
 def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None:
-    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability, readiness_evidence = _approved_session(tmp_path)
 
     first = gate.consume_for_runtime_start(
         session=session,
@@ -213,6 +233,7 @@ def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None
         runtime_request=request,
         audit_observer=observer,
         runtime_availability=availability,
+        readiness_evidence=readiness_evidence,
     )
 
     assert first.disposition is SessionDisposition.RUNTIME_START_ALLOWED
@@ -221,7 +242,7 @@ def test_session_reuse_and_activation_replay_are_refused(tmp_path: Path) -> None
 
 
 def test_changed_policy_isolation_or_audit_binding_is_refused_before_runtime_start(tmp_path: Path) -> None:
-    gate, session, receipt, approval_receipt, activation, request, observer, availability = _approved_session(tmp_path)
+    gate, session, receipt, approval_receipt, activation, request, observer, availability, _ = _approved_session(tmp_path)
     changed_policy = GovernedExecutionRequest(
         goal=request.goal,
         workspace_root=request.workspace_root,

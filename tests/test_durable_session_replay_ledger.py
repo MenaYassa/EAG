@@ -47,6 +47,7 @@ def _create_session(gate: ControlledRuntimeSessionGate, bindings, approval_recei
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
         runtime_availability=bindings.runtime_availability,
+        readiness_evidence=bindings.readiness_evidence,
     )
     assert admission.session is not None
     return admission.session
@@ -71,6 +72,7 @@ def test_consumed_session_and_activation_receipt_remain_refused_after_gate_recre
     gate_a = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(bindings.control_root),
         approval_gate=approval,
+        readiness_gate=bindings.readiness_gate,
     )
     session = _create_session(gate_a, bindings, approval_receipt)
     allowed = _consume(gate_a, session, bindings)
@@ -78,6 +80,7 @@ def test_consumed_session_and_activation_receipt_remain_refused_after_gate_recre
     gate_b = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(bindings.control_root),
         approval_gate=approval_gate(durable_approval_store(bindings.control_root.parent / "approval-store")),
+        readiness_gate=bindings.readiness_gate,
     )
     consumed_replay = _consume(gate_b, session, bindings)
     activation_replay = gate_b.create_session(
@@ -87,6 +90,7 @@ def test_consumed_session_and_activation_receipt_remain_refused_after_gate_recre
         runtime_request=bindings.runtime_request,
         audit_observer=bindings.audit_observer,
         runtime_availability=bindings.runtime_availability,
+        readiness_evidence=bindings.readiness_evidence,
     )
 
     assert allowed.disposition is SessionDisposition.RUNTIME_START_ALLOWED
@@ -102,6 +106,7 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
     unavailable = ControlledRuntimeSessionGate(
         replay_ledger=UnavailableReplayLedger(control_root=unavailable_bindings.control_root),
         approval_gate=unavailable_approval,
+        readiness_gate=unavailable_bindings.readiness_gate,
     ).create_session(
         activation_receipt=unavailable_bindings.activation_receipt,
         approval_receipt=unavailable_approval_receipt,
@@ -109,6 +114,7 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
         runtime_request=unavailable_bindings.runtime_request,
         audit_observer=unavailable_bindings.audit_observer,
         runtime_availability=unavailable_bindings.runtime_availability,
+        readiness_evidence=unavailable_bindings.readiness_evidence,
     )
 
     corrupt_bindings = session_bindings(tmp_path / "corrupt", identity="corrupt")
@@ -117,6 +123,7 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
     corrupt_gate = ControlledRuntimeSessionGate(
         replay_ledger=corrupt_ledger,
         approval_gate=corrupt_approval,
+        readiness_gate=corrupt_bindings.readiness_gate,
     )
     corrupt_session = _create_session(corrupt_gate, corrupt_bindings, corrupt_approval_receipt)
     issued_record = corrupt_ledger.read(
@@ -141,6 +148,7 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
     conflict = ControlledRuntimeSessionGate(
         replay_ledger=conflict_ledger,
         approval_gate=conflict_approval,
+        readiness_gate=conflict_bindings.readiness_gate,
     ).create_session(
         activation_receipt=conflict_bindings.activation_receipt,
         approval_receipt=conflict_approval_receipt,
@@ -148,6 +156,7 @@ def test_unavailable_corrupt_and_conflicting_durable_store_state_fail_closed(tmp
         runtime_request=conflict_bindings.runtime_request,
         audit_observer=conflict_bindings.audit_observer,
         runtime_availability=conflict_bindings.runtime_availability,
+        readiness_evidence=conflict_bindings.readiness_evidence,
     )
 
     assert unavailable.decision.reason is SessionRejectionReason.REPLAY_LEDGER_UNAVAILABLE
@@ -162,6 +171,7 @@ def test_altered_session_and_control_root_inside_workspace_are_refused(tmp_path:
     gate = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(bindings.control_root),
         approval_gate=approval,
+        readiness_gate=bindings.readiness_gate,
     )
     session = _create_session(gate, bindings, approval_receipt)
     altered = _consume(gate, replace(session, runtime_id="altered-runtime"), bindings)
@@ -173,6 +183,7 @@ def test_altered_session_and_control_root_inside_workspace_are_refused(tmp_path:
     unsafe_gate = ControlledRuntimeSessionGate(
         replay_ledger=durable_ledger(workspace_root),
         approval_gate=isolated_approval,
+        readiness_gate=isolated.readiness_gate,
     )
     unsafe = unsafe_gate.create_session(
         activation_receipt=isolated.activation_receipt,
@@ -181,6 +192,7 @@ def test_altered_session_and_control_root_inside_workspace_are_refused(tmp_path:
         runtime_request=isolated.runtime_request,
         audit_observer=isolated.audit_observer,
         runtime_availability=isolated.runtime_availability,
+        readiness_evidence=isolated.readiness_evidence,
     )
 
     assert altered.reason is SessionRejectionReason.REQUEST_IDENTITY_MISMATCH
