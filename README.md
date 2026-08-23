@@ -39,6 +39,37 @@ explainable.
 | Sprint 9 — Autonomous Engineering | ⏳ In Progress |
 | Sprint 10 — Autonomous Software Engineering | 🔜 Next |
 
+### Published Gen2 Governed Boundary Status
+
+The following evidence-only governed boundaries are published. They are separate from the legacy autonomous and generic execution paths and do **not** introduce an external transition executor.
+
+| Milestone | Published tag | Current status | Boundary contribution |
+| --- | --- | --- | --- |
+| G2.4.14 — Artifact Readiness | `v2.4.14-g2.4.14` | Complete / published | Immutable artifact readiness evidence. |
+| G2.4.15 — Promotion Eligibility | `v2.4.15-g2.4.15` | Complete / published | Governed logical-destination promotion eligibility evidence. |
+| G2.4.16 — External Transition Authorization | `v2.4.16-g2.4.16` | Complete / published | Immutable human external-transition authorization evidence. |
+| G2.4.17 — Transition Control Ledger | `v2.4.17-g2.4.17` | Complete / published | Durable, fail-closed pre-execution transition-control ledger. |
+| G2.4.18 — Destination Contract Evidence | `v2.4.18-g2.4.18` | Complete / published | Immutable, deterministic destination-contract evidence bound to the upstream chain. |
+| G2.4.19 | — | Not started | Future milestone; no design, implementation, or execution path exists. |
+
+The current governed progression is:
+
+```text
+Artifact Readiness
+        ↓
+Promotion Eligibility
+        ↓
+External Transition Authorization
+        ↓
+External Transition Control Ledger
+        ↓
+External Destination Contract Evidence
+        ↓
+[G2.4.19 — future / not started]
+```
+
+G2.4.17 remains the durable pre-execution control ledger. G2.4.18 is evidence-only: it does not execute transitions, provide a destination client, provider integration, credential path, network or egress execution, external receipt, reconciliation, rollback authority, or operational external transition.
+
 ### Implemented Capabilities
 
 *   **Kernel** — Central coordinator managing lifecycle, dependency injection, and runtime context

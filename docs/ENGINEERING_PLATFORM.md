@@ -35,6 +35,18 @@ state; each Runtime owns its domain.
 
 * * *
 
+## Current Governed Evidence Boundaries
+
+The legacy platform walkthrough below remains useful for contributor orientation. Separately, the published Gen2 governed progression establishes a narrow evidence-and-control chain:
+
+```text
+Artifact Readiness → Promotion Eligibility → External Transition Authorization
+→ External Transition Control Ledger → External Destination Contract Evidence
+→ [G2.4.19 — future / not started]
+```
+
+G2.4.14 through G2.4.18 are complete and published as `v2.4.14-g2.4.14`, `v2.4.15-g2.4.15`, `v2.4.16-g2.4.16`, `v2.4.17-g2.4.17`, and `v2.4.18-g2.4.18`. G2.4.17 is the durable, fail-closed pre-execution transition-control ledger. G2.4.18 is immutable, deterministic destination-contract evidence only; it does not add an executor, destination client, provider integration, credential path, network or egress execution, external receipt, reconciliation, rollback authority, or operational external transition.
+
 ## 1. Kernel
 
 The Kernel is the root of the system. It is the first to start and the  

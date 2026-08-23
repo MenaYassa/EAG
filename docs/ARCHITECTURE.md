@@ -16,6 +16,34 @@ the platform through the Tool Registry without the core ever depending on them.
 
 * * *
 
+## Current Governed Boundary Status
+
+The published Gen2 governed progression is an evidence-and-control chain that remains separate from legacy autonomous, generic execution, provider, and destination integrations:
+
+```text
+Artifact Readiness (G2.4.14)
+        ↓
+Promotion Eligibility (G2.4.15)
+        ↓
+External Transition Authorization (G2.4.16)
+        ↓
+External Transition Control Ledger (G2.4.17)
+        ↓
+External Destination Contract Evidence (G2.4.18)
+        ↓
+[G2.4.19 — future / not started]
+```
+
+| Published milestone | Tag | Current architectural boundary |
+| --- | --- | --- |
+| G2.4.14 | `v2.4.14-g2.4.14` | Immutable artifact-readiness evidence. |
+| G2.4.15 | `v2.4.15-g2.4.15` | Promotion-eligibility evidence for a logical destination. |
+| G2.4.16 | `v2.4.16-g2.4.16` | Immutable external-transition authorization evidence. |
+| G2.4.17 | `v2.4.17-g2.4.17` | Durable, fail-closed pre-execution transition-control ledger. |
+| G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence. |
+
+These milestones do not add an external transition executor. In particular, no destination client, provider integration, credential path, network or egress execution, external receipt, reconciliation, rollback authority, or operational external transition exists in this chain. G2.4.18 establishes evidence consistency and capability absence; it does not perform or verify an external destination operation.
+
 ## Engineering Philosophy
 
 | Principle | Meaning |

@@ -165,6 +165,35 @@ This sprint turns the Chief Engineer into an orchestrator.
 
 ---
 
+## Published Gen2 Governed Boundary Progression
+
+The following milestones are published, evidence-oriented Gen2 boundaries. They preserve the existing autonomous and generic execution paths and do not form an external transition executor.
+
+| Milestone | Status | Published tag | Boundary |
+| --- | --- | --- | --- |
+| G2.4.14 — Artifact Readiness | Complete / published | `v2.4.14-g2.4.14` | Proves immutable artifact readiness evidence. |
+| G2.4.15 — Promotion Eligibility | Complete / published | `v2.4.15-g2.4.15` | Proves promotion eligibility for a logical destination. |
+| G2.4.16 — External Transition Authorization | Complete / published | `v2.4.16-g2.4.16` | Proves immutable external-transition authorization evidence. |
+| G2.4.17 — External Transition Control Ledger | Complete / published | `v2.4.17-g2.4.17` | Provides the durable, fail-closed pre-execution control ledger. |
+| G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Proves immutable, deterministic destination-contract evidence for the exact authorized chain. |
+| G2.4.19 | Not started | — | No design, implementation, or execution path is underway. |
+
+```text
+Artifact Readiness
+        ↓
+Promotion Eligibility
+        ↓
+External Transition Authorization
+        ↓
+External Transition Control Ledger
+        ↓
+External Destination Contract Evidence
+        ↓
+[G2.4.19 — future / not started]
+```
+
+G2.4.17 remains the durable pre-execution transition-control ledger. G2.4.18 is an evidence-only boundary: it does not execute a transition, resolve or contact a destination, provide provider or credential integration, perform network or egress execution, create an external receipt, reconcile or roll back an external state, or introduce any operational external transition.
+
 ## Upcoming Sprints
 
 ### Sprint 8 — Workers ✅

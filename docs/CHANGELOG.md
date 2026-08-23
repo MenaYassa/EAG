@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 * * *
 
+## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.18
+
+### Published milestones
+
+| Milestone | Tag | Published boundary |
+| --- | --- | --- |
+| G2.4.14 | `v2.4.14-g2.4.14` | Artifact readiness evidence validation. |
+| G2.4.15 | `v2.4.15-g2.4.15` | Governed artifact promotion eligibility evidence. |
+| G2.4.16 | `v2.4.16-g2.4.16` | Human external-transition authorization evidence. |
+| G2.4.17 | `v2.4.17-g2.4.17` | Durable, fail-closed pre-execution external-transition control ledger. |
+| G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence boundary. |
+
+G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. Its final publication record was `REMOTE_VERIFICATION=PASS` and `WORKTREE=CLEAN`. The deterministic acceptance record is:
+
+```text
+EBS_033=PASS
+EBS_033_COMPLETENESS=PASS
+EXACT_UPSTREAM_BINDING=PASS
+CONTRACT_SELF_IDENTITY=PASS
+FAIL_CLOSED_BEHAVIOR=PASS
+NO_EXECUTION_AUTHORITY=PASS
+G2_4_17_SEPARATION=PASS
+```
+
+These are evidence, deterministic/static validation, and capability-absence results; they do not assert or record an external destination operation.
+
+The current chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence. G2.4.19 is not started. No destination client, provider integration, credential path, network/egress execution, external receipt, reconciliation, rollback authority, or operational external transition was introduced by these milestones.
+
+* * *
+
 
 ## v0.91.0 — Chief Engineer & Benchmarking
 
