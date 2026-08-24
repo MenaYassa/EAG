@@ -15,6 +15,7 @@ from eag.governed_destination_contract import (
     DestinationReceiptSchema,
 )
 from eag.governed_outcome_policy.canonical import (
+    OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION,
     OUTCOME_POLICY_SCHEMA_VERSION,
     OutcomePolicyEvidenceError,
     canonical_digest,
@@ -399,9 +400,11 @@ class OutcomeSemanticsFinding:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OutcomeSemanticsAssessment:
-    """Immutable policy-only assessment; never an outcome, receipt, or completion record."""
+    """Immutable policy-only assessment with exact typed parent-request provenance."""
 
     assessment_id: str
+    assessed_request_id: str
+    assessed_request_digest: str
     destination_identity: str
     policy_id: str | None
     disposition: OutcomePolicyDisposition
@@ -410,10 +413,20 @@ class OutcomeSemanticsAssessment:
     recommendations: tuple[str, ...]
     assessment_digest: str
     timestamp: datetime
-    schema_version: str = OUTCOME_POLICY_SCHEMA_VERSION
+    schema_version: str = OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "assessment_id", require_identifier(self.assessment_id, "assessment_id"))
+        object.__setattr__(
+            self,
+            "assessed_request_id",
+            require_identifier(self.assessed_request_id, "assessed_request_id"),
+        )
+        object.__setattr__(
+            self,
+            "assessed_request_digest",
+            require_sha256(self.assessed_request_digest, "assessed_request_digest"),
+        )
         object.__setattr__(self, "destination_identity", require_identifier(self.destination_identity, "destination_identity"))
         if self.policy_id is not None:
             object.__setattr__(self, "policy_id", require_identifier(self.policy_id, "policy_id"))
@@ -428,7 +441,7 @@ class OutcomeSemanticsAssessment:
         object.__setattr__(self, "recommendations", _ordered_unique_values(self.recommendations, "recommendations"))
         object.__setattr__(self, "assessment_digest", require_sha256(self.assessment_digest, "assessment_digest"))
         object.__setattr__(self, "timestamp", canonical_timestamp(self.timestamp, "timestamp"))
-        if self.schema_version != OUTCOME_POLICY_SCHEMA_VERSION:
+        if self.schema_version != OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION:
             raise OutcomePolicyEvidenceError("unsupported outcome policy assessment schema_version")
         if self.assessment_digest != self.calculate_digest():
             raise OutcomePolicyEvidenceError("assessment_digest does not match canonical outcome policy assessment")
@@ -438,6 +451,7 @@ class OutcomeSemanticsAssessment:
         cls,
         *,
         assessment_id: str,
+        request: OutcomeSemanticsAssessmentRequest,
         destination_identity: str,
         policy_id: str | None,
         disposition: OutcomePolicyDisposition,
@@ -446,9 +460,16 @@ class OutcomeSemanticsAssessment:
         recommendations: tuple[str, ...],
         timestamp: datetime,
     ) -> OutcomeSemanticsAssessment:
+        if not isinstance(request, OutcomeSemanticsAssessmentRequest):
+            raise TypeError("request must be an OutcomeSemanticsAssessmentRequest")
+        request_digest = request.request_digest
+        if request_digest is None:
+            raise OutcomePolicyEvidenceError("request_digest must be self-validating")
         canonical_time = canonical_timestamp(timestamp, "timestamp")
         payload = _assessment_payload(
             assessment_id=assessment_id,
+            assessed_request_id=request.assessment_request_id,
+            assessed_request_digest=request_digest,
             destination_identity=destination_identity,
             policy_id=policy_id,
             disposition=disposition,
@@ -456,10 +477,12 @@ class OutcomeSemanticsAssessment:
             evidence_refs=evidence_refs,
             recommendations=recommendations,
             timestamp=canonical_time,
-            schema_version=OUTCOME_POLICY_SCHEMA_VERSION,
+            schema_version=OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION,
         )
         return cls(
             assessment_id=assessment_id,
+            assessed_request_id=request.assessment_request_id,
+            assessed_request_digest=request_digest,
             destination_identity=destination_identity,
             policy_id=policy_id,
             disposition=disposition,
@@ -474,6 +497,8 @@ class OutcomeSemanticsAssessment:
         return canonical_digest(
             _assessment_payload(
                 assessment_id=self.assessment_id,
+                assessed_request_id=self.assessed_request_id,
+                assessed_request_digest=self.assessed_request_digest,
                 destination_identity=self.destination_identity,
                 policy_id=self.policy_id,
                 disposition=self.disposition,
@@ -574,6 +599,8 @@ def _request_payload(request: OutcomeSemanticsAssessmentRequest) -> dict[str, An
 def _assessment_payload(
     *,
     assessment_id: str,
+    assessed_request_id: str,
+    assessed_request_digest: str,
     destination_identity: str,
     policy_id: str | None,
     disposition: OutcomePolicyDisposition,
@@ -585,6 +612,8 @@ def _assessment_payload(
 ) -> dict[str, Any]:
     return {
         "assessment_id": assessment_id,
+        "assessed_request_digest": require_sha256(assessed_request_digest, "assessed_request_digest"),
+        "assessed_request_id": require_identifier(assessed_request_id, "assessed_request_id"),
         "destination_identity": destination_identity,
         "disposition": disposition.value,
         "evidence_refs": list(evidence_refs),

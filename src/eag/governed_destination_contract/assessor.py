@@ -73,6 +73,7 @@ class DestinationContractAssessor:
         disposition = _disposition_for(findings)
         return _assessment(
             assessment_id=assessment_id,
+            request=request,
             destination_identity=destination_identity,
             contract_id=contract_id,
             disposition=disposition,
@@ -329,6 +330,7 @@ def _finding(code: DestinationContractFindingCode, reference: str) -> Destinatio
 def _assessment(
     *,
     assessment_id: str,
+    request: DestinationContractAssessmentRequest,
     destination_identity: str,
     contract_id: str | None,
     disposition: DestinationContractDisposition,
@@ -346,6 +348,7 @@ def _assessment(
     recommendations = tuple(sorted({_recommendation(finding.code) for finding in ordered_findings}))
     return DestinationContractAssessment.issue(
         assessment_id=assessment_id,
+        request=request,
         destination_identity=destination_identity,
         contract_id=contract_id,
         disposition=disposition,

@@ -76,6 +76,14 @@ def _validate_contract_evidence(
         findings.append(_finding(AttestationPolicyFindingCode.CONTRACT_ASSESSMENT_INVALID, contract_assessment.assessment_id))
     if contract_assessment.contract_id != contract.destination_contract_id:
         findings.append(_finding(AttestationPolicyFindingCode.CONTRACT_BINDING_MISMATCH, "contract_id"))
+    if contract_assessment.assessed_request_id != contract_request.assessment_request_id:
+        findings.append(
+            _finding(AttestationPolicyFindingCode.CONTRACT_BINDING_MISMATCH, "contract_assessed_request_id")
+        )
+    if contract_assessment.assessed_request_digest != contract_request.request_digest:
+        findings.append(
+            _finding(AttestationPolicyFindingCode.CONTRACT_BINDING_MISMATCH, "contract_assessed_request_digest")
+        )
     if contract_assessment.destination_identity != contract.destination_identity:
         findings.append(
             _finding(
@@ -108,6 +116,20 @@ def _validate_outcome_policy_evidence(
             _finding(
                 AttestationPolicyFindingCode.OUTCOME_POLICY_BINDING_MISMATCH,
                 "outcome_policy_assessment_id",
+            )
+        )
+    if outcome_assessment.assessed_request_id != outcome_request.assessment_request_id:
+        findings.append(
+            _finding(
+                AttestationPolicyFindingCode.OUTCOME_POLICY_BINDING_MISMATCH,
+                "outcome_policy_assessed_request_id",
+            )
+        )
+    if outcome_assessment.assessed_request_digest != outcome_request.request_digest:
+        findings.append(
+            _finding(
+                AttestationPolicyFindingCode.OUTCOME_POLICY_BINDING_MISMATCH,
+                "outcome_policy_assessed_request_digest",
             )
         )
     if outcome_request.destination_contract_request.request_digest != contract_request.request_digest:

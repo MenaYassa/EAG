@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from eag.governed_destination_contract.canonical import (
+    DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION,
     DESTINATION_CONTRACT_SCHEMA_VERSION,
     DestinationContractEvidenceError,
     canonical_digest,
@@ -556,9 +557,11 @@ class DestinationContractFinding:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DestinationContractAssessment:
-    """Immutable destination-contract evidence assessment with no execution authority."""
+    """Immutable destination-contract assessment with exact typed parent-request provenance."""
 
     assessment_id: str
+    assessed_request_id: str
+    assessed_request_digest: str
     destination_identity: str
     contract_id: str | None
     disposition: DestinationContractDisposition
@@ -567,10 +570,20 @@ class DestinationContractAssessment:
     recommendations: tuple[str, ...]
     assessment_digest: str
     timestamp: datetime
-    schema_version: str = DESTINATION_CONTRACT_SCHEMA_VERSION
+    schema_version: str = DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "assessment_id", require_identifier(self.assessment_id, "assessment_id"))
+        object.__setattr__(
+            self,
+            "assessed_request_id",
+            require_identifier(self.assessed_request_id, "assessed_request_id"),
+        )
+        object.__setattr__(
+            self,
+            "assessed_request_digest",
+            require_sha256(self.assessed_request_digest, "assessed_request_digest"),
+        )
         object.__setattr__(self, "destination_identity", require_identifier(self.destination_identity, "destination_identity"))
         if self.contract_id is not None:
             object.__setattr__(self, "contract_id", require_identifier(self.contract_id, "contract_id"))
@@ -585,7 +598,7 @@ class DestinationContractAssessment:
         object.__setattr__(self, "recommendations", _ordered_unique_strings(self.recommendations, "recommendations", allow_empty=True))
         object.__setattr__(self, "assessment_digest", require_sha256(self.assessment_digest, "assessment_digest"))
         object.__setattr__(self, "timestamp", canonical_timestamp(self.timestamp, "timestamp"))
-        if self.schema_version != DESTINATION_CONTRACT_SCHEMA_VERSION:
+        if self.schema_version != DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION:
             raise DestinationContractEvidenceError("unsupported destination contract assessment schema_version")
         if self.assessment_digest != self.calculate_digest():
             raise DestinationContractEvidenceError("assessment_digest does not match canonical destination contract assessment")
@@ -595,6 +608,7 @@ class DestinationContractAssessment:
         cls,
         *,
         assessment_id: str,
+        request: DestinationContractAssessmentRequest,
         destination_identity: str,
         contract_id: str | None,
         disposition: DestinationContractDisposition,
@@ -603,9 +617,16 @@ class DestinationContractAssessment:
         recommendations: tuple[str, ...],
         timestamp: datetime,
     ) -> DestinationContractAssessment:
+        if not isinstance(request, DestinationContractAssessmentRequest):
+            raise TypeError("request must be a DestinationContractAssessmentRequest")
+        request_digest = request.request_digest
+        if request_digest is None:
+            raise DestinationContractEvidenceError("request_digest must be self-validating")
         canonical_time = canonical_timestamp(timestamp, "timestamp")
         payload = _assessment_payload(
             assessment_id=assessment_id,
+            assessed_request_id=request.assessment_request_id,
+            assessed_request_digest=request_digest,
             destination_identity=destination_identity,
             contract_id=contract_id,
             disposition=disposition,
@@ -613,10 +634,12 @@ class DestinationContractAssessment:
             evidence_refs=evidence_refs,
             recommendations=recommendations,
             timestamp=canonical_time,
-            schema_version=DESTINATION_CONTRACT_SCHEMA_VERSION,
+            schema_version=DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION,
         )
         return cls(
             assessment_id=assessment_id,
+            assessed_request_id=request.assessment_request_id,
+            assessed_request_digest=request_digest,
             destination_identity=destination_identity,
             contract_id=contract_id,
             disposition=disposition,
@@ -631,6 +654,8 @@ class DestinationContractAssessment:
         return canonical_digest(
             _assessment_payload(
                 assessment_id=self.assessment_id,
+                assessed_request_id=self.assessed_request_id,
+                assessed_request_digest=self.assessed_request_digest,
                 destination_identity=self.destination_identity,
                 contract_id=self.contract_id,
                 disposition=self.disposition,
@@ -715,6 +740,8 @@ def _contract_payload(
 def _assessment_payload(
     *,
     assessment_id: str,
+    assessed_request_id: str,
+    assessed_request_digest: str,
     destination_identity: str,
     contract_id: str | None,
     disposition: DestinationContractDisposition,
@@ -726,6 +753,8 @@ def _assessment_payload(
 ) -> dict[str, object]:
     return {
         "assessment_id": assessment_id,
+        "assessed_request_digest": require_sha256(assessed_request_digest, "assessed_request_digest"),
+        "assessed_request_id": require_identifier(assessed_request_id, "assessed_request_id"),
         "contract_id": contract_id,
         "destination_identity": destination_identity,
         "disposition": disposition.value,

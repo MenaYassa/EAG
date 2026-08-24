@@ -9,6 +9,10 @@ from datetime import timedelta, timezone
 from pathlib import Path
 
 import pytest
+from test_support.g2_4_18_destination_contract_fixture import (
+    assessment_request as destination_assessment_request,
+)
+from test_support.g2_4_19_outcome_policy_fixture import outcome_assessment_request
 from test_support.g2_4_20_attestation_policy_fixture import (
     assessment_request,
     attestation_policy_fixture,
@@ -25,6 +29,8 @@ from eag.governed_attestation_policy import (
     AttestationPolicyFindingCode,
     DestinationContractAttestationPolicyEvidence,
 )
+from eag.governed_destination_contract import DestinationContractAssessor
+from eag.governed_outcome_policy import OutcomeSemanticsAssessor
 
 
 def _digest(value: str) -> str:
@@ -180,7 +186,83 @@ def test_ebs_035_declared_attestation_policy_evidence_boundary(tmp_path: Path) -
     assert valid.disposition is AttestationPolicyDisposition.ATTESTATION_POLICY_ATTESTED
     assert valid.findings == ()
     assert valid.recommendations == ("attestation_policy_evidence_only",)
+    assert fixture.outcome_assessment.assessed_request_id == fixture.outcome_request.assessment_request_id
+    assert fixture.outcome_assessment.assessed_request_digest == fixture.outcome_request.request_digest
     _assert_immutable(valid)
+
+    substituted_destination_request = destination_assessment_request(
+        fixture.outcome_fixture.destination_fixture,
+        assessment_request_id="g2420-ebs035-substituted-destination-request",
+        timestamp=fixture.timestamp + timedelta(seconds=1),
+    )
+    substituted_destination_assessment = DestinationContractAssessor().assess(
+        assessment_id="g2420-ebs035-substituted-destination-assessment",
+        request=substituted_destination_request,
+    )
+    substituted_destination_chain = AttestationPolicyAssessmentRequest(
+        assessment_request_id="g2420-ebs035-substituted-destination-chain",
+        destination_contract_request=fixture.outcome_fixture.destination_request,
+        destination_contract_assessment=substituted_destination_assessment,
+        outcome_policy_request=fixture.outcome_request,
+        outcome_policy_assessment=fixture.outcome_assessment,
+        policy=fixture.policy,
+        timestamp=fixture.timestamp,
+    )
+    assert substituted_destination_chain.policy == valid_request.policy
+    assert substituted_destination_chain.destination_contract_request == valid_request.destination_contract_request
+    assert substituted_destination_chain.outcome_policy_request == valid_request.outcome_policy_request
+    assert substituted_destination_chain.outcome_policy_assessment == valid_request.outcome_policy_assessment
+    assert (
+        substituted_destination_chain.destination_contract_assessment.assessed_request_id
+        != substituted_destination_chain.destination_contract_request.assessment_request_id
+    )
+    assert (
+        substituted_destination_chain.destination_contract_assessment.assessed_request_digest
+        != substituted_destination_chain.destination_contract_request.request_digest
+    )
+    substituted_destination_result = _assess_preserving_state(
+        assessor=assessor,
+        request=substituted_destination_chain,
+        temporary_root=tmp_path,
+    )
+    assert substituted_destination_result.disposition is AttestationPolicyDisposition.NOT_ATTESTED
+    assert AttestationPolicyFindingCode.CONTRACT_BINDING_MISMATCH in _codes(substituted_destination_result)
+    _assert_immutable(substituted_destination_result)
+
+    substituted_outcome_request = outcome_assessment_request(
+        fixture.outcome_fixture,
+        assessment_request_id="g2420-ebs035-substituted-outcome-request",
+        timestamp=fixture.timestamp + timedelta(seconds=1),
+    )
+    substituted_outcome_assessment = OutcomeSemanticsAssessor().assess(
+        assessment_id="g2420-ebs035-substituted-outcome-assessment",
+        request=substituted_outcome_request,
+    )
+    substituted_outcome_assessment_request = assessment_request(
+        fixture,
+        assessment_request_id="g2420-ebs035-substituted-outcome-chain",
+        outcome_assessment=substituted_outcome_assessment,
+    )
+    assert substituted_outcome_assessment_request.policy == valid_request.policy
+    assert substituted_outcome_assessment_request.destination_contract_request == valid_request.destination_contract_request
+    assert substituted_outcome_assessment_request.destination_contract_assessment == valid_request.destination_contract_assessment
+    assert substituted_outcome_assessment_request.outcome_policy_request == valid_request.outcome_policy_request
+    assert (
+        substituted_outcome_assessment_request.outcome_policy_assessment.assessed_request_id
+        != substituted_outcome_assessment_request.outcome_policy_request.assessment_request_id
+    )
+    assert (
+        substituted_outcome_assessment_request.outcome_policy_assessment.assessed_request_digest
+        != substituted_outcome_assessment_request.outcome_policy_request.request_digest
+    )
+    substituted_outcome_result = _assess_preserving_state(
+        assessor=assessor,
+        request=substituted_outcome_assessment_request,
+        temporary_root=tmp_path,
+    )
+    assert substituted_outcome_result.disposition is AttestationPolicyDisposition.NOT_ATTESTED
+    assert AttestationPolicyFindingCode.OUTCOME_POLICY_BINDING_MISMATCH in _codes(substituted_outcome_result)
+    _assert_immutable(substituted_outcome_result)
     assert (
         f"destination_contract_assessment:{fixture.outcome_fixture.destination_assessment.assessment_id}:"
         f"{fixture.outcome_fixture.destination_assessment.assessment_digest}"

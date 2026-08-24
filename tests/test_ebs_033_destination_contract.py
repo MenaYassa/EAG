@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-from dataclasses import FrozenInstanceError, asdict, fields
+from dataclasses import FrozenInstanceError, asdict, fields, replace
 from datetime import timedelta, timezone
 from pathlib import Path
 
@@ -160,6 +160,10 @@ def test_ebs_033_governed_destination_contract_evidence_boundary(tmp_path: Path)
     )
     assert valid.disposition is DestinationContractDisposition.CONTRACT_ATTESTED
     assert valid.findings == ()
+    assert valid.assessed_request_id == valid_request.assessment_request_id
+    assert valid.assessed_request_digest == valid_request.request_digest
+    assert valid.assessment_digest == valid.calculate_digest()
+    assert valid.schema_version == "g2.4.18.destination-contract-assessment.v2"
     _assert_assessment_immutable(valid)
     assert f"destination_contract:{fixture.contract.destination_contract_id}:{fixture.contract.contract_digest}" in valid.evidence_refs
 
@@ -172,7 +176,30 @@ def test_ebs_033_governed_destination_contract_evidence_boundary(tmp_path: Path)
     assert equivalent_fixture.contract.contract_digest == fixture.contract.contract_digest
     assert equivalent_request.to_payload() == valid_request.to_payload()
     assert equivalent_request.request_digest == valid_request.request_digest
+    assert equivalent.assessed_request_id == equivalent_request.assessment_request_id
+    assert equivalent.assessed_request_digest == equivalent_request.request_digest
     assert equivalent.assessment_digest == valid.assessment_digest
+
+    linked_variant_request = assessment_request(
+        fixture,
+        assessment_request_id="g2418-ebs033-linked-variant",
+        timestamp=fixture.timestamp + timedelta(seconds=1),
+    )
+    linked_variant = _assess_preserving_state(
+        assessor=assessor,
+        request=linked_variant_request,
+        temporary_root=tmp_path,
+    )
+    assert linked_variant.assessed_request_id == linked_variant_request.assessment_request_id
+    assert linked_variant.assessed_request_digest == linked_variant_request.request_digest
+    assert linked_variant.assessed_request_id != valid.assessed_request_id
+    assert linked_variant.assessed_request_digest != valid.assessed_request_digest
+    with pytest.raises(DestinationContractEvidenceError):
+        replace(linked_variant, assessed_request_id="different-request")
+    with pytest.raises(DestinationContractEvidenceError):
+        replace(linked_variant, assessed_request_digest="0" * 64)
+    with pytest.raises(DestinationContractEvidenceError):
+        replace(linked_variant, schema_version="g2.4.18.destination-contract.v1")
 
     offset_request = assessment_request(
         fixture, assessment_request_id="g2418-ebs033-valid",

@@ -126,7 +126,8 @@ def test_expiry_nonattested_destination_evidence_and_ambiguity_stop_without_reco
     assert OutcomePolicyFindingCode.POLICY_EXPIRED in _codes(expired)
 
     nonattested = fixture.destination_assessment.__class__.issue(
-        assessment_id="g2419-nonattested-contract", destination_identity=fixture.destination_assessment.destination_identity,
+        assessment_id="g2419-nonattested-contract", request=fixture.destination_request,
+        destination_identity=fixture.destination_assessment.destination_identity,
         contract_id=fixture.destination_assessment.contract_id,
         disposition=DestinationContractDisposition.NOT_ATTESTED,
         findings=(), evidence_refs=fixture.destination_assessment.evidence_refs,

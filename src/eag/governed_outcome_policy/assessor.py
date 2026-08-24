@@ -56,6 +56,7 @@ class OutcomeSemanticsAssessor:
         disposition = _disposition_for(findings)
         return _assessment(
             assessment_id=assessment_id,
+            request=request,
             destination_identity=destination_identity,
             policy_id=policy.outcome_policy_id,
             disposition=disposition,
@@ -76,6 +77,10 @@ def _validate_contract_evidence(
         findings.append(_finding(OutcomePolicyFindingCode.CONTRACT_ASSESSMENT_INVALID, contract_assessment.assessment_id))
     if contract_assessment.contract_id != contract.destination_contract_id:
         findings.append(_finding(OutcomePolicyFindingCode.CONTRACT_BINDING_MISMATCH, "contract_id"))
+    if contract_assessment.assessed_request_id != contract_request.assessment_request_id:
+        findings.append(_finding(OutcomePolicyFindingCode.CONTRACT_BINDING_MISMATCH, "assessed_request_id"))
+    if contract_assessment.assessed_request_digest != contract_request.request_digest:
+        findings.append(_finding(OutcomePolicyFindingCode.CONTRACT_BINDING_MISMATCH, "assessed_request_digest"))
     current = request.timestamp.astimezone(UTC)
     if current >= contract.expires_at or current >= contract_request.authorization.expires_at:
         findings.append(_finding(OutcomePolicyFindingCode.CONTRACT_ASSESSMENT_INVALID, "expired_upstream_evidence"))
@@ -159,6 +164,7 @@ def _finding(code: OutcomePolicyFindingCode, evidence_reference: str) -> Outcome
 def _assessment(
     *,
     assessment_id: str,
+    request: OutcomeSemanticsAssessmentRequest,
     destination_identity: str,
     policy_id: str,
     disposition: OutcomePolicyDisposition,
@@ -175,6 +181,7 @@ def _assessment(
     )
     return OutcomeSemanticsAssessment.issue(
         assessment_id=assessment_id,
+        request=request,
         destination_identity=destination_identity,
         policy_id=policy_id,
         disposition=disposition,

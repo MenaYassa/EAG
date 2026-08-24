@@ -1,7 +1,10 @@
 """G2.4.19 immutable outcome-semantics policy evidence boundary."""
 
 from eag.governed_outcome_policy.assessor import OutcomeSemanticsAssessor
-from eag.governed_outcome_policy.canonical import OutcomePolicyEvidenceError
+from eag.governed_outcome_policy.canonical import (
+    OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION,
+    OutcomePolicyEvidenceError,
+)
 from eag.governed_outcome_policy.models import (
     AutomaticRetryDisposition,
     AutomaticRollbackDisposition,
@@ -18,6 +21,7 @@ from eag.governed_outcome_policy.models import (
 )
 
 __all__ = [
+    "OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION",
     "AutomaticRetryDisposition",
     "AutomaticRollbackDisposition",
     "CompletionVerificationRequirement",

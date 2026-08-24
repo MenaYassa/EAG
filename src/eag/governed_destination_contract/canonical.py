@@ -8,6 +8,7 @@ import re
 from datetime import UTC, datetime
 
 DESTINATION_CONTRACT_SCHEMA_VERSION = "g2.4.18.destination-contract.v1"
+DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION = "g2.4.18.destination-contract-assessment.v2"
 
 
 class DestinationContractEvidenceError(ValueError):
@@ -64,6 +65,7 @@ def canonical_digest(payload: object) -> str:
 
 
 __all__ = [
+    "DESTINATION_CONTRACT_ASSESSMENT_SCHEMA_VERSION",
     "DESTINATION_CONTRACT_SCHEMA_VERSION",
     "DestinationContractEvidenceError",
     "canonical_digest",

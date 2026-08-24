@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-from dataclasses import FrozenInstanceError, asdict, fields
+from dataclasses import FrozenInstanceError, asdict, fields, replace
 from datetime import timedelta, timezone
 from pathlib import Path
 
@@ -147,6 +147,10 @@ def test_ebs_034_governed_outcome_semantics_policy_boundary(tmp_path: Path) -> N
     valid = _assess_preserving_state(assessor=assessor, request=valid_request, temporary_root=tmp_path)
     assert valid.disposition is OutcomePolicyDisposition.OUTCOME_POLICY_ATTESTED
     assert valid.findings == ()
+    assert valid.assessed_request_id == valid_request.assessment_request_id
+    assert valid.assessed_request_digest == valid_request.request_digest
+    assert valid.assessment_digest == valid.calculate_digest()
+    assert valid.schema_version == "g2.4.19.outcome-semantics-policy-assessment.v2"
     _assert_assessment_immutable(valid)
     assert f"outcome_policy:{fixture.policy.outcome_policy_id}:{fixture.policy.policy_digest}" in valid.evidence_refs
 
@@ -166,7 +170,30 @@ def test_ebs_034_governed_outcome_semantics_policy_boundary(tmp_path: Path) -> N
     assert equivalent_fixture.policy.policy_digest == fixture.policy.policy_digest
     assert equivalent_request.to_payload() == valid_request.to_payload()
     assert equivalent_request.request_digest == valid_request.request_digest
+    assert equivalent.assessed_request_id == equivalent_request.assessment_request_id
+    assert equivalent.assessed_request_digest == equivalent_request.request_digest
     assert equivalent.assessment_digest == valid.assessment_digest
+
+    linked_variant_request = outcome_assessment_request(
+        fixture,
+        assessment_request_id="g2419-ebs034-linked-variant",
+        timestamp=fixture.timestamp + timedelta(seconds=1),
+    )
+    linked_variant = _assess_preserving_state(
+        assessor=assessor,
+        request=linked_variant_request,
+        temporary_root=tmp_path,
+    )
+    assert linked_variant.assessed_request_id == linked_variant_request.assessment_request_id
+    assert linked_variant.assessed_request_digest == linked_variant_request.request_digest
+    assert linked_variant.assessed_request_id != valid.assessed_request_id
+    assert linked_variant.assessed_request_digest != valid.assessed_request_digest
+    with pytest.raises(OutcomePolicyEvidenceError):
+        replace(linked_variant, assessed_request_id="different-request")
+    with pytest.raises(OutcomePolicyEvidenceError):
+        replace(linked_variant, assessed_request_digest="0" * 64)
+    with pytest.raises(OutcomePolicyEvidenceError):
+        replace(linked_variant, schema_version="g2.4.19.outcome-semantics-policy.v1")
 
     offset_request = outcome_assessment_request(
         fixture, assessment_request_id="g2419-ebs034-valid",
@@ -238,7 +265,8 @@ def test_ebs_034_governed_outcome_semantics_policy_boundary(tmp_path: Path) -> N
     )
 
     nonattested = fixture.destination_assessment.__class__.issue(
-        assessment_id="g2419-nonattested", destination_identity=fixture.destination_assessment.destination_identity,
+        assessment_id="g2419-nonattested", request=fixture.destination_request,
+        destination_identity=fixture.destination_assessment.destination_identity,
         contract_id=fixture.destination_assessment.contract_id,
         disposition=fixture.destination_assessment.disposition.NOT_ATTESTED,
         findings=(), evidence_refs=fixture.destination_assessment.evidence_refs,

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 OUTCOME_POLICY_SCHEMA_VERSION = "g2.4.19.outcome-semantics-policy.v1"
+OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION = "g2.4.19.outcome-semantics-policy-assessment.v2"
 
 
 class OutcomePolicyEvidenceError(ValueError):
@@ -58,6 +59,7 @@ def canonical_digest(payload: dict[str, Any]) -> str:
 
 
 __all__ = [
+    "OUTCOME_POLICY_ASSESSMENT_SCHEMA_VERSION",
     "OUTCOME_POLICY_SCHEMA_VERSION",
     "OutcomePolicyEvidenceError",
     "canonical_digest",
