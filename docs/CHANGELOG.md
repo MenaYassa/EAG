@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 * * *
 
-## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.18
+## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.19
 
 ### Published milestones
 
@@ -15,24 +15,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 | G2.4.14 | `v2.4.14-g2.4.14` | Artifact readiness evidence validation. |
 | G2.4.15 | `v2.4.15-g2.4.15` | Governed artifact promotion eligibility evidence. |
 | G2.4.16 | `v2.4.16-g2.4.16` | Human external-transition authorization evidence. |
-| G2.4.17 | `v2.4.17-g2.4.17` | Durable, fail-closed pre-execution external-transition control ledger. |
+| G2.4.17 | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution external-transition control ledger. |
 | G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence boundary. |
+| G2.4.19 | `v2.4.19-g2.4.19` | Immutable, deterministic external outcome-semantics policy evidence boundary. |
 
-G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. Its final publication record was `REMOTE_VERIFICATION=PASS` and `WORKTREE=CLEAN`. The deterministic acceptance record is:
+G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. G2.4.19 was published at commit `429f1ecf4782b1ce8f925c58a517b547999fb325`. Both publication records were `REMOTE_VERIFICATION=PASS` and `WORKTREE=CLEAN`. The G2.4.19 deterministic acceptance record is:
 
 ```text
-EBS_033=PASS
-EBS_033_COMPLETENESS=PASS
+EBS_034=PASS
+EBS_034_COMPLETENESS=PASS
 EXACT_UPSTREAM_BINDING=PASS
-CONTRACT_SELF_IDENTITY=PASS
+POLICY_ID_SELF_IDENTITY=PASS
+OUTCOME_UNKNOWN_SAFETY=PASS
 FAIL_CLOSED_BEHAVIOR=PASS
 NO_EXECUTION_AUTHORITY=PASS
 G2_4_17_SEPARATION=PASS
 ```
 
-These are evidence, deterministic/static validation, and capability-absence results; they do not assert or record an external destination operation.
+These are immutable evidence, deterministic/static validation, and capability-absence results. G2.4.17 remains the sole durable pre-execution control ledger; G2.4.18 remains destination-contract evidence only; and G2.4.19 remains outcome-semantics policy evidence only. No attestation asserts or records an external receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect.
 
-The current chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence. G2.4.19 is not started. No destination client, provider integration, credential path, network/egress execution, external receipt, reconciliation, rollback authority, or operational external transition was introduced by these milestones.
+The published chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence → external outcome-semantics policy evidence. No destination client, provider integration, credential path, network/egress execution, external receipt, reconciliation, rollback authority, or operational external transition was introduced. `G2.4.20=NOT_STARTED`.
+
+The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`.
 
 * * *
 

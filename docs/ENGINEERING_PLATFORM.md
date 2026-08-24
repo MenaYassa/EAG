@@ -42,10 +42,12 @@ The legacy platform walkthrough below remains useful for contributor orientation
 ```text
 Artifact Readiness → Promotion Eligibility → External Transition Authorization
 → External Transition Control Ledger → External Destination Contract Evidence
-→ [G2.4.19 — future / not started]
+→ External Outcome-Semantics Policy Evidence → [G2.4.20 — not started]
 ```
 
-G2.4.14 through G2.4.18 are complete and published as `v2.4.14-g2.4.14`, `v2.4.15-g2.4.15`, `v2.4.16-g2.4.16`, `v2.4.17-g2.4.17`, and `v2.4.18-g2.4.18`. G2.4.17 is the durable, fail-closed pre-execution transition-control ledger. G2.4.18 is immutable, deterministic destination-contract evidence only; it does not add an executor, destination client, provider integration, credential path, network or egress execution, external receipt, reconciliation, rollback authority, or operational external transition.
+G2.4.14 through G2.4.19 are complete and published as `v2.4.14-g2.4.14`, `v2.4.15-g2.4.15`, `v2.4.16-g2.4.16`, `v2.4.17-g2.4.17`, `v2.4.18-g2.4.18`, and `v2.4.19-g2.4.19`. G2.4.17 remains the sole durable, fail-closed pre-execution transition-control ledger. G2.4.18 remains immutable, deterministic destination-contract evidence only, and G2.4.19 remains immutable, deterministic outcome-semantics policy evidence only. None adds an executor, destination client, provider integration, credential path, network or egress execution, receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect.
+
+The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state use `DIRECT_STATE_PROOF`. `G2.4.20=NOT_STARTED`.
 
 ## 1. Kernel
 

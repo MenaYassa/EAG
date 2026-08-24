@@ -31,7 +31,9 @@ External Transition Control Ledger (G2.4.17)
         ↓
 External Destination Contract Evidence (G2.4.18)
         ↓
-[G2.4.19 — future / not started]
+External Outcome-Semantics Policy Evidence (G2.4.19)
+        ↓
+[G2.4.20 — not started]
 ```
 
 | Published milestone | Tag | Current architectural boundary |
@@ -39,10 +41,13 @@ External Destination Contract Evidence (G2.4.18)
 | G2.4.14 | `v2.4.14-g2.4.14` | Immutable artifact-readiness evidence. |
 | G2.4.15 | `v2.4.15-g2.4.15` | Promotion-eligibility evidence for a logical destination. |
 | G2.4.16 | `v2.4.16-g2.4.16` | Immutable external-transition authorization evidence. |
-| G2.4.17 | `v2.4.17-g2.4.17` | Durable, fail-closed pre-execution transition-control ledger. |
+| G2.4.17 | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution transition-control ledger. |
 | G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence. |
+| G2.4.19 | `v2.4.19-g2.4.19` | Immutable, deterministic external outcome-semantics policy evidence. |
 
-These milestones do not add an external transition executor. In particular, no destination client, provider integration, credential path, network or egress execution, external receipt, reconciliation, rollback authority, or operational external transition exists in this chain. G2.4.18 establishes evidence consistency and capability absence; it does not perform or verify an external destination operation.
+G2.4.17 remains the sole durable pre-execution control ledger. G2.4.18 remains immutable destination-contract evidence only, and G2.4.19 remains immutable outcome-semantics policy evidence only. These milestones do not add an external transition executor: evidence attestation does not establish a receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect. `G2.4.20=NOT_STARTED`.
+
+The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state use `DIRECT_STATE_PROOF`.
 
 ## Engineering Philosophy
 

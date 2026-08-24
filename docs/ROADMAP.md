@@ -174,9 +174,10 @@ The following milestones are published, evidence-oriented Gen2 boundaries. They 
 | G2.4.14 — Artifact Readiness | Complete / published | `v2.4.14-g2.4.14` | Proves immutable artifact readiness evidence. |
 | G2.4.15 — Promotion Eligibility | Complete / published | `v2.4.15-g2.4.15` | Proves promotion eligibility for a logical destination. |
 | G2.4.16 — External Transition Authorization | Complete / published | `v2.4.16-g2.4.16` | Proves immutable external-transition authorization evidence. |
-| G2.4.17 — External Transition Control Ledger | Complete / published | `v2.4.17-g2.4.17` | Provides the durable, fail-closed pre-execution control ledger. |
-| G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Proves immutable, deterministic destination-contract evidence for the exact authorized chain. |
-| G2.4.19 | Not started | — | No design, implementation, or execution path is underway. |
+| G2.4.17 — External Transition Control Ledger | Complete / published | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution transition-control ledger. |
+| G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Immutable, deterministic destination-contract evidence for the exact authorized chain. |
+| G2.4.19 — Outcome-Semantics Policy Evidence | Complete / published | `v2.4.19-g2.4.19` | Immutable, deterministic policy evidence defining safe future outcome semantics for exact G2.4.18 evidence. |
+| G2.4.20 | Not started | — | No reconnaissance, design, implementation, or testing is underway. |
 
 ```text
 Artifact Readiness
@@ -189,10 +190,14 @@ External Transition Control Ledger
         ↓
 External Destination Contract Evidence
         ↓
-[G2.4.19 — future / not started]
+External Outcome-Semantics Policy Evidence
+        ↓
+[G2.4.20 — not started]
 ```
 
-G2.4.17 remains the durable pre-execution transition-control ledger. G2.4.18 is an evidence-only boundary: it does not execute a transition, resolve or contact a destination, provide provider or credential integration, perform network or egress execution, create an external receipt, reconcile or roll back an external state, or introduce any operational external transition.
+G2.4.17 remains the sole durable pre-execution transition-control ledger. G2.4.18 remains immutable destination-contract evidence only, and G2.4.19 remains immutable outcome-semantics policy evidence only. None of these attestations establishes an external receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect; no external execution authority exists.
+
+The B5/B6 evidence classification remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`.
 
 ## Upcoming Sprints
 
