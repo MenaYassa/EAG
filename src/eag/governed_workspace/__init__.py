@@ -1,14 +1,24 @@
-"""Library-only governed workspace custody evidence; no workspace or execution authority."""
+"""Library-only governed workspace custody evidence and one-shot live-root handoff."""
 
 from eag.governed_workspace.gate import WorkspaceCustodyGate
 from eag.governed_workspace.models import (
+    WORKSPACE_CUSTODY_ATTESTATION_SCHEMA_VERSION,
+    WORKSPACE_CUSTODY_HANDOFF_CAPABILITY_PROFILE,
+    WORKSPACE_CUSTODY_OBJECT_IDENTITY_SCHEMA_VERSION,
+    WORKSPACE_CUSTODY_REQUEST_SCHEMA_VERSION,
+    WORKSPACE_CUSTODY_ROOT_BINDING_SCHEMA_VERSION,
     WorkspaceCustodyAdmission,
     WorkspaceCustodyAttestation,
     WorkspaceCustodyDisposition,
     WorkspaceCustodyError,
+    WorkspaceCustodyFilesystemObjectIdentity,
+    WorkspaceCustodyHandleError,
     WorkspaceCustodyPolicy,
     WorkspaceCustodyRejectionReason,
     WorkspaceCustodyRequest,
+    WorkspaceCustodyRootBinding,
+    WorkspaceCustodyRootHandle,
+    WorkspaceCustodyRootHandoff,
     isolation_binding_digest,
     root_identity,
 )
@@ -25,6 +35,11 @@ from eag.governed_workspace.store import (
 
 __all__ = [
     "GOVERNED_WORKSPACE_CUSTODY_STORE_SCHEMA_VERSION",
+    "WORKSPACE_CUSTODY_ATTESTATION_SCHEMA_VERSION",
+    "WORKSPACE_CUSTODY_HANDOFF_CAPABILITY_PROFILE",
+    "WORKSPACE_CUSTODY_OBJECT_IDENTITY_SCHEMA_VERSION",
+    "WORKSPACE_CUSTODY_REQUEST_SCHEMA_VERSION",
+    "WORKSPACE_CUSTODY_ROOT_BINDING_SCHEMA_VERSION",
     "DurableWorkspaceCustodyStore",
     "FileDurableWorkspaceCustodyStore",
     "WorkspaceCustodyAdmission",
@@ -33,10 +48,15 @@ __all__ = [
     "WorkspaceCustodyClaimDisposition",
     "WorkspaceCustodyDisposition",
     "WorkspaceCustodyError",
+    "WorkspaceCustodyFilesystemObjectIdentity",
     "WorkspaceCustodyGate",
+    "WorkspaceCustodyHandleError",
     "WorkspaceCustodyPolicy",
     "WorkspaceCustodyRejectionReason",
     "WorkspaceCustodyRequest",
+    "WorkspaceCustodyRootBinding",
+    "WorkspaceCustodyRootHandle",
+    "WorkspaceCustodyRootHandoff",
     "WorkspaceCustodyStoreCorruptionError",
     "WorkspaceCustodyStoreError",
     "WorkspaceCustodyStoreUnavailableError",

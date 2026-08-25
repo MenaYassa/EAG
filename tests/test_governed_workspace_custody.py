@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
+import os
+import threading
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
+import pytest
 from test_support.g2_4_10_workspace_custody_fixture import (
     UnavailableWorkspaceCustodyStore,
     custody_bindings,
@@ -14,7 +19,9 @@ from test_support.g2_4_10_workspace_custody_fixture import (
 
 from eag.governed_workspace import (
     WorkspaceCustodyGate,
+    WorkspaceCustodyHandleError,
     WorkspaceCustodyRejectionReason,
+    WorkspaceCustodyRootBinding,
 )
 
 
@@ -126,3 +133,205 @@ def test_duplicate_conflicting_corrupt_and_unavailable_custody_storage_fail_clos
     assert corrupt is WorkspaceCustodyRejectionReason.STORE_CORRUPT
     assert unsafe is WorkspaceCustodyRejectionReason.STORE_CORRUPT
     assert unavailable.reason is WorkspaceCustodyRejectionReason.STORE_UNAVAILABLE
+
+
+def test_model_a_handoff_issues_v2_evidence_and_retains_exact_live_descriptor(tmp_path: Path) -> None:
+    assert tuple(inspect.signature(WorkspaceCustodyGate.attest_and_acquire_root_handoff).parameters) == (
+        "self",
+        "request",
+    )
+    bindings = custody_bindings(tmp_path / "handoff", identity="handoff")
+    gate = WorkspaceCustodyGate(custody_store=custody_store(bindings.control_root))
+    handoff = gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+
+    assert handoff.reason is None
+    assert handoff.attestation is not None
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    assert handoff.attestation.custody_request_id == bindings.request.custody_request_id
+    assert handoff.attestation.custody_request_digest == bindings.request.request_digest
+    assert handoff.binding.custody_attestation_binding_digest == handoff.attestation.binding_digest
+    assert tuple(inspect.signature(type(handoff.handle).consume_for_g2_4_22).parameters) == (
+        "self",
+        "binding",
+    )
+
+    descriptor = handoff.handle.consume_for_g2_4_22(
+        binding=handoff.binding,
+    )
+    descriptor_identity = os.fstat(descriptor)
+    workspace_identity = handoff.binding.workspace_object_identity
+    assert str(descriptor_identity.st_dev) == workspace_identity.device_id
+    assert str(descriptor_identity.st_ino) == workspace_identity.inode
+    assert tuple(bindings.workspace_root.iterdir()) == ()
+    handoff.handle.close()
+    assert handoff.handle.is_closed
+
+
+def test_model_a_handoff_refuses_consumption_mismatch_and_reuse_without_effect(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "refusal", identity="refusal")
+    gate = WorkspaceCustodyGate(custody_store=custody_store(bindings.control_root))
+    handoff = gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    before = tuple(bindings.workspace_root.iterdir())
+
+    mismatch_bindings = custody_bindings(tmp_path / "mismatch", identity="mismatch")
+    mismatch_gate = WorkspaceCustodyGate(custody_store=custody_store(mismatch_bindings.control_root))
+    mismatch = mismatch_gate.attest_and_acquire_root_handoff(
+        request=mismatch_bindings.request,
+    )
+    assert mismatch.binding is not None
+    assert mismatch.handle is not None
+    with pytest.raises(WorkspaceCustodyHandleError, match="handle_binding_mismatch"):
+        handoff.handle.consume_for_g2_4_22(binding=mismatch.binding)
+    mismatch.handle.close()
+    descriptor = handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+    assert descriptor >= 0
+    with pytest.raises(WorkspaceCustodyHandleError, match="handle_already_consumed"):
+        handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+    handoff.handle.close()
+    with pytest.raises(WorkspaceCustodyHandleError, match="handle_closed"):
+        handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+    assert tuple(bindings.workspace_root.iterdir()) == before == ()
+
+
+def test_model_a_handoff_replacement_after_acquisition_keeps_original_descriptor(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "replacement", identity="replacement")
+    gate = WorkspaceCustodyGate(custody_store=custody_store(bindings.control_root))
+    handoff = gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    original_root = bindings.workspace_root
+    renamed_root = original_root.with_name("workspace-original")
+    original_root.rename(renamed_root)
+    original_root.mkdir()
+
+    descriptor = handoff.handle.consume_for_g2_4_22(
+        binding=handoff.binding,
+    )
+    observed = os.fstat(descriptor)
+    assert str(observed.st_dev) == handoff.binding.workspace_object_identity.device_id
+    assert str(observed.st_ino) == handoff.binding.workspace_object_identity.inode
+    assert tuple(original_root.iterdir()) == ()
+    assert tuple(renamed_root.iterdir()) == ()
+    handoff.handle.close()
+
+
+def test_model_a_handoff_refuses_nonempty_and_symlink_roots_before_handle(tmp_path: Path) -> None:
+    nonempty = custody_bindings(tmp_path / "nonempty", identity="nonempty")
+    (nonempty.workspace_root / "existing.txt").write_text("existing", encoding="utf-8")
+    nonempty_gate = WorkspaceCustodyGate(custody_store=custody_store(nonempty.control_root))
+    nonempty_result = nonempty_gate.attest_and_acquire_root_handoff(
+        request=nonempty.request,
+    )
+
+    symlinked = custody_bindings(tmp_path / "symlink", identity="symlink")
+    target = symlinked.workspace_root.with_name("workspace-target")
+    symlinked.workspace_root.rename(target)
+    symlinked.workspace_root.symlink_to(target, target_is_directory=True)
+    symlink_gate = WorkspaceCustodyGate(custody_store=custody_store(symlinked.control_root))
+    symlink_result = symlink_gate.attest_and_acquire_root_handoff(
+        request=symlinked.request,
+    )
+
+    assert nonempty_result.reason is WorkspaceCustodyRejectionReason.NONEMPTY_WORKSPACE
+    assert nonempty_result.handle is None
+    assert symlink_result.reason is WorkspaceCustodyRejectionReason.UNSAFE_ROOT
+    assert symlink_result.handle is None
+    assert (nonempty.workspace_root / "existing.txt").read_text(encoding="utf-8") == "existing"
+    assert tuple(target.iterdir()) == ()
+
+
+def test_model_a_handoff_capability_refusal_and_handle_nonserialization_preserve_state(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "capability", identity="capability")
+    before = tuple(bindings.workspace_root.iterdir())
+    unavailable_gate = WorkspaceCustodyGate(
+        custody_store=custody_store(bindings.control_root),
+        capability_probe=lambda: False,
+    )
+    unavailable = unavailable_gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+    assert unavailable.reason is WorkspaceCustodyRejectionReason.HANDOFF_CAPABILITY_UNSUPPORTED
+    assert unavailable.handle is None
+    assert tuple(bindings.workspace_root.iterdir()) == before == ()
+
+    supported_gate = WorkspaceCustodyGate(custody_store=custody_store(bindings.control_root))
+    supported = supported_gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+    assert supported.handle is not None
+    with pytest.raises(WorkspaceCustodyHandleError, match="cannot be serialized"):
+        __import__("pickle").dumps(supported.handle)
+    supported.handle.close()
+
+
+def test_model_a_handoff_is_thread_local_noncopyable_and_closed_on_abandonment(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "thread-local", identity="thread-local")
+    gate = WorkspaceCustodyGate(custody_store=custody_store(bindings.control_root))
+    handoff = gate.attest_and_acquire_root_handoff(
+        request=bindings.request,
+    )
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    thread_failure: list[WorkspaceCustodyHandleError] = []
+
+    def _cross_thread_consume() -> None:
+        try:
+            handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+        except WorkspaceCustodyHandleError as error:
+            thread_failure.append(error)
+
+    worker = threading.Thread(target=_cross_thread_consume)
+    worker.start()
+    worker.join()
+    assert [str(error) for error in thread_failure] == ["handle_context_mismatch"]
+    with pytest.raises(WorkspaceCustodyHandleError, match="cannot be copied"):
+        __import__("copy").copy(handoff.handle)
+    with pytest.raises(WorkspaceCustodyHandleError, match="cannot be copied"):
+        __import__("copy").deepcopy(handoff.handle)
+    with pytest.raises(RuntimeError, match="abandoned"), handoff.handle:
+        raise RuntimeError("abandoned")
+    assert handoff.handle.is_closed
+    with pytest.raises(WorkspaceCustodyHandleError, match="handle_closed"):
+        handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+    assert tuple(bindings.workspace_root.iterdir()) == ()
+
+
+def test_model_a_handoff_refuses_same_thread_reentrant_descriptor_consumption(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "reentrant", identity="reentrant")
+    handoff = WorkspaceCustodyGate(
+        custody_store=custody_store(bindings.control_root)
+    ).attest_and_acquire_root_handoff(request=bindings.request)
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    original_binding = handoff.binding
+    reentrant_error: list[WorkspaceCustodyHandleError] = []
+
+    class _ReentrantBinding:
+        @property
+        def binding_digest(self) -> str:
+            try:
+                handoff.handle.consume_for_g2_4_22(binding=original_binding)
+            except WorkspaceCustodyHandleError as error:
+                reentrant_error.append(error)
+            return original_binding.binding_digest
+
+    descriptor = handoff.handle.consume_for_g2_4_22(
+        binding=cast(WorkspaceCustodyRootBinding, _ReentrantBinding()),
+    )
+    assert os.fstat(descriptor).st_ino == int(original_binding.workspace_object_identity.inode)
+    assert [str(error) for error in reentrant_error] == ["handle_already_consumed"]
+    with pytest.raises(WorkspaceCustodyHandleError, match="handle_already_consumed"):
+        handoff.handle.consume_for_g2_4_22(binding=original_binding)
+    assert handoff.binding == original_binding
+    handoff.handle.close()
+    assert handoff.handle.is_closed
+    assert tuple(bindings.workspace_root.iterdir()) == ()
