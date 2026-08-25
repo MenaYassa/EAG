@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 * * *
 
-## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.19
+## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.21
 
 ### Published milestones
 
@@ -16,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 | G2.4.15 | `v2.4.15-g2.4.15` | Governed artifact promotion eligibility evidence. |
 | G2.4.16 | `v2.4.16-g2.4.16` | Human external-transition authorization evidence. |
 | G2.4.17 | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution external-transition control ledger. |
-| G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence boundary. |
-| G2.4.19 | `v2.4.19-g2.4.19` | Immutable, deterministic external outcome-semantics policy evidence boundary. |
+| G2.4.18 | `v2.4.18-g2.4.18` | Immutable destination-contract evidence boundary, strengthened with typed exact request/assessment provenance. |
+| G2.4.19 | `v2.4.19-g2.4.19` | Immutable outcome-semantics policy evidence boundary, with typed exact request/assessment provenance and outcome-unknown safety. |
+| G2.4.20 | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; no trust, issuer authentication, signature verification, destination truth, or execution readiness. |
+| G2.4.21 | `v2.4.21-g2.4.21` | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. |
 
-G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. G2.4.19 was published at commit `429f1ecf4782b1ce8f925c58a517b547999fb325`. Both publication records were `REMOTE_VERIFICATION=PASS` and `WORKTREE=CLEAN`. The G2.4.19 deterministic acceptance record is:
+G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. G2.4.19 was published at commit `429f1ecf4782b1ce8f925c58a517b547999fb325`. G2.4.20 was published at commit `2749185ac44e38e86e4d1971a654ba26252e93a2`. G2.4.21 was published at commit `e8931c5dc196d25a4741447d5b4580a7f84ead4d` with `REMOTE_VERIFICATION=PASS` and `WORKTREE=CLEAN`. The G2.4.19 deterministic acceptance record is:
 
 ```text
 EBS_034=PASS
@@ -32,9 +34,9 @@ NO_EXECUTION_AUTHORITY=PASS
 G2_4_17_SEPARATION=PASS
 ```
 
-These are immutable evidence, deterministic/static validation, and capability-absence results. G2.4.17 remains the sole durable pre-execution control ledger; G2.4.18 remains destination-contract evidence only; and G2.4.19 remains outcome-semantics policy evidence only. No attestation asserts or records an external receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect.
+These are immutable evidence, deterministic/static validation, and capability-absence results. G2.4.17 remains the sole durable pre-execution control ledger for its existing external-artifact-transition profile; G2.4.18 remains destination-contract evidence only; G2.4.19 remains outcome-semantics policy evidence only; G2.4.20 remains declared attestation-policy evidence only; and G2.4.21 remains construction work-order evidence only. The typed provenance remediation across G2.4.18–G2.4.21 closed request/assessment substitution gaps through exact immutable ID/digest linkage, not generic evidence-reference inference.
 
-The published chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence → external outcome-semantics policy evidence. No destination client, provider integration, credential path, network/egress execution, external receipt, reconciliation, rollback authority, or operational external transition was introduced. `G2.4.20=NOT_STARTED`.
+The published chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence → external outcome-semantics policy evidence → declared attestation-policy evidence → construction work-order evidence. G2.4.21 does not create or lease workspaces, write files, run commands, install dependencies, invoke runtimes, access credentials/network, build/test applications, perform correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. `G2.4.22=NOT_STARTED`.
 
 The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`.
 

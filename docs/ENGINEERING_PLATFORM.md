@@ -42,12 +42,13 @@ The legacy platform walkthrough below remains useful for contributor orientation
 ```text
 Artifact Readiness → Promotion Eligibility → External Transition Authorization
 → External Transition Control Ledger → External Destination Contract Evidence
-→ External Outcome-Semantics Policy Evidence → [G2.4.20 — not started]
+→ External Outcome-Semantics Policy Evidence → Declared Attestation-Policy Evidence
+→ Construction Work-Order Evidence → [G2.4.22 — not started]
 ```
 
-G2.4.14 through G2.4.19 are complete and published as `v2.4.14-g2.4.14`, `v2.4.15-g2.4.15`, `v2.4.16-g2.4.16`, `v2.4.17-g2.4.17`, `v2.4.18-g2.4.18`, and `v2.4.19-g2.4.19`. G2.4.17 remains the sole durable, fail-closed pre-execution transition-control ledger. G2.4.18 remains immutable, deterministic destination-contract evidence only, and G2.4.19 remains immutable, deterministic outcome-semantics policy evidence only. None adds an executor, destination client, provider integration, credential path, network or egress execution, receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect.
+G2.4.14 through G2.4.21 are complete and published through `v2.4.21-g2.4.21`. G2.4.17 remains the sole durable, fail-closed pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 remains immutable destination-contract evidence only, with typed exact request/assessment provenance; G2.4.19 remains immutable outcome-semantics policy evidence only, with typed provenance and outcome-unknown safety; and G2.4.20 remains declared destination-contract attestation-policy evidence only, without trust, issuer authentication, signature verification, destination truth, or execution readiness. The typed provenance remediation through G2.4.21 closed request/assessment substitution gaps through exact immutable ID/digest linkage.
 
-The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state use `DIRECT_STATE_PROOF`. `G2.4.20=NOT_STARTED`.
+G2.4.21 introduces immutable local construction work-order evidence that binds upstream evidence, custody/composition declarations, action-plan/requirements/architecture digests, capability declarations, limits, identity, and expiry. It does not create or lease workspaces, write files, run commands, install dependencies, invoke runtimes, access credentials/network, build/test applications, perform correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state use `DIRECT_STATE_PROOF`. `G2.4.22=NOT_STARTED`.
 
 ## 1. Kernel
 

@@ -33,7 +33,11 @@ External Destination Contract Evidence (G2.4.18)
         ↓
 External Outcome-Semantics Policy Evidence (G2.4.19)
         ↓
-[G2.4.20 — not started]
+Declared Attestation-Policy Evidence (G2.4.20)
+        ↓
+Construction Work-Order Evidence (G2.4.21)
+        ↓
+[G2.4.22 — not started]
 ```
 
 | Published milestone | Tag | Current architectural boundary |
@@ -42,10 +46,12 @@ External Outcome-Semantics Policy Evidence (G2.4.19)
 | G2.4.15 | `v2.4.15-g2.4.15` | Promotion-eligibility evidence for a logical destination. |
 | G2.4.16 | `v2.4.16-g2.4.16` | Immutable external-transition authorization evidence. |
 | G2.4.17 | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution transition-control ledger. |
-| G2.4.18 | `v2.4.18-g2.4.18` | Immutable, deterministic external destination-contract evidence. |
-| G2.4.19 | `v2.4.19-g2.4.19` | Immutable, deterministic external outcome-semantics policy evidence. |
+| G2.4.18 | `v2.4.18-g2.4.18` | Immutable destination-contract evidence with typed exact request/assessment provenance. |
+| G2.4.19 | `v2.4.19-g2.4.19` | Immutable outcome-semantics policy evidence with typed provenance and outcome-unknown safety. |
+| G2.4.20 | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; it does not establish trust, issuer authentication, signature verification, destination truth, or execution readiness. |
+| G2.4.21 | `v2.4.21-g2.4.21` | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. |
 
-G2.4.17 remains the sole durable pre-execution control ledger. G2.4.18 remains immutable destination-contract evidence only, and G2.4.19 remains immutable outcome-semantics policy evidence only. These milestones do not add an external transition executor: evidence attestation does not establish a receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect. `G2.4.20=NOT_STARTED`.
+G2.4.17 remains the sole durable pre-execution control ledger for its existing external-artifact-transition profile. G2.4.18–G2.4.21 are immutable evidence-only boundaries; the typed provenance remediation across them closes request/assessment substitution gaps through exact ID/digest linkage. G2.4.21 does not create or lease a workspace, write files, run commands, install dependencies, invoke runtimes, access credentials/network, build/test applications, perform correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. `G2.4.22=NOT_STARTED`.
 
 The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state use `DIRECT_STATE_PROOF`.
 

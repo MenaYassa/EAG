@@ -175,9 +175,11 @@ The following milestones are published, evidence-oriented Gen2 boundaries. They 
 | G2.4.15 — Promotion Eligibility | Complete / published | `v2.4.15-g2.4.15` | Proves promotion eligibility for a logical destination. |
 | G2.4.16 — External Transition Authorization | Complete / published | `v2.4.16-g2.4.16` | Proves immutable external-transition authorization evidence. |
 | G2.4.17 — External Transition Control Ledger | Complete / published | `v2.4.17-g2.4.17` | Sole durable, fail-closed pre-execution transition-control ledger. |
-| G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Immutable, deterministic destination-contract evidence for the exact authorized chain. |
-| G2.4.19 — Outcome-Semantics Policy Evidence | Complete / published | `v2.4.19-g2.4.19` | Immutable, deterministic policy evidence defining safe future outcome semantics for exact G2.4.18 evidence. |
-| G2.4.20 | Not started | — | No reconnaissance, design, implementation, or testing is underway. |
+| G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Immutable destination-contract evidence with typed exact request/assessment provenance. |
+| G2.4.19 — Outcome-Semantics Policy Evidence | Complete / published | `v2.4.19-g2.4.19` | Immutable policy evidence defining safe future outcome semantics, typed exact provenance, and outcome-unknown safety. |
+| G2.4.20 — Attestation-Policy Evidence | Complete / published | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; no trust, issuer authentication, signature verification, destination truth, or execution readiness. |
+| G2.4.21 — Construction Work-Order Evidence | Complete / published | `v2.4.21-g2.4.21` | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. |
+| G2.4.22 | Not started | — | No reconnaissance, design, implementation, or testing is underway. |
 
 ```text
 Artifact Readiness
@@ -192,12 +194,16 @@ External Destination Contract Evidence
         ↓
 External Outcome-Semantics Policy Evidence
         ↓
-[G2.4.20 — not started]
+Declared Attestation-Policy Evidence
+        ↓
+Construction Work-Order Evidence
+        ↓
+[G2.4.22 — not started]
 ```
 
-G2.4.17 remains the sole durable pre-execution transition-control ledger. G2.4.18 remains immutable destination-contract evidence only, and G2.4.19 remains immutable outcome-semantics policy evidence only. None of these attestations establishes an external receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect; no external execution authority exists.
+G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 and G2.4.19 carry typed exact request/assessment provenance; G2.4.20 is declared attestation-policy evidence only; and G2.4.21 is local construction work-order evidence only. The typed provenance remediation through G2.4.21 closed request/assessment substitution gaps without generic evidence-reference inference.
 
-The B5/B6 evidence classification remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`.
+G2.4.21 does not execute construction: it creates or leases no workspace, writes no file, runs no command, installs no dependency, invokes no runtime, accesses no credential/network, builds/tests no application, and performs no correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. The B5/B6 evidence classification remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`. `G2.4.22=NOT_STARTED`.
 
 ## Upcoming Sprints
 

@@ -49,9 +49,11 @@ The following evidence-only governed boundaries are published. They are separate
 | G2.4.15 — Promotion Eligibility | `v2.4.15-g2.4.15` | Complete / published | Governed logical-destination promotion eligibility evidence. |
 | G2.4.16 — External Transition Authorization | `v2.4.16-g2.4.16` | Complete / published | Immutable human external-transition authorization evidence. |
 | G2.4.17 — Transition Control Ledger | `v2.4.17-g2.4.17` | Complete / published | Sole durable, fail-closed pre-execution transition-control ledger. |
-| G2.4.18 — Destination Contract Evidence | `v2.4.18-g2.4.18` | Complete / published | Immutable, deterministic destination-contract evidence bound to the upstream chain. |
-| G2.4.19 — Outcome-Semantics Policy Evidence | `v2.4.19-g2.4.19` | Complete / published | Immutable, deterministic outcome-semantics policy evidence bound to exact G2.4.18 evidence. |
-| G2.4.20 | — | Not started | No reconnaissance, design, implementation, or testing is underway. |
+| G2.4.18 — Destination Contract Evidence | `v2.4.18-g2.4.18` | Complete / published | Immutable, deterministic destination-contract evidence with typed exact request/assessment provenance. |
+| G2.4.19 — Outcome-Semantics Policy Evidence | `v2.4.19-g2.4.19` | Complete / published | Immutable, deterministic outcome-semantics policy evidence with typed exact request/assessment provenance and outcome-unknown safety. |
+| G2.4.20 — Attestation-Policy Evidence | `v2.4.20-g2.4.20` | Complete / published | Declared destination-contract attestation-policy evidence only; it does not establish trust, issuer authentication, signature verification, destination truth, or execution readiness. |
+| G2.4.21 — Construction Work-Order Evidence | `v2.4.21-g2.4.21` | Complete / published | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. Published at `e8931c5dc196d25a4741447d5b4580a7f84ead4d`; remote publication verified. |
+| G2.4.22 | — | Not started | No reconnaissance, design, implementation, or testing is underway. |
 
 The current governed progression is:
 
@@ -68,12 +70,16 @@ External Destination Contract Evidence
         ↓
 External Outcome-Semantics Policy Evidence
         ↓
-[G2.4.20 — not started]
+Declared Attestation-Policy Evidence
+        ↓
+Construction Work-Order Evidence
+        ↓
+[G2.4.22 — not started]
 ```
 
-G2.4.17 remains the sole durable pre-execution transition-control ledger. G2.4.18 remains immutable destination-contract evidence only. G2.4.19 remains immutable outcome-semantics policy evidence only. None of these milestones provides external execution authority: evidence attestation does not establish a receipt, outcome, completion, publication, release, deployment, reconciliation, retry, rollback, or destination-side effect.
+G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 remains destination-contract evidence only, now with typed exact request/assessment provenance; G2.4.19 remains outcome-semantics policy evidence only, including typed provenance and outcome-unknown safety; and G2.4.20 remains declared attestation-policy evidence only. G2.4.20 does not establish trust, issuer authentication, signature verification, destination truth, or execution readiness. The typed provenance remediation across G2.4.18–G2.4.21 closes discovered request/assessment substitution gaps without inferring provenance from generic evidence references.
 
-The validation vocabulary remains intentionally truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, requests, policies, results, and test-owned state use `DIRECT_STATE_PROOF`.
+G2.4.21 does not execute construction. It does not create or lease workspaces, write files, run commands, install dependencies, invoke runtimes, access credentials or networks, build/test applications, perform correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. The validation vocabulary remains intentionally truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, requests, policies, results, and test-owned state use `DIRECT_STATE_PROOF`.
 
 ### Implemented Capabilities
 
