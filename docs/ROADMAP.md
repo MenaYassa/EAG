@@ -178,8 +178,8 @@ The following milestones are published, evidence-oriented Gen2 boundaries. They 
 | G2.4.18 — External Destination Contract Evidence | Complete / published | `v2.4.18-g2.4.18` | Immutable destination-contract evidence with typed exact request/assessment provenance. |
 | G2.4.19 — Outcome-Semantics Policy Evidence | Complete / published | `v2.4.19-g2.4.19` | Immutable policy evidence defining safe future outcome semantics, typed exact provenance, and outcome-unknown safety. |
 | G2.4.20 — Attestation-Policy Evidence | Complete / published | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; no trust, issuer authentication, signature verification, destination truth, or execution readiness. |
-| G2.4.21 — Construction Work-Order Evidence | Complete / published | `v2.4.21-g2.4.21` | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. |
-| G2.4.22 | Not started | — | No reconnaissance, design, implementation, or testing is underway. |
+| G2.4.21 — Construction Work-Order Evidence | Complete / published | `v2.4.21-g2.4.21` (original) and `v2.4.21-provenance.1` (remediation) | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry; follow-up typed request/assessment provenance is fail-closed. |
+| G2.4.22 | `NOT_STARTED` for implementation | — | Design/authorization is separate and unimplemented; no filesystem construction authority is published. |
 
 ```text
 Artifact Readiness
@@ -201,7 +201,7 @@ Construction Work-Order Evidence
 [G2.4.22 — not started]
 ```
 
-G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 and G2.4.19 carry typed exact request/assessment provenance; G2.4.20 is declared attestation-policy evidence only; and G2.4.21 is local construction work-order evidence only. The typed provenance remediation through G2.4.21 closed request/assessment substitution gaps without generic evidence-reference inference.
+G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 and G2.4.19 carry typed exact request/assessment provenance; G2.4.20 is declared attestation-policy evidence only; and G2.4.21 is local construction work-order evidence only. The typed provenance remediation through G2.4.21 closed request/assessment substitution gaps without generic evidence-reference inference. The original G2.4.21 tag `v2.4.21-g2.4.21` remains at `e8931c5dc196d25a4741447d5b4580a7f84ead4d`; the distinct follow-up remediation is commit `55c9d02e698558bbf7f68773207c3c80b9995b3d`, tagged `v2.4.21-provenance.1`.
 
 G2.4.21 does not execute construction: it creates or leases no workspace, writes no file, runs no command, installs no dependency, invokes no runtime, accesses no credential/network, builds/tests no application, and performs no correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. The B5/B6 evidence classification remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`. `G2.4.22=NOT_STARTED`.
 
