@@ -2,6 +2,7 @@
 
 from eag.governed_construction_work_order.assessor import ConstructionWorkOrderAssessor
 from eag.governed_construction_work_order.canonical import (
+    CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION,
     CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION,
     ConstructionWorkOrderEvidenceError,
 )
@@ -16,6 +17,7 @@ from eag.governed_construction_work_order.models import (
 )
 
 __all__ = [
+    "CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION",
     "CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION",
     "ConstructionWorkOrderAssessment",
     "ConstructionWorkOrderAssessmentRequest",

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION = "g2.4.21.local-construction-work-order.v1"
+CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION = "g2.4.21.construction-work-order-assessment.v2"
 
 
 class ConstructionWorkOrderEvidenceError(ValueError):
@@ -72,6 +73,7 @@ def canonical_digest(payload: dict[str, Any]) -> str:
 
 
 __all__ = [
+    "CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION",
     "CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION",
     "ConstructionWorkOrderEvidenceError",
     "canonical_digest",

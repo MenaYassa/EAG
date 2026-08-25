@@ -13,6 +13,8 @@ from test_support.g2_4_21_construction_work_order_fixture import (
 )
 
 from eag.governed_construction_work_order import (
+    CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION,
+    ConstructionWorkOrderAssessment,
     ConstructionWorkOrderAssessmentRequest,
     ConstructionWorkOrderAssessor,
     ConstructionWorkOrderDisposition,
@@ -40,7 +42,11 @@ def test_valid_work_order_attests_exact_public_evidence(tmp_path) -> None:
     assert assessment.findings == ()
     assert assessment.work_order_id == fixture.work_order.work_order_id
     assert assessment.workspace_id == fixture.work_order.workspace_id
+    assert assessment.assessed_request_id == request.assessment_request_id
+    assert assessment.assessed_request_digest == request.request_digest
+    assert assessment.schema_version == CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION
     assert assessment.assessment_digest == assessment.calculate_digest()
+    assessment.require_exact_request(request)
 
 
 def test_exact_upstream_binding_mismatches_fail_closed(tmp_path) -> None:
@@ -155,6 +161,72 @@ def test_payload_parser_is_strict_and_self_validating(tmp_path) -> None:
     for invalid in (malformed_timestamp, tampered_digest, unexpected_field, unsupported_schema):
         with pytest.raises(ConstructionWorkOrderEvidenceError):
             LocalConstructionWorkOrderEvidence.from_payload(invalid)
+
+
+def test_assessment_v2_payload_is_strict_self_validating_and_rejects_legacy_unlinked_evidence(tmp_path) -> None:
+    fixture = construction_work_order_fixture(tmp_path)
+    request = assessment_request(fixture, assessment_request_id="g2421-v2-parser")
+    assessment = ConstructionWorkOrderAssessor().assess(
+        assessment_id="g2421-v2-parser-assessment",
+        request=request,
+    )
+    payload = assessment.to_payload()
+    assert ConstructionWorkOrderAssessment.from_payload(payload) == assessment
+    assert payload["assessed_request_id"] == request.assessment_request_id
+    assert payload["assessed_request_digest"] == request.request_digest
+
+    tampered_request_id = {**payload, "assessed_request_id": "different-request"}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_request_id)
+
+    tampered_request_digest = {**payload, "assessed_request_digest": "0" * 64}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_request_digest)
+
+    tampered_assessment_digest = {**payload, "assessment_digest": "0" * 64}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_assessment_digest)
+
+    legacy_unlinked = {
+        field_name: value
+        for field_name, value in payload.items()
+        if field_name not in {"assessed_request_id", "assessed_request_digest"}
+    }
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(legacy_unlinked)
+
+
+def test_assessment_typed_provenance_refuses_bidirectional_request_substitution(tmp_path) -> None:
+    fixture = construction_work_order_fixture(tmp_path)
+    baseline_request = assessment_request(
+        fixture,
+        assessment_request_id="g2421-provenance-request-a",
+    )
+    alternate_request = assessment_request(
+        fixture,
+        assessment_request_id="g2421-provenance-request-b",
+    )
+    assessor = ConstructionWorkOrderAssessor()
+    assessment_a = assessor.assess(
+        assessment_id="g2421-provenance-assessment",
+        request=baseline_request,
+    )
+    assessment_b = assessor.assess(
+        assessment_id="g2421-provenance-assessment",
+        request=alternate_request,
+    )
+
+    assert assessment_a.assessed_request_id == baseline_request.assessment_request_id
+    assert assessment_a.assessed_request_digest == baseline_request.request_digest
+    assert assessment_b.assessed_request_id == alternate_request.assessment_request_id
+    assert assessment_b.assessed_request_digest == alternate_request.request_digest
+    assert assessment_a.assessment_digest != assessment_b.assessment_digest
+    assessment_a.require_exact_request(baseline_request)
+    assessment_b.require_exact_request(alternate_request)
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        assessment_a.require_exact_request(alternate_request)
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        assessment_b.require_exact_request(baseline_request)
 
 
 def test_request_strictly_requires_every_public_upstream_type(tmp_path) -> None:

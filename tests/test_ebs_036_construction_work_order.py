@@ -21,6 +21,7 @@ from test_support.g2_4_21_construction_work_order_fixture import (
 
 import eag.governed_construction_work_order as boundary
 from eag.governed_construction_work_order import (
+    ConstructionWorkOrderAssessment,
     ConstructionWorkOrderAssessmentRequest,
     ConstructionWorkOrderAssessor,
     ConstructionWorkOrderDisposition,
@@ -225,6 +226,107 @@ def test_ebs_036_construction_work_order_evidence_boundary(tmp_path: Path) -> No
     assert baseline_assessment.workspace_id == fixture.work_order.workspace_id
     assert fixture.outcome_assessment.assessed_request_id == baseline.outcome_policy_request.assessment_request_id
     assert fixture.outcome_assessment.assessed_request_digest == baseline.outcome_policy_request.request_digest
+    assert baseline_assessment.assessed_request_id == baseline.assessment_request_id
+    assert baseline_assessment.assessed_request_digest == baseline.request_digest
+    baseline_assessment.require_exact_request(baseline)
+
+    # The same immutable request, assessment ID, and request timestamp produce the exact production-
+    # defined canonical assessment identity again, while retaining the same typed request provenance.
+    repeated_request_before = baseline.to_payload()
+    repeated_tree_before = _tree_state(tmp_path)
+    repeated_assessment = _assess_preserving_state(
+        root=tmp_path,
+        request=baseline,
+        assessment_id="ebs036-valid",
+    )
+    assert repeated_assessment.assessed_request_id == baseline.assessment_request_id
+    assert repeated_assessment.assessed_request_digest == baseline.request_digest
+    assert repeated_assessment.assessed_request_id == baseline_assessment.assessed_request_id
+    assert repeated_assessment.assessed_request_digest == baseline_assessment.assessed_request_digest
+    assert repeated_assessment.assessment_digest == baseline_assessment.assessment_digest
+    assert repeated_assessment.to_payload() == baseline_assessment.to_payload()
+    assert baseline.to_payload() == repeated_request_before
+    assert _tree_state(tmp_path) == repeated_tree_before
+
+    # A real assessment is exact-linked to the supplied G2.4.21 request. An otherwise equivalent
+    # request with only a distinct identity receives distinct typed provenance and digest evidence.
+    alternate_request = assessment_request(
+        fixture,
+        assessment_request_id="ebs036-assessment-request-b",
+        timestamp=baseline.timestamp,
+    )
+    assert alternate_request.assessment_request_id != baseline.assessment_request_id
+    assert alternate_request.request_digest != baseline.request_digest
+    alternate_assessment = _assess_preserving_state(
+        root=tmp_path,
+        request=alternate_request,
+        assessment_id="ebs036-valid",
+    )
+    assert alternate_assessment.disposition is ConstructionWorkOrderDisposition.CONSTRUCTION_WORK_ORDER_ATTESTED
+    assert alternate_assessment.assessed_request_id == alternate_request.assessment_request_id
+    assert alternate_assessment.assessed_request_digest == alternate_request.request_digest
+    assert alternate_assessment.assessment_digest != baseline_assessment.assessment_digest
+    alternate_assessment.require_exact_request(alternate_request)
+
+    # Direct exact-request consumer refusal preserves the supplied baseline assessment and alternate
+    # request as well as the byte-for-byte test-owned filesystem state.
+    baseline_assessment_before_refusal = baseline_assessment.to_payload()
+    alternate_request_before_refusal = alternate_request.to_payload()
+    baseline_pair_tree_before_refusal = _tree_state(tmp_path)
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        baseline_assessment.require_exact_request(alternate_request)
+    assert baseline_assessment.to_payload() == baseline_assessment_before_refusal
+    assert alternate_request.to_payload() == alternate_request_before_refusal
+    assert _tree_state(tmp_path) == baseline_pair_tree_before_refusal
+
+    # The inverse direct refusal independently preserves the alternate assessment and baseline
+    # request without relying on assessor-state proof helpers.
+    alternate_assessment_before_refusal = alternate_assessment.to_payload()
+    baseline_request_before_refusal = baseline.to_payload()
+    alternate_pair_tree_before_refusal = _tree_state(tmp_path)
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        alternate_assessment.require_exact_request(baseline)
+    assert alternate_assessment.to_payload() == alternate_assessment_before_refusal
+    assert baseline.to_payload() == baseline_request_before_refusal
+    assert _tree_state(tmp_path) == alternate_pair_tree_before_refusal
+
+    # The strict v2 public parser makes typed request provenance and assessment identity tampering
+    # fail closed without changing immutable inputs or test-owned state. Legacy unlinked payloads
+    # cannot enter the exact-linked consumer path.
+    assessment_payload = baseline_assessment.to_payload()
+    root_before_provenance_parser = _tree_state(tmp_path)
+    tampered_assessed_request_id = {**assessment_payload, "assessed_request_id": "different-request"}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_assessed_request_id)
+    assert tampered_assessed_request_id["assessed_request_id"] == "different-request"
+    assert _tree_state(tmp_path) == root_before_provenance_parser
+
+    tampered_assessed_request_digest = {**assessment_payload, "assessed_request_digest": "0" * 64}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_assessed_request_digest)
+    assert tampered_assessed_request_digest["assessed_request_digest"] == "0" * 64
+    assert _tree_state(tmp_path) == root_before_provenance_parser
+
+    tampered_assessment_digest = {**assessment_payload, "assessment_digest": "0" * 64}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(tampered_assessment_digest)
+    assert tampered_assessment_digest["assessment_digest"] == "0" * 64
+    assert _tree_state(tmp_path) == root_before_provenance_parser
+
+    malformed_assessment = {**assessment_payload, "findings": ["not-a-finding"]}
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(malformed_assessment)
+    assert malformed_assessment["findings"] == ["not-a-finding"]
+    assert _tree_state(tmp_path) == root_before_provenance_parser
+
+    legacy_unlinked_assessment = {
+        field_name: value
+        for field_name, value in assessment_payload.items()
+        if field_name not in {"assessed_request_id", "assessed_request_digest"}
+    }
+    with pytest.raises(ConstructionWorkOrderEvidenceError):
+        ConstructionWorkOrderAssessment.from_payload(legacy_unlinked_assessment)
+    assert _tree_state(tmp_path) == root_before_provenance_parser
 
     # Substitute an otherwise valid G2.4.18 assessment while preserving the work order and every
     # other upstream relationship. The existing contract-binding finding must fail closed.

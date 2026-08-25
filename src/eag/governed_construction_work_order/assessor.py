@@ -243,6 +243,7 @@ def _assessment(
     ordered_findings = tuple(sorted(findings, key=lambda item: (item.code.value, item.evidence_reference)))
     return ConstructionWorkOrderAssessment.issue(
         assessment_id=assessment_id,
+        assessed_request=request,
         workspace_id=request.work_order.workspace_id,
         work_order_id=request.work_order.work_order_id,
         disposition=disposition,

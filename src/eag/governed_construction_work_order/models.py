@@ -8,6 +8,7 @@ from enum import StrEnum
 
 from eag.governed_composition import RuntimeCompositionAttestation
 from eag.governed_construction_work_order.canonical import (
+    CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION,
     CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION,
     ConstructionWorkOrderEvidenceError,
     canonical_digest,
@@ -475,6 +476,8 @@ class ConstructionWorkOrderAssessment:
     """Immutable work-order policy evidence; it never reports local or external execution facts."""
 
     assessment_id: str
+    assessed_request_id: str
+    assessed_request_digest: str
     workspace_id: str
     work_order_id: str | None
     disposition: ConstructionWorkOrderDisposition
@@ -483,10 +486,20 @@ class ConstructionWorkOrderAssessment:
     recommendations: tuple[str, ...]
     assessment_digest: str
     timestamp: datetime
-    schema_version: str = CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION
+    schema_version: str = CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "assessment_id", require_identifier(self.assessment_id, "assessment_id"))
+        object.__setattr__(
+            self,
+            "assessed_request_id",
+            require_identifier(self.assessed_request_id, "assessed_request_id"),
+        )
+        object.__setattr__(
+            self,
+            "assessed_request_digest",
+            require_sha256(self.assessed_request_digest, "assessed_request_digest"),
+        )
         object.__setattr__(self, "workspace_id", require_identifier(self.workspace_id, "workspace_id"))
         if self.work_order_id is not None:
             object.__setattr__(self, "work_order_id", require_identifier(self.work_order_id, "work_order_id"))
@@ -501,7 +514,7 @@ class ConstructionWorkOrderAssessment:
         object.__setattr__(self, "recommendations", _ordered_unique_values(self.recommendations, "recommendations"))
         object.__setattr__(self, "assessment_digest", require_sha256(self.assessment_digest, "assessment_digest"))
         object.__setattr__(self, "timestamp", canonical_timestamp(self.timestamp, "timestamp"))
-        if self.schema_version != CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION:
+        if self.schema_version != CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION:
             raise ConstructionWorkOrderEvidenceError("unsupported construction work-order assessment schema_version")
         if self.assessment_digest != self.calculate_digest():
             raise ConstructionWorkOrderEvidenceError(
@@ -513,6 +526,7 @@ class ConstructionWorkOrderAssessment:
         cls,
         *,
         assessment_id: str,
+        assessed_request: ConstructionWorkOrderAssessmentRequest,
         workspace_id: str,
         work_order_id: str | None,
         disposition: ConstructionWorkOrderDisposition,
@@ -521,9 +535,15 @@ class ConstructionWorkOrderAssessment:
         recommendations: tuple[str, ...],
         timestamp: datetime,
     ) -> ConstructionWorkOrderAssessment:
+        if not isinstance(assessed_request, ConstructionWorkOrderAssessmentRequest):
+            raise TypeError("assessed_request must be a ConstructionWorkOrderAssessmentRequest")
+        assessed_request_id = assessed_request.assessment_request_id
+        assessed_request_digest = require_sha256(assessed_request.request_digest, "assessed_request_digest")
         canonical_time = canonical_timestamp(timestamp, "timestamp")
         payload = _assessment_payload(
             assessment_id=assessment_id,
+            assessed_request_id=assessed_request_id,
+            assessed_request_digest=assessed_request_digest,
             workspace_id=workspace_id,
             work_order_id=work_order_id,
             disposition=disposition,
@@ -531,10 +551,12 @@ class ConstructionWorkOrderAssessment:
             evidence_refs=evidence_refs,
             recommendations=recommendations,
             timestamp=canonical_time,
-            schema_version=CONSTRUCTION_WORK_ORDER_SCHEMA_VERSION,
+            schema_version=CONSTRUCTION_WORK_ORDER_ASSESSMENT_SCHEMA_VERSION,
         )
         return cls(
             assessment_id=assessment_id,
+            assessed_request_id=assessed_request_id,
+            assessed_request_digest=assessed_request_digest,
             workspace_id=workspace_id,
             work_order_id=work_order_id,
             disposition=disposition,
@@ -549,6 +571,8 @@ class ConstructionWorkOrderAssessment:
         return canonical_digest(
             _assessment_payload(
                 assessment_id=self.assessment_id,
+                assessed_request_id=self.assessed_request_id,
+                assessed_request_digest=self.assessed_request_digest,
                 workspace_id=self.workspace_id,
                 work_order_id=self.work_order_id,
                 disposition=self.disposition,
@@ -559,6 +583,93 @@ class ConstructionWorkOrderAssessment:
                 schema_version=self.schema_version,
             )
         )
+
+    def to_payload(self) -> dict[str, object]:
+        """Return the complete canonical v2 assessment payload and self-validating digest."""
+        return {
+            **_assessment_payload(
+                assessment_id=self.assessment_id,
+                assessed_request_id=self.assessed_request_id,
+                assessed_request_digest=self.assessed_request_digest,
+                workspace_id=self.workspace_id,
+                work_order_id=self.work_order_id,
+                disposition=self.disposition,
+                findings=self.findings,
+                evidence_refs=self.evidence_refs,
+                recommendations=self.recommendations,
+                timestamp=self.timestamp,
+                schema_version=self.schema_version,
+            ),
+            "assessment_digest": self.assessment_digest,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: object) -> ConstructionWorkOrderAssessment:
+        """Parse only exact v2 assessment payloads and reject legacy unlinked representations."""
+        required = set(_ASSESSMENT_FIELDS) | {"assessment_digest"}
+        if not isinstance(payload, dict) or set(payload) != required:
+            raise ConstructionWorkOrderEvidenceError("construction work-order assessment payload has unexpected fields")
+        try:
+            finding_payloads = payload["findings"]
+            evidence_refs = payload["evidence_refs"]
+            recommendations = payload["recommendations"]
+            if (
+                not isinstance(finding_payloads, list)
+                or not isinstance(evidence_refs, list)
+                or not isinstance(recommendations, list)
+            ):
+                raise ConstructionWorkOrderEvidenceError("assessment sequence payloads must be lists")
+            findings = tuple(
+                ConstructionWorkOrderFinding(
+                    code=ConstructionWorkOrderFindingCode(item["code"]),
+                    evidence_reference=item["evidence_reference"],
+                )
+                for item in finding_payloads
+            )
+            return cls(
+                assessment_id=payload["assessment_id"],
+                assessed_request_id=payload["assessed_request_id"],
+                assessed_request_digest=payload["assessed_request_digest"],
+                workspace_id=payload["workspace_id"],
+                work_order_id=payload["work_order_id"],
+                disposition=ConstructionWorkOrderDisposition(payload["disposition"]),
+                findings=findings,
+                evidence_refs=tuple(evidence_refs),
+                recommendations=tuple(recommendations),
+                assessment_digest=payload["assessment_digest"],
+                timestamp=datetime.fromisoformat(payload["timestamp"]),
+                schema_version=payload["schema_version"],
+            )
+        except (KeyError, TypeError, ValueError, ConstructionWorkOrderEvidenceError) as error:
+            raise ConstructionWorkOrderEvidenceError("invalid construction work-order assessment payload") from error
+
+    def require_exact_request(self, request: ConstructionWorkOrderAssessmentRequest) -> None:
+        """Refuse a request that is not the exact immutable source of this assessment."""
+        if not isinstance(request, ConstructionWorkOrderAssessmentRequest):
+            raise TypeError("request must be a ConstructionWorkOrderAssessmentRequest")
+        request_digest = require_sha256(request.request_digest, "request_digest")
+        if (
+            self.assessed_request_id != request.assessment_request_id
+            or self.assessed_request_digest != request_digest
+        ):
+            raise ConstructionWorkOrderEvidenceError(
+                "construction work-order assessment is not bound to the supplied request"
+            )
+
+
+_ASSESSMENT_FIELDS = (
+    "assessment_id",
+    "assessed_request_digest",
+    "assessed_request_id",
+    "disposition",
+    "evidence_refs",
+    "findings",
+    "recommendations",
+    "schema_version",
+    "timestamp",
+    "work_order_id",
+    "workspace_id",
+)
 
 
 _WORK_ORDER_FIELDS = (
@@ -736,6 +847,8 @@ def _request_payload(request: ConstructionWorkOrderAssessmentRequest) -> dict[st
 def _assessment_payload(
     *,
     assessment_id: str,
+    assessed_request_id: str,
+    assessed_request_digest: str,
     workspace_id: str,
     work_order_id: str | None,
     disposition: ConstructionWorkOrderDisposition,
@@ -747,6 +860,8 @@ def _assessment_payload(
 ) -> dict[str, object]:
     return {
         "assessment_id": assessment_id,
+        "assessed_request_digest": require_sha256(assessed_request_digest, "assessed_request_digest"),
+        "assessed_request_id": require_identifier(assessed_request_id, "assessed_request_id"),
         "disposition": disposition.value,
         "evidence_refs": list(evidence_refs),
         "findings": [item.to_payload() for item in findings],
