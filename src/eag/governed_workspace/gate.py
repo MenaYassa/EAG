@@ -18,8 +18,8 @@ from eag.governed_workspace.models import (
     WorkspaceCustodyRejectionReason,
     WorkspaceCustodyRequest,
     WorkspaceCustodyRootBinding,
-    WorkspaceCustodyRootHandle,
     WorkspaceCustodyRootHandoff,
+    _issue_workspace_custody_root_handle,
 )
 from eag.governed_workspace.store import (
     DurableWorkspaceCustodyStore,
@@ -125,7 +125,7 @@ class WorkspaceCustodyGate:
                 capability_digest=capability_digest,
                 acquired_at=occurred_at,
             )
-            handle = WorkspaceCustodyRootHandle(
+            handle = _issue_workspace_custody_root_handle(
                 descriptor=workspace_fd,
                 binding=binding,
             )

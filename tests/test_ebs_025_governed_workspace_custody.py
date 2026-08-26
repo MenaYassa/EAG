@@ -19,6 +19,7 @@ from eag.governed_workspace import (
     WorkspaceCustodyGate,
     WorkspaceCustodyHandleError,
     WorkspaceCustodyRejectionReason,
+    WorkspaceCustodyRootHandle,
 )
 
 
@@ -247,3 +248,33 @@ def test_ebs_025_model_a_nonempty_root_refuses_before_handoff_or_effect(tmp_path
         tuple(bindings.audit_root.iterdir()),
         tuple(bindings.control_root.iterdir()),
     ) == before
+
+
+def test_ebs_025_model_a_public_matching_binding_handle_cannot_forge_descriptor_provenance(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "forged-provenance", identity="forged-provenance")
+    handoff = WorkspaceCustodyGate(
+        custody_store=custody_store(bindings.control_root)
+    ).attest_and_acquire_root_handoff(request=bindings.request)
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    before = (
+        tuple(bindings.workspace_root.iterdir()),
+        tuple(bindings.source_root.iterdir()),
+        tuple(bindings.audit_root.iterdir()),
+        tuple(bindings.control_root.iterdir()),
+    )
+    arbitrary_descriptor = os.open(bindings.source_root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        with pytest.raises(WorkspaceCustodyHandleError, match="custody_continuity_broken"):
+            WorkspaceCustodyRootHandle(descriptor=arbitrary_descriptor, binding=handoff.binding)
+        assert os.fstat(arbitrary_descriptor).st_ino == os.stat(bindings.source_root).st_ino
+        assert handoff.handle.consume_for_g2_4_22(binding=handoff.binding) >= 0
+        assert (
+            tuple(bindings.workspace_root.iterdir()),
+            tuple(bindings.source_root.iterdir()),
+            tuple(bindings.audit_root.iterdir()),
+            tuple(bindings.control_root.iterdir()),
+        ) == before
+    finally:
+        os.close(arbitrary_descriptor)
+        handoff.handle.close()

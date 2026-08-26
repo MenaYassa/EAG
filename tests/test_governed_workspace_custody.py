@@ -22,6 +22,7 @@ from eag.governed_workspace import (
     WorkspaceCustodyHandleError,
     WorkspaceCustodyRejectionReason,
     WorkspaceCustodyRootBinding,
+    WorkspaceCustodyRootHandle,
 )
 
 
@@ -335,3 +336,26 @@ def test_model_a_handoff_refuses_same_thread_reentrant_descriptor_consumption(tm
     handoff.handle.close()
     assert handoff.handle.is_closed
     assert tuple(bindings.workspace_root.iterdir()) == ()
+
+
+def test_model_a_public_handle_construction_cannot_forge_matching_binding_provenance(tmp_path: Path) -> None:
+    bindings = custody_bindings(tmp_path / "forged", identity="forged")
+    handoff = WorkspaceCustodyGate(
+        custody_store=custody_store(bindings.control_root)
+    ).attest_and_acquire_root_handoff(request=bindings.request)
+    assert handoff.binding is not None
+    assert handoff.handle is not None
+    before_workspace = tuple(bindings.workspace_root.iterdir())
+    before_source = tuple(bindings.source_root.iterdir())
+    arbitrary_descriptor = os.open(bindings.source_root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        with pytest.raises(WorkspaceCustodyHandleError, match="custody_continuity_broken"):
+            WorkspaceCustodyRootHandle(descriptor=arbitrary_descriptor, binding=handoff.binding)
+        assert os.fstat(arbitrary_descriptor).st_ino == os.stat(bindings.source_root).st_ino
+        assert tuple(bindings.workspace_root.iterdir()) == before_workspace == ()
+        assert tuple(bindings.source_root.iterdir()) == before_source == ()
+        descriptor = handoff.handle.consume_for_g2_4_22(binding=handoff.binding)
+        assert os.fstat(descriptor).st_ino == int(handoff.binding.workspace_object_identity.inode)
+    finally:
+        os.close(arbitrary_descriptor)
+        handoff.handle.close()

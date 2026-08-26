@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import threading
+import weakref
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -18,6 +19,9 @@ WORKSPACE_CUSTODY_ATTESTATION_SCHEMA_VERSION = "g2.4.10-custody-attestation.v2"
 WORKSPACE_CUSTODY_OBJECT_IDENTITY_SCHEMA_VERSION = "g2.4.10-filesystem-object-identity.v1"
 WORKSPACE_CUSTODY_ROOT_BINDING_SCHEMA_VERSION = "g2.4.10-custody-root-binding.v1"
 WORKSPACE_CUSTODY_HANDOFF_CAPABILITY_PROFILE = "g2.4.10-descriptor-handoff-posix.v1"
+
+_HANDLE_ISSUANCE_SENTINEL = object()
+_HANDLE_ISSUANCE_LOCK = threading.RLock()
 
 
 class WorkspaceCustodyError(ValueError):
@@ -567,9 +571,18 @@ class WorkspaceCustodyRootHandle:
         "_state_lock",
         "_thread_id",
         "_transitioning",
+        "__weakref__",
     )
 
-    def __init__(self, *, descriptor: int, binding: WorkspaceCustodyRootBinding) -> None:
+    def __init__(
+        self,
+        *,
+        descriptor: int,
+        binding: WorkspaceCustodyRootBinding,
+        _issuance: object | None = None,
+    ) -> None:
+        if _issuance is not _HANDLE_ISSUANCE_SENTINEL:
+            raise WorkspaceCustodyHandleError(WorkspaceCustodyRejectionReason.CUSTODY_CONTINUITY_BROKEN.value)
         if not isinstance(descriptor, int) or descriptor < 0:
             raise WorkspaceCustodyError("descriptor must be an open non-negative integer")
         self._descriptor = descriptor
@@ -590,10 +603,12 @@ class WorkspaceCustodyRootHandle:
         return self._closed
 
     def consume_for_g2_4_22(self, *, binding: WorkspaceCustodyRootBinding) -> int:
-        """Return an internal descriptor only once to the named future construction consumer."""
+        """Return the G2.4.10-issued descriptor only once to the named construction consumer."""
         with self._state_lock:
             if self._closed:
                 raise WorkspaceCustodyHandleError(WorkspaceCustodyRejectionReason.HANDLE_CLOSED.value)
+            if not _is_issued_root_handle(self):
+                raise WorkspaceCustodyHandleError(WorkspaceCustodyRejectionReason.CUSTODY_CONTINUITY_BROKEN.value)
             if self._consumed or self._transitioning:
                 raise WorkspaceCustodyHandleError(WorkspaceCustodyRejectionReason.HANDLE_ALREADY_CONSUMED.value)
             if os.getpid() != self._pid or threading.get_ident() != self._thread_id:
@@ -614,8 +629,11 @@ class WorkspaceCustodyRootHandle:
             if self._transitioning:
                 raise WorkspaceCustodyHandleError(WorkspaceCustodyRejectionReason.HANDLE_ALREADY_CONSUMED.value)
             self._closed = True
-            with suppress(OSError):
-                os.close(self._descriptor)
+            try:
+                with suppress(OSError):
+                    os.close(self._descriptor)
+            finally:
+                _revoke_issued_root_handle(self)
 
     def __enter__(self) -> WorkspaceCustodyRootHandle:
         if self._closed:
@@ -639,6 +657,37 @@ class WorkspaceCustodyRootHandle:
 
     def __getstate__(self) -> NoReturn:
         raise WorkspaceCustodyHandleError("custody root handles cannot be serialized")
+
+
+_ISSUED_ROOT_HANDLES: weakref.WeakSet[WorkspaceCustodyRootHandle] = weakref.WeakSet()
+
+
+def _issue_workspace_custody_root_handle(
+    *,
+    descriptor: int,
+    binding: WorkspaceCustodyRootBinding,
+) -> WorkspaceCustodyRootHandle:
+    """Create and register one non-durable live handle for the successful custody handoff only."""
+    handle = WorkspaceCustodyRootHandle(
+        descriptor=descriptor,
+        binding=binding,
+        _issuance=_HANDLE_ISSUANCE_SENTINEL,
+    )
+    with _HANDLE_ISSUANCE_LOCK:
+        _ISSUED_ROOT_HANDLES.add(handle)
+    return handle
+
+
+def _is_issued_root_handle(handle: WorkspaceCustodyRootHandle) -> bool:
+    """Return whether the exact live handle object was issued by this process-local owner."""
+    with _HANDLE_ISSUANCE_LOCK:
+        return handle in _ISSUED_ROOT_HANDLES
+
+
+def _revoke_issued_root_handle(handle: WorkspaceCustodyRootHandle) -> None:
+    """Remove a closed live handle from the non-durable issuance registry."""
+    with _HANDLE_ISSUANCE_LOCK:
+        _ISSUED_ROOT_HANDLES.discard(handle)
 
 
 def _object_identity(payload: object) -> WorkspaceCustodyFilesystemObjectIdentity:
