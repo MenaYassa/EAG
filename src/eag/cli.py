@@ -21,6 +21,7 @@ from eag.explorer.models import (
     StatisticsRequest,
 )
 from eag.explorer.runtime import ExplorerRuntime
+from eag.governed_presentation.cli import register_fixed_profile_presentation_command
 from eag.index.runtime import IndexRuntime
 from eag.planner.cli import register_planner_commands
 from eag.plugins.builtin.command import (
@@ -47,8 +48,9 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
-# Register Planner CLI commands
+# Register isolated command families.
 register_planner_commands(app)
+register_fixed_profile_presentation_command(app)
 
 
 @app.callback(invoke_without_command=True)
