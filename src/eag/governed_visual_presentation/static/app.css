@@ -1,0 +1,44 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; background: radial-gradient(circle at top, #1f2937, #111827 60%); }
+
+main { width: min(920px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0; }
+
+header { margin-bottom: 2rem; }
+
+h1 { margin: 0.25rem 0 0.75rem; font-size: clamp(2rem, 6vw, 3.5rem); }
+h2 { margin-top: 0; }
+h3 { margin: 1.5rem 0 0.5rem; }
+.eyebrow { color: #5eead4; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.intro { max-width: 56rem; color: #cbd5e1; line-height: 1.6; }
+
+.card { margin: 1rem 0; padding: 1.5rem; border: 1px solid #334155; border-radius: 0.85rem; background: rgba(15, 23, 42, 0.78); box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.22); }
+
+label { display: grid; gap: 0.4rem; margin: 0.75rem 0; color: #cbd5e1; font-size: 0.9rem; }
+input, select, textarea, button { width: 100%; border-radius: 0.5rem; border: 1px solid #475569; padding: 0.7rem; font: inherit; }
+input, select, textarea { color: #e5e7eb; background: #0f172a; }
+textarea { resize: vertical; }
+button { margin-top: 1rem; border-color: #14b8a6; background: #0f766e; color: white; font-weight: 700; cursor: pointer; }
+button:hover { background: #0d9488; }
+button:disabled { cursor: wait; opacity: 0.65; }
+
+details { margin-top: 1rem; padding: 0.5rem 0; }
+summary { cursor: pointer; color: #5eead4; font-weight: 700; }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0 1rem; }
+
+#status { min-height: 1.5rem; color: #cbd5e1; }
+dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.5rem 1rem; }
+dt { color: #94a3b8; }
+dd { margin: 0; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 0.7rem; border-top: 1px solid #334155; text-align: left; overflow-wrap: anywhere; }
+th { color: #94a3b8; }
+
+@media (max-width: 540px) { main { padding: 2rem 0; } dl { grid-template-columns: 1fr; gap: 0.15rem; } dd { margin-bottom: 0.75rem; } }

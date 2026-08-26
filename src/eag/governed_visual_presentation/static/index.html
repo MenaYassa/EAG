@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EAG — Build an App</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Governed local construction</p>
+        <h1>EAG — Build an App</h1>
+        <p class="intro">Choose the approved profile, provide the required governed inputs, and view immutable receipt-backed construction facts.</p>
+      </header>
+
+      <section aria-labelledby="create-heading" class="card">
+        <h2 id="create-heading">Choose a starting profile</h2>
+        <form id="construct-form">
+          <label for="profile">Profile</label>
+          <select id="profile" name="profile">
+            <option value="modern_todo_static_v1">Todo App — modern_todo_static_v1</option>
+          </select>
+
+          <details>
+            <summary>Governed construction inputs</summary>
+            <p>These caller-supplied immutable inputs are required by the published governed boundary.</p>
+            <div class="field-grid">
+              <label>Submission ID<input name="submission_id" required></label>
+              <label>Custody attestation ID<input name="attestation_id" required></label>
+              <label>Execution ID<input name="execution_id" required></label>
+              <label>Run ID<input name="run_id" required></label>
+              <label>Workspace ID<input name="workspace_id" required></label>
+              <label>Workspace root<input name="workspace_root" required></label>
+              <label>Source repository root<input name="source_repository_root" required></label>
+              <label>Audit root<input name="audit_root" required></label>
+              <label>Control root<input name="control_root" required></label>
+              <label>Requested at (ISO 8601)<input name="requested_at" required></label>
+              <label>Expires at (ISO 8601)<input name="expires_at" required></label>
+            </div>
+            <label for="composition_attestation">Runtime composition attestation JSON</label>
+            <textarea id="composition_attestation" name="composition_attestation" rows="8" required></textarea>
+          </details>
+
+          <button type="submit">Create</button>
+        </form>
+      </section>
+
+      <section aria-live="polite" aria-labelledby="result-heading" class="card">
+        <h2 id="result-heading">Construction</h2>
+        <p id="status">No construction submitted.</p>
+        <dl id="facts"></dl>
+        <div id="files" hidden>
+          <h3>Files</h3>
+          <table>
+            <thead><tr><th>Path</th><th>Bytes</th><th>SHA-256</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
