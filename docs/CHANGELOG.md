@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 * * *
 
-## Published Gen2 Governed Evidence Boundaries — G2.4.14 through G2.4.21
+## Published Gen2 Governed Boundaries — G2.4.14 through G2.4.22
 
 ### Published milestones
 
@@ -21,25 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 | G2.4.20 | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; no trust, issuer authentication, signature verification, destination truth, or execution readiness. |
 | G2.4.21 | `v2.4.21-g2.4.21` (original) | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry. |
 | G2.4.21 provenance remediation | `v2.4.21-provenance.1` | Follow-up typed immutable `assessed_request_id`/`assessed_request_digest` linkage for construction-work-order assessments, closing request/assessment substitution without inferring provenance from generic evidence references. |
+| G2.4.22 | `v2.4.22-g2.4.22` | Bounded create-only descriptor-relative text-file construction using a published G2.4.10 live custody handoff and exact G2.4.21 typed work-order provenance. |
 
-G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. G2.4.19 was published at commit `429f1ecf4782b1ce8f925c58a517b547999fb325`. G2.4.20 was published at commit `2749185ac44e38e86e4d1971a654ba26252e93a2`. The original G2.4.21 milestone was published at commit `e8931c5dc196d25a4741447d5b4580a7f84ead4d` under unchanged tag `v2.4.21-g2.4.21`. The accepted G2.4.21 typed request/assessment provenance remediation was subsequently published at commit `55c9d02e698558bbf7f68773207c3c80b9995b3d` under immutable follow-up tag `v2.4.21-provenance.1`, with `REMOTE_VERIFICATION=PASS`. The G2.4.19 deterministic acceptance record is:
+G2.4.18 was published at commit `2606a1060f7341d269d5dfee5575c7a0d7050adb`. G2.4.19 was published at commit `429f1ecf4782b1ce8f925c58a517b547999fb325`. G2.4.20 was published at commit `2749185ac44e38e86e4d1971a654ba26252e93a2`. The original G2.4.21 milestone was published at commit `e8931c5dc196d25a4741447d5b4580a7f84ead4d` under unchanged tag `v2.4.21-g2.4.21`; its accepted typed request/assessment provenance remediation was subsequently published at commit `55c9d02e698558bbf7f68773207c3c80b9995b3d` under immutable follow-up tag `v2.4.21-provenance.1`. G2.4.22 was published at commit `14f42717be5e819f41ee0369e93417303b5753b3` under immutable annotated tag `v2.4.22-g2.4.22`, with remote commit and peeled-tag verification passing.
 
-```text
-EBS_034=PASS
-EBS_034_COMPLETENESS=PASS
-EXACT_UPSTREAM_BINDING=PASS
-POLICY_ID_SELF_IDENTITY=PASS
-OUTCOME_UNKNOWN_SAFETY=PASS
-FAIL_CLOSED_BEHAVIOR=PASS
-NO_EXECUTION_AUTHORITY=PASS
-G2_4_17_SEPARATION=PASS
-```
+G2.4.10 remains the sole custody and handle-provenance owner: it acquires the existing workspace root, retains live descriptor continuity, issues the opaque process-local one-shot handle, and enforces its lifecycle. G2.4.21 remains the owner of exact typed construction-work-order request/assessment provenance. G2.4.22 consumes that published handoff without reopening a root pathname, reconstructing a descriptor, creating a handle, inspecting issuance state, or inferring generic evidence-reference provenance.
 
-These are immutable evidence, deterministic/static validation, and capability-absence results. G2.4.17 remains the sole durable pre-execution control ledger for its existing external-artifact-transition profile; G2.4.18 remains destination-contract evidence only; G2.4.19 remains outcome-semantics policy evidence only; G2.4.20 remains declared attestation-policy evidence only; and G2.4.21 remains construction work-order evidence only. The typed provenance remediation across G2.4.18–G2.4.21 closed request/assessment substitution gaps through exact immutable ID/digest linkage, not generic evidence-reference inference.
+G2.4.22 is the sole owner of its narrowly bounded filesystem effects. After immutable authorization and required primitive preflight, it creates only declared new UTF-8 text files descriptor-relatively with exclusive and no-follow semantics. Action receipts represent only the successful ordered prefix. A definitive target-create failure before any owned effect is `CONSTRUCTION_REFUSED` with no receipt; a failure after a directory or target creation has begun is `PARTIAL_CONSTRUCTION_STOPPED`, again with no receipt for the unsuccessful action. The first failure is terminal: G2.4.22 adds no retry, rollback, cleanup, recovery, or reconciliation.
 
-The published chain is artifact readiness → promotion eligibility → external transition authorization → external transition control ledger → external destination contract evidence → external outcome-semantics policy evidence → declared attestation-policy evidence → construction work-order evidence. Neither G2.4.21 nor its provenance remediation creates or leases workspaces, writes files, runs commands, installs dependencies, invokes runtimes, accesses credentials/network, builds/tests applications, performs correction, retry, rollback, recovery, reconciliation, publication, release, or deployment. `G2.4.22=NOT_STARTED` for implementation; its design/authorization stage is separate and remains unimplemented.
-
-The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, policy, request, result, and test-owned state are established through `DIRECT_STATE_PROOF`.
+EBS-037 final acceptance directly proves valid descriptor-bound construction, pathname-replacement continuity, pre-create no-effect refusal, a real effect-started post-create write failure, truthful receipts, unsupported-capability refusal, custody/handoff mismatch refusal, and forged/closed/consumed handle refusal. The boundary has no workspace-root provisioning, overwrite, delete, move, copy, chmod, command, build, dependency, browser, network, credential, session, permit, ledger, release, publication, or deployment authority. The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; unavailable operational categories are `CAPABILITY_ABSENT`; and immutable evidence, receipts, and test-owned filesystem state are established through `DIRECT_STATE_PROOF`. `G2.4.23=NOT_STARTED`.
 
 * * *
 
