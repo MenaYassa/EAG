@@ -173,6 +173,28 @@ export function loadPastedGovernedSubmissionManifest(text) {
   return parseGovernedSubmissionManifest({ declaredSize: bytes.byteLength, bytes });
 }
 
+/**
+ * Discard only browser-local caller preparation state. This neither submits nor
+ * evaluates the values, and fails without changing state unless every required
+ * control is present.
+ */
+export function discardPreparedInputs({ form, importInput, pastedManifest, importStatus }) {
+  const controls = MANIFEST_FIELDS.map((field) => form.elements.namedItem(field));
+  if (controls.some((control) => !(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement))
+    || !(importInput instanceof HTMLInputElement)
+    || !(pastedManifest instanceof HTMLTextAreaElement)
+    || !(importStatus instanceof HTMLElement)) {
+    return false;
+  }
+  for (const control of controls) {
+    control.value = '';
+  }
+  importInput.value = '';
+  pastedManifest.value = '';
+  importStatus.textContent = 'Prepared local inputs discarded. No construction was submitted.';
+  return true;
+}
+
 function resetResult({ facts, fileRows, files }) {
   facts.replaceChildren();
   fileRows.replaceChildren();
@@ -212,6 +234,7 @@ function bindVisualPage() {
   const importInput = document.querySelector('#submission-manifest');
   const pastedManifest = document.querySelector('#pasted-manifest');
   const loadPastedManifest = document.querySelector('#load-pasted-manifest');
+  const discardPreparedInputsButton = document.querySelector('#discard-prepared-inputs');
   const importStatus = document.querySelector('#import-status');
   const facts = document.querySelector('#facts');
   const files = document.querySelector('#files');
@@ -243,6 +266,12 @@ function bindVisualPage() {
     }
     importStatus.textContent = result.message;
   });
+
+  if (discardPreparedInputsButton instanceof HTMLButtonElement) {
+    discardPreparedInputsButton.addEventListener('click', () => {
+      discardPreparedInputs({ form, importInput, pastedManifest, importStatus });
+    });
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
