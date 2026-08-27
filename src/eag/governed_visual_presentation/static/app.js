@@ -195,6 +195,26 @@ export function discardPreparedInputs({ form, importInput, pastedManifest, impor
   return true;
 }
 
+/**
+ * Dismiss only an already-rendered terminal presentation. This is browser-local
+ * presentation state: it neither submits nor changes prepared inputs or upstream facts.
+ */
+export function dismissTerminalResult({ status, facts, files, fileRows }) {
+  if (!(facts instanceof HTMLElement) || !(files instanceof HTMLElement)) {
+    return false;
+  }
+  const terminalPresentationRendered = facts.children.length > 0 || files.hidden === false;
+  if (!terminalPresentationRendered) {
+    return false;
+  }
+  if (!(status instanceof HTMLElement) || !(fileRows instanceof HTMLTableSectionElement)) {
+    return false;
+  }
+  resetResult({ facts, fileRows, files });
+  status.textContent = 'Terminal result dismissed locally. No upstream state changed.';
+  return true;
+}
+
 function resetResult({ facts, fileRows, files }) {
   facts.replaceChildren();
   fileRows.replaceChildren();
@@ -235,10 +255,18 @@ function bindVisualPage() {
   const pastedManifest = document.querySelector('#pasted-manifest');
   const loadPastedManifest = document.querySelector('#load-pasted-manifest');
   const discardPreparedInputsButton = document.querySelector('#discard-prepared-inputs');
+  const dismissTerminalResultButton = document.querySelector('#dismiss-terminal-result');
   const importStatus = document.querySelector('#import-status');
   const facts = document.querySelector('#facts');
   const files = document.querySelector('#files');
   const fileRows = document.querySelector('#files tbody');
+
+  if (dismissTerminalResultButton instanceof HTMLButtonElement) {
+    dismissTerminalResultButton.addEventListener('click', () => {
+      dismissTerminalResult({ status, facts, files, fileRows });
+    });
+  }
+
   if (!(form instanceof HTMLFormElement)
     || !(status instanceof HTMLElement)
     || !(importInput instanceof HTMLInputElement)
