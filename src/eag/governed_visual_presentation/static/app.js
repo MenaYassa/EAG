@@ -161,6 +161,18 @@ export async function importGovernedSubmissionManifest(file) {
   return parseGovernedSubmissionManifest({ declaredSize: file.size, bytes });
 }
 
+/**
+ * Encode caller-entered DOM text and reuse the existing manifest representation parser.
+ * Loading text is local form preparation only; it neither submits nor assesses the values.
+ */
+export function loadPastedGovernedSubmissionManifest(text) {
+  if (typeof text !== 'string') {
+    return importRefusal('Pasted manifest text is invalid.');
+  }
+  const bytes = new TextEncoder().encode(text);
+  return parseGovernedSubmissionManifest({ declaredSize: bytes.byteLength, bytes });
+}
+
 function resetResult({ facts, fileRows, files }) {
   facts.replaceChildren();
   fileRows.replaceChildren();
@@ -198,6 +210,8 @@ function bindVisualPage() {
   const form = document.querySelector('#construct-form');
   const status = document.querySelector('#status');
   const importInput = document.querySelector('#submission-manifest');
+  const pastedManifest = document.querySelector('#pasted-manifest');
+  const loadPastedManifest = document.querySelector('#load-pasted-manifest');
   const importStatus = document.querySelector('#import-status');
   const facts = document.querySelector('#facts');
   const files = document.querySelector('#files');
@@ -205,6 +219,8 @@ function bindVisualPage() {
   if (!(form instanceof HTMLFormElement)
     || !(status instanceof HTMLElement)
     || !(importInput instanceof HTMLInputElement)
+    || !(pastedManifest instanceof HTMLTextAreaElement)
+    || !(loadPastedManifest instanceof HTMLButtonElement)
     || !(importStatus instanceof HTMLElement)
     || !(facts instanceof HTMLElement)
     || !(files instanceof HTMLElement)
@@ -220,9 +236,17 @@ function bindVisualPage() {
     importStatus.textContent = result.message;
   });
 
+  loadPastedManifest.addEventListener('click', () => {
+    const result = loadPastedGovernedSubmissionManifest(pastedManifest.value);
+    if (result.disposition === IMPORT_DISPOSITIONS.LOADED_FOR_REVIEW) {
+      applyManifestToForm({ form, result });
+    }
+    importStatus.textContent = result.message;
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const button = form.querySelector('button');
+    const button = form.querySelector('button[type="submit"]');
     if (!(button instanceof HTMLButtonElement)) return;
     button.disabled = true;
     resetResult({ facts, fileRows, files });

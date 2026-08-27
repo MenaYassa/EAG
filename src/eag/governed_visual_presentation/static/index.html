@@ -21,6 +21,10 @@
           <input id="submission-manifest" type="file" accept="application/json">
           <p id="import-status" aria-live="polite">No manifest imported. Provide caller-supplied inputs or load them for review.</p>
 
+          <label for="pasted-manifest">Pasted governed submission manifest JSON (optional)</label>
+          <textarea id="pasted-manifest" rows="8"></textarea>
+          <button id="load-pasted-manifest" type="button">Load pasted manifest for review</button>
+
           <label for="profile">Profile token</label>
           <input id="profile" name="profile" value="modern_todo_static_v1" readonly required>
 
