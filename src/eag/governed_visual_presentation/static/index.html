@@ -11,16 +11,18 @@
       <header>
         <p class="eyebrow">Governed local construction</p>
         <h1>EAG — Build an App</h1>
-        <p class="intro">Choose the approved profile, provide the required governed inputs, and view immutable receipt-backed construction facts.</p>
+        <p class="intro">Load caller-supplied governed inputs for review or provide them directly, then view immutable receipt-backed construction facts.</p>
       </header>
 
       <section aria-labelledby="create-heading" class="card">
-        <h2 id="create-heading">Choose a starting profile</h2>
+        <h2 id="create-heading">Prepare a governed submission</h2>
         <form id="construct-form">
-          <label for="profile">Profile</label>
-          <select id="profile" name="profile">
-            <option value="modern_todo_static_v1">Todo App — modern_todo_static_v1</option>
-          </select>
+          <label for="submission-manifest">Local governed submission manifest (optional)</label>
+          <input id="submission-manifest" type="file" accept="application/json">
+          <p id="import-status" aria-live="polite">No manifest imported. Provide caller-supplied inputs or load them for review.</p>
+
+          <label for="profile">Profile token</label>
+          <input id="profile" name="profile" value="modern_todo_static_v1" readonly required>
 
           <details>
             <summary>Governed construction inputs</summary>
@@ -59,6 +61,6 @@
         </div>
       </section>
     </main>
-    <script src="/app.js"></script>
+    <script type="module" src="/app.js"></script>
   </body>
 </html>
