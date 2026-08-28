@@ -7,59 +7,116 @@
     <link rel="stylesheet" href="/app.css">
   </head>
   <body>
-    <main>
-      <header>
+    <main class="page-shell">
+      <header class="page-header">
         <p class="eyebrow">Governed local construction</p>
         <h1>EAG — Build an App</h1>
-        <p class="intro">Load caller-supplied governed inputs for review or provide them directly, then view immutable receipt-backed construction facts.</p>
+        <p class="intro">Prepare caller-supplied governed inputs locally, review them, explicitly submit a construction request, then review returned terminal facts and receipts.</p>
       </header>
 
-      <section aria-labelledby="create-heading" class="card">
-        <h2 id="create-heading">Prepare a governed submission</h2>
-        <form id="construct-form">
-          <label for="submission-manifest">Local governed submission manifest (optional)</label>
-          <input id="submission-manifest" type="file" accept="application/json">
-          <button id="clear-selected-manifest" type="button">Clear selected local manifest</button>
-          <p id="import-status" aria-live="polite">No manifest imported. Provide caller-supplied inputs or load them for review.</p>
-          <button id="dismiss-import-status" type="button">Dismiss import status</button>
+      <section aria-labelledby="workflow-heading" class="workflow-card card">
+        <div class="workflow-card__header">
+          <p class="eyebrow">Guided view</p>
+          <h2 id="workflow-heading">Governed construction workflow</h2>
+          <p>Local preparation does not submit. Create is the sole explicit governed submission action.</p>
+        </div>
 
-          <label for="pasted-manifest">Pasted governed submission manifest JSON (optional)</label>
-          <textarea id="pasted-manifest" rows="8"></textarea>
-          <button id="clear-pasted-manifest" type="button">Clear pasted manifest</button>
-          <button id="load-pasted-manifest" type="button">Load pasted manifest for review</button>
-          <button id="discard-prepared-inputs" type="button">Discard prepared inputs</button>
+        <form id="construct-form" class="workflow-form">
+          <fieldset class="workflow-stage workflow-stage--local">
+            <legend class="workflow-stage__header">
+              <span class="workflow-stage__index" aria-hidden="true">1</span>
+              <span>
+                <span class="workflow-stage__title">Prepare locally</span>
+                <span class="workflow-stage__copy">Select or paste caller-supplied manifest data. These local actions do not submit a construction request.</span>
+              </span>
+            </legend>
 
-          <label for="profile">Profile token</label>
-          <input id="profile" name="profile" value="modern_todo_static_v1" readonly required>
+            <div class="source-grid">
+              <section aria-labelledby="file-source-heading" class="source-panel">
+                <h3 id="file-source-heading">Local manifest file</h3>
+                <label for="submission-manifest">Optional governed submission manifest</label>
+                <input id="submission-manifest" type="file" accept="application/json">
+                <div class="local-action-row">
+                  <button id="clear-selected-manifest" type="button">Clear selected local manifest</button>
+                </div>
+              </section>
 
-          <details>
-            <summary>Governed construction inputs</summary>
-            <p>These caller-supplied immutable inputs are required by the published governed boundary.</p>
-            <div class="field-grid">
-              <label>Submission ID<input name="submission_id" required></label>
-              <label>Custody attestation ID<input name="attestation_id" required></label>
-              <label>Execution ID<input name="execution_id" required></label>
-              <label>Run ID<input name="run_id" required></label>
-              <label>Workspace ID<input name="workspace_id" required></label>
-              <label>Workspace root<input name="workspace_root" required></label>
-              <label>Source repository root<input name="source_repository_root" required></label>
-              <label>Audit root<input name="audit_root" required></label>
-              <label>Control root<input name="control_root" required></label>
-              <label>Requested at (ISO 8601)<input name="requested_at" required></label>
-              <label>Expires at (ISO 8601)<input name="expires_at" required></label>
+              <section aria-labelledby="pasted-source-heading" class="source-panel">
+                <h3 id="pasted-source-heading">Pasted manifest</h3>
+                <label for="pasted-manifest">Optional governed submission manifest JSON</label>
+                <textarea id="pasted-manifest" rows="8"></textarea>
+                <div class="local-action-row">
+                  <button id="load-pasted-manifest" type="button">Load pasted manifest for review</button>
+                  <button id="clear-pasted-manifest" type="button">Clear pasted manifest</button>
+                </div>
+              </section>
             </div>
-            <label for="composition_attestation">Runtime composition attestation JSON</label>
-            <textarea id="composition_attestation" name="composition_attestation" rows="8" required></textarea>
-          </details>
 
-          <button type="submit">Create</button>
+            <div class="local-status-panel">
+              <p id="import-status" aria-live="polite">No manifest imported. Provide caller-supplied inputs or load them for review.</p>
+              <div class="local-action-row">
+                <button id="dismiss-import-status" type="button">Dismiss import status</button>
+                <button id="discard-prepared-inputs" type="button">Discard prepared inputs</button>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="workflow-stage workflow-stage--review">
+            <legend class="workflow-stage__header">
+              <span class="workflow-stage__index" aria-hidden="true">2</span>
+              <span>
+                <span class="workflow-stage__title">Review prepared inputs</span>
+                <span class="workflow-stage__copy">Review the caller-provided form values before deciding whether to submit.</span>
+              </span>
+            </legend>
+
+            <label for="profile">Profile token</label>
+            <input id="profile" name="profile" value="modern_todo_static_v1" readonly required>
+
+            <details>
+              <summary>Governed construction inputs</summary>
+              <p>These caller-supplied immutable inputs are required by the published governed boundary.</p>
+              <div class="field-grid">
+                <label>Submission ID<input name="submission_id" required></label>
+                <label>Custody attestation ID<input name="attestation_id" required></label>
+                <label>Execution ID<input name="execution_id" required></label>
+                <label>Run ID<input name="run_id" required></label>
+                <label>Workspace ID<input name="workspace_id" required></label>
+                <label>Workspace root<input name="workspace_root" required></label>
+                <label>Source repository root<input name="source_repository_root" required></label>
+                <label>Audit root<input name="audit_root" required></label>
+                <label>Control root<input name="control_root" required></label>
+                <label>Requested at (ISO 8601)<input name="requested_at" required></label>
+                <label>Expires at (ISO 8601)<input name="expires_at" required></label>
+              </div>
+              <label for="composition_attestation">Runtime composition attestation JSON</label>
+              <textarea id="composition_attestation" name="composition_attestation" rows="8" required></textarea>
+            </details>
+          </fieldset>
+
+          <section aria-labelledby="submit-heading" class="primary-submit-area">
+            <div>
+              <p class="eyebrow">Step 3</p>
+              <h2 id="submit-heading">Explicitly submit governed construction</h2>
+              <p>Everything above prepares or reviews local form state. Create is the only action that submits the existing governed construction request.</p>
+            </div>
+            <button class="primary-action" type="submit">Create</button>
+          </section>
         </form>
       </section>
 
-      <section aria-live="polite" aria-labelledby="result-heading" class="card">
-        <h2 id="result-heading">Construction</h2>
+      <section aria-live="polite" aria-labelledby="result-heading" class="result-card card">
+        <div class="workflow-stage__header workflow-stage__header--result">
+          <span class="workflow-stage__index" aria-hidden="true">4</span>
+          <span>
+            <span class="workflow-stage__title" id="result-heading">Review terminal result</span>
+            <span class="workflow-stage__copy">Review returned terminal facts and receipt-backed file details.</span>
+          </span>
+        </div>
         <p id="status">No construction submitted.</p>
-        <button id="dismiss-terminal-result" type="button">Dismiss terminal result</button>
+        <div class="local-action-row result-action-row">
+          <button id="dismiss-terminal-result" type="button">Dismiss terminal result</button>
+        </div>
         <dl id="facts"></dl>
         <div id="files" hidden>
           <h3>Files</h3>

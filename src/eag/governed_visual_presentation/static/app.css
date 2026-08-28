@@ -9,36 +9,80 @@
 
 body { margin: 0; background: radial-gradient(circle at top, #1f2937, #111827 60%); }
 
-main { width: min(920px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0; }
-
-header { margin-bottom: 2rem; }
-
+.page-shell { width: min(1040px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0; }
+.page-header { max-width: 48rem; margin-bottom: 2.5rem; }
 h1 { margin: 0.25rem 0 0.75rem; font-size: clamp(2rem, 6vw, 3.5rem); }
-h2 { margin-top: 0; }
-h3 { margin: 1.5rem 0 0.5rem; }
-.eyebrow { color: #5eead4; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.intro { max-width: 56rem; color: #cbd5e1; line-height: 1.6; }
+h2 { margin: 0; font-size: clamp(1.25rem, 2vw, 1.65rem); }
+h3 { margin: 0; font-size: 1rem; }
+.eyebrow { margin: 0; color: #5eead4; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.intro, .workflow-card__header > p, .primary-submit-area p { color: #cbd5e1; line-height: 1.6; }
+.intro { margin: 0; }
 
-.card { margin: 1rem 0; padding: 1.5rem; border: 1px solid #334155; border-radius: 0.85rem; background: rgba(15, 23, 42, 0.78); box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.22); }
+.card { margin: 1rem 0; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid #334155; border-radius: 1rem; background: rgba(15, 23, 42, 0.78); box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.22); }
+.workflow-card__header { max-width: 44rem; margin-bottom: 1.5rem; }
+.workflow-card__header h2 { margin: 0.35rem 0 0.6rem; }
+.workflow-card__header > p { margin: 0; }
+
+.workflow-form { display: grid; gap: 1rem; }
+.workflow-stage { min-width: 0; margin: 0; padding: 1.25rem; border: 1px solid #334155; border-radius: 0.8rem; background: rgba(2, 6, 23, 0.35); }
+.workflow-stage__header { display: flex; align-items: flex-start; gap: 0.8rem; width: 100%; padding: 0; color: #e5e7eb; }
+legend.workflow-stage__header { float: left; margin-bottom: 1rem; }
+legend.workflow-stage__header + * { clear: both; }
+.workflow-stage__header--result { margin-bottom: 1rem; }
+.workflow-stage__index { display: grid; flex: 0 0 1.9rem; place-items: center; width: 1.9rem; height: 1.9rem; border: 1px solid #2dd4bf; border-radius: 999px; color: #99f6e4; font-size: 0.85rem; font-weight: 800; }
+.workflow-stage__title, .workflow-stage__copy { display: block; }
+.workflow-stage__title { font-size: 1.08rem; font-weight: 800; }
+.workflow-stage__copy { max-width: 46rem; margin-top: 0.2rem; color: #94a3b8; font-size: 0.92rem; font-weight: 400; line-height: 1.45; }
+
+.source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.source-panel, .local-status-panel { min-width: 0; padding: 1rem; border: 1px solid #334155; border-radius: 0.65rem; background: rgba(15, 23, 42, 0.55); }
+.source-panel h3 { color: #e2e8f0; }
+.local-status-panel { display: grid; gap: 0.5rem; margin-top: 1rem; }
+.local-status-panel p { min-height: 1.5rem; margin: 0; color: #cbd5e1; line-height: 1.5; }
 
 label { display: grid; gap: 0.4rem; margin: 0.75rem 0; color: #cbd5e1; font-size: 0.9rem; }
 input, select, textarea, button { width: 100%; border-radius: 0.5rem; border: 1px solid #475569; padding: 0.7rem; font: inherit; }
 input, select, textarea { color: #e5e7eb; background: #0f172a; }
 textarea { resize: vertical; }
-button { margin-top: 1rem; border-color: #14b8a6; background: #0f766e; color: white; font-weight: 700; cursor: pointer; }
-button:hover { background: #0d9488; }
+button { border-color: #475569; background: #1e293b; color: #e2e8f0; font-weight: 700; cursor: pointer; transition: background 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out; }
+button:hover { border-color: #2dd4bf; background: #334155; }
+button:active { transform: scale(0.98); }
 button:disabled { cursor: wait; opacity: 0.65; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #5eead4; outline-offset: 3px; }
 
-details { margin-top: 1rem; padding: 0.5rem 0; }
+.local-action-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; }
+.local-action-row button { flex: 1 1 12rem; width: auto; }
+.primary-submit-area { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); gap: 1.25rem; align-items: center; padding: 1.25rem; border: 1px solid #2dd4bf; border-radius: 0.8rem; background: linear-gradient(135deg, rgba(13, 148, 136, 0.18), rgba(15, 23, 42, 0.8)); }
+.primary-submit-area h2 { margin: 0.35rem 0 0.45rem; }
+.primary-submit-area p { margin: 0; }
+.primary-action { border-color: #5eead4; background: #0f766e; color: #f0fdfa; font-size: 1.05rem; }
+.primary-action:hover { background: #0d9488; }
+
 summary { cursor: pointer; color: #5eead4; font-weight: 700; }
+details { margin-top: 1rem; }
+details > p { color: #cbd5e1; line-height: 1.5; }
 .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0 1rem; }
 
-#status { min-height: 1.5rem; color: #cbd5e1; }
-dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.5rem 1rem; }
+.result-card { margin-top: 1.5rem; }
+#status { min-height: 1.5rem; margin: 0; color: #cbd5e1; line-height: 1.5; }
+.result-action-row { margin-top: 1rem; }
+dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.5rem 1rem; margin: 1.25rem 0 0; }
 dt { color: #94a3b8; }
 dd { margin: 0; overflow-wrap: anywhere; }
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 th, td { padding: 0.7rem; border-top: 1px solid #334155; text-align: left; overflow-wrap: anywhere; }
 th { color: #94a3b8; }
 
-@media (max-width: 540px) { main { padding: 2rem 0; } dl { grid-template-columns: 1fr; gap: 0.15rem; } dd { margin-bottom: 0.75rem; } }
+@media (max-width: 720px) {
+  .page-shell { padding: 2rem 0; }
+  .source-grid, .primary-submit-area { grid-template-columns: 1fr; }
+  .local-action-row { display: grid; grid-template-columns: 1fr; }
+  .local-action-row button { width: 100%; }
+}
+
+@media (max-width: 540px) {
+  .workflow-stage, .source-panel, .local-status-panel, .primary-submit-area { padding: 1rem; }
+  dl { grid-template-columns: 1fr; gap: 0.15rem; }
+  dd { margin-bottom: 0.75rem; }
+  th, td { padding: 0.55rem; }
+}
