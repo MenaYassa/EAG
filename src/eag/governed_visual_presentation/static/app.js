@@ -196,6 +196,22 @@ export function discardPreparedInputs({ form, importInput, pastedManifest, impor
 }
 
 /**
+ * Clear only the browser-local selected-file control. This neither imports,
+ * submits, nor changes prepared fields, terminal presentation, or upstream facts.
+ */
+export function clearSelectedGovernedSubmissionManifest({ importInput, importStatus }) {
+  if (!(importInput instanceof HTMLInputElement)
+    || importInput.type !== 'file'
+    || !(importStatus instanceof HTMLElement)
+    || importInput.value === '') {
+    return false;
+  }
+  importInput.value = '';
+  importStatus.textContent = 'Selected local manifest cleared. Prepared inputs unchanged.';
+  return true;
+}
+
+/**
  * Dismiss only an already-rendered terminal presentation. This is browser-local
  * presentation state: it neither submits nor changes prepared inputs or upstream facts.
  */
@@ -252,6 +268,7 @@ function bindVisualPage() {
   const form = document.querySelector('#construct-form');
   const status = document.querySelector('#status');
   const importInput = document.querySelector('#submission-manifest');
+  const clearSelectedManifestButton = document.querySelector('#clear-selected-manifest');
   const pastedManifest = document.querySelector('#pasted-manifest');
   const loadPastedManifest = document.querySelector('#load-pasted-manifest');
   const discardPreparedInputsButton = document.querySelector('#discard-prepared-inputs');
@@ -260,6 +277,12 @@ function bindVisualPage() {
   const facts = document.querySelector('#facts');
   const files = document.querySelector('#files');
   const fileRows = document.querySelector('#files tbody');
+
+  if (clearSelectedManifestButton instanceof HTMLButtonElement) {
+    clearSelectedManifestButton.addEventListener('click', () => {
+      clearSelectedGovernedSubmissionManifest({ importInput, importStatus });
+    });
+  }
 
   if (dismissTerminalResultButton instanceof HTMLButtonElement) {
     dismissTerminalResultButton.addEventListener('click', () => {
