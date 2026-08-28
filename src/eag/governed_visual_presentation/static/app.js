@@ -196,6 +196,21 @@ export function discardPreparedInputs({ form, importInput, pastedManifest, impor
 }
 
 /**
+ * Clear only the browser-local pasted-text control. This neither loads,
+ * submits, nor changes prepared fields, terminal presentation, or upstream facts.
+ */
+export function clearPastedGovernedSubmissionManifest({ pastedManifest, importStatus }) {
+  if (!(pastedManifest instanceof HTMLTextAreaElement)
+    || !(importStatus instanceof HTMLElement)
+    || pastedManifest.value === '') {
+    return false;
+  }
+  pastedManifest.value = '';
+  importStatus.textContent = 'Pasted manifest cleared locally. Prepared inputs unchanged.';
+  return true;
+}
+
+/**
  * Clear only the browser-local selected-file control. This neither imports,
  * submits, nor changes prepared fields, terminal presentation, or upstream facts.
  */
@@ -270,6 +285,7 @@ function bindVisualPage() {
   const importInput = document.querySelector('#submission-manifest');
   const clearSelectedManifestButton = document.querySelector('#clear-selected-manifest');
   const pastedManifest = document.querySelector('#pasted-manifest');
+  const clearPastedManifestButton = document.querySelector('#clear-pasted-manifest');
   const loadPastedManifest = document.querySelector('#load-pasted-manifest');
   const discardPreparedInputsButton = document.querySelector('#discard-prepared-inputs');
   const dismissTerminalResultButton = document.querySelector('#dismiss-terminal-result');
@@ -281,6 +297,12 @@ function bindVisualPage() {
   if (clearSelectedManifestButton instanceof HTMLButtonElement) {
     clearSelectedManifestButton.addEventListener('click', () => {
       clearSelectedGovernedSubmissionManifest({ importInput, importStatus });
+    });
+  }
+
+  if (clearPastedManifestButton instanceof HTMLButtonElement) {
+    clearPastedManifestButton.addEventListener('click', () => {
+      clearPastedGovernedSubmissionManifest({ pastedManifest, importStatus });
     });
   }
 
