@@ -227,6 +227,18 @@ export function clearSelectedGovernedSubmissionManifest({ importInput, importSta
 }
 
 /**
+ * Dismiss only nonempty browser-local import-status presentation text. This
+ * neither imports, submits, nor changes any prepared or terminal state.
+ */
+export function dismissImportStatus({ importStatus }) {
+  if (!(importStatus instanceof HTMLElement) || importStatus.textContent === '') {
+    return false;
+  }
+  importStatus.textContent = '';
+  return true;
+}
+
+/**
  * Dismiss only an already-rendered terminal presentation. This is browser-local
  * presentation state: it neither submits nor changes prepared inputs or upstream facts.
  */
@@ -289,6 +301,7 @@ function bindVisualPage() {
   const loadPastedManifest = document.querySelector('#load-pasted-manifest');
   const discardPreparedInputsButton = document.querySelector('#discard-prepared-inputs');
   const dismissTerminalResultButton = document.querySelector('#dismiss-terminal-result');
+  const dismissImportStatusButton = document.querySelector('#dismiss-import-status');
   const importStatus = document.querySelector('#import-status');
   const facts = document.querySelector('#facts');
   const files = document.querySelector('#files');
@@ -309,6 +322,12 @@ function bindVisualPage() {
   if (dismissTerminalResultButton instanceof HTMLButtonElement) {
     dismissTerminalResultButton.addEventListener('click', () => {
       dismissTerminalResult({ status, facts, files, fileRows });
+    });
+  }
+
+  if (dismissImportStatusButton instanceof HTMLButtonElement) {
+    dismissImportStatusButton.addEventListener('click', () => {
+      dismissImportStatus({ importStatus });
     });
   }
 
