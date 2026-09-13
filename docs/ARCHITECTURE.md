@@ -38,6 +38,14 @@ Declared Attestation-Policy Evidence (G2.4.20)
 Construction Work-Order Evidence (G2.4.21)
         ↓
 Bounded Workspace File Construction (G2.4.22)
+        ↓
+Fixed-Profile Terminal Presentation (G2.4.23)
+        ↓
+Loopback Visual Presentation (G2.4.24)
+        ↓
+Browser-Local Manifest and Result Conveniences (G2.4.25–G2.4.31)
+        ↓
+Cohesive Static Workflow Hierarchy (G2.4.32)
 ```
 
 | Published milestone | Tag | Current architectural boundary |
@@ -51,12 +59,17 @@ Bounded Workspace File Construction (G2.4.22)
 | G2.4.20 | `v2.4.20-g2.4.20` | Declared destination-contract attestation-policy evidence only; it does not establish trust, issuer authentication, signature verification, destination truth, or execution readiness. |
 | G2.4.21 | `v2.4.21-g2.4.21` (original) and `v2.4.21-provenance.1` (remediation) | Immutable local construction work-order evidence; remediation adds typed exact request/assessment provenance. |
 | G2.4.22 | `v2.4.22-g2.4.22` | Sole owner of bounded descriptor-relative create-only text-file effects after exact upstream evidence validation and one G2.4.10 live-handle consumption. |
+| G2.4.23 | `v2.4.23-g2.4.23` | Thin Typer terminal presentation boundary; exact finite profile relay and immutable receipt-backed facts only. |
+| G2.4.24 | `v2.4.24-g2.4.24` | Loopback-only standard-library WSGI visual boundary with strict JSON request enforcement and first-party static assets. |
+| G2.4.25 | `v2.4.25-g2.4.25` | Representation-only local manifest import; profile meaning remains owned by G2.4.21 at explicit Create. |
+| G2.4.26–G2.4.31 | `v2.4.26-g2.4.26` through `v2.4.31-g2.4.31` | Browser-local loading, discard, clearance, and status/result dismissal conveniences with no submission authority. |
+| G2.4.32 | `v2.4.32-g2.4.32` | Four-stage semantic HTML/CSS workflow hierarchy; EBS-048 proves refusal-like facts with zero receipts remain renderable and dismissible. |
 
-G2.4.22 was published at `14f42717be5e819f41ee0369e93417303b5753b3`. G2.4.10 remains the sole owner of custody acquisition, live descriptor continuity, handle issuance provenance, and one-shot lifecycle enforcement. G2.4.21 remains the owner of typed construction-work-order request/assessment provenance. G2.4.22 validates immutable relationships and required descriptor-relative primitive availability, then calls the published named G2.4.10 handle-consumption boundary exactly once; it neither reopens a root pathname nor reconstructs a descriptor, handle, or provenance check.
+G2.4.22 was published at `14f42717be5e819f41ee0369e93417303b5753b3`. G2.4.23 through G2.4.32 are also complete and published, with G2.4.32 at commit `cc23dee6fcb09e3544fdffce56a7b2c19cc028bf` under immutable tag `v2.4.32-g2.4.32`. G2.4.10 remains the sole owner of custody acquisition, live descriptor continuity, handle issuance provenance, and one-shot lifecycle enforcement. G2.4.21 remains the owner of typed construction-work-order request/assessment provenance. G2.4.22 validates immutable relationships and required descriptor-relative primitive availability, then calls the published named G2.4.10 handle-consumption boundary exactly once; it neither reopens a root pathname nor reconstructs a descriptor, handle, or provenance check.
 
 The construction scope is limited to declared create-only UTF-8 text files through the retained descriptor, using no-follow and exclusive-create semantics with post-write verification. A definitive pre-create failure is `CONSTRUCTION_REFUSED` with no action receipt. Once a directory or target-file effect has begun, a later failure is `PARTIAL_CONSTRUCTION_STOPPED`; receipts record only the successfully completed ordered prefix and never an unsuccessful action. First failure is terminal, with no retry, rollback, cleanup, recovery, or reconciliation. EBS-037 final acceptance directly proves the positive path, pathname-replacement continuity, pre-create and effect-started failure classification, truthful receipts, capability refusal, and G2.4.10 handoff refusal states.
 
-G2.4.22 does not create a workspace root, overwrite, delete, move, copy, chmod, execute commands, build or test, install dependencies, access a browser, provider, network, or credential, issue sessions or permits, operate a ledger, or release, publish, or deploy. G2.4.17 remains the sole durable pre-execution control ledger for its existing external-artifact-transition profile. The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, receipts, and test-owned filesystem state use `DIRECT_STATE_PROOF`. `G2.4.23=NOT_STARTED`.
+G2.4.22 does not create a workspace root, overwrite, delete, move, copy, chmod, execute commands, build or test, install dependencies, access a browser, provider, network, or credential, issue sessions or permits, operate a ledger, or release, publish, or deploy. G2.4.17 remains the sole durable pre-execution control ledger for its existing external-artifact-transition profile. The B5/B6 evidence vocabulary remains truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; operational categories are `CAPABILITY_ABSENT`; and immutable evidence, receipts, and test-owned filesystem state use `DIRECT_STATE_PROOF`. G2.4.23 through G2.4.32 are complete and published. G2.4.32 is presentation-only: it changes the semantic HTML/CSS hierarchy, preserves the frozen `app.js` behavior and all G2.4.25–G2.4.31 listeners, and keeps Create as the sole governed submission transition. The page communicates Prepare locally, Review prepared inputs, Explicitly submit governed construction, and Review terminal result. EBS-048 directly proves receipt-backed success and upstream refusal with nonempty terminal facts and zero receipts through the real Create, response-rendering, and dismissal path. No new network, persistence, runtime, build, test, deployment, browser-automation, or generalized application-generation capability exists. G2.4.33 is not started.
 
 ## Engineering Philosophy
 

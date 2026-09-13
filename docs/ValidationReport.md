@@ -9,7 +9,17 @@ Here is the complete, organized markdown file. You can copy this directly into y
 > **Date:** 2026-07  
 > **Scope:** `src/eag/` — Phases 0 through 5 (Kernel → Presentation & Ops)  
 > **Method:** Source code inspection of 40+ files across all runtime modules  
-> **Conclusion:** Architecture is sound. 3 high-severity wiring issues must be resolved before Sprint 8.
+> **Conclusion:** Historical audit record. Its findings remain phase-specific and are not the current published-boundary status.
+
+---
+
+## Current Published Governed Boundary Status
+
+The repository has completed and published the governed progression through **G2.4.32**, with current `HEAD` and `origin/main` at commit `cc23dee6fcb09e3544fdffce56a7b2c19cc028bf` and immutable tag `v2.4.32-g2.4.32`. G2.4.23 is the thin Typer terminal presentation boundary; G2.4.24 is the loopback-only standard-library WSGI boundary; G2.4.25 preserves representation-only manifest import and exact literal relay; G2.4.26–G2.4.31 add browser-local loading, discard, clearance, and dismissal conveniences; and G2.4.32 establishes the cohesive static workflow hierarchy.
+
+G2.4.32 communicates four stages: **Prepare locally**, **Review prepared inputs**, **Explicitly submit governed construction**, and **Review terminal result**. The slice preserves the frozen `app.js` behavior from G2.4.31, keeps Create as the sole governed submission transition, and adds no new authority, network, persistence, runtime, build, test, browser-automation, deployment, or generalized application-generation capability. EBS-048 directly proves receipt-backed success and an upstream-refusal result with nonempty terminal facts and zero receipts through the real response-rendering and terminal-dismissal path. The published scope is complete, documentation synchronization is current through G2.4.32, and G2.4.33 has not started.
+
+The detailed sections below remain the historical July 2026 architecture audit and should be read as an archival validation record rather than a statement that the later governed milestones are incomplete.
 
 ---
 

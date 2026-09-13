@@ -54,6 +54,16 @@ The following published Gen2 chain separates immutable evidence, durable transit
 | G2.4.20 — Attestation-Policy Evidence | `v2.4.20-g2.4.20` | Complete / published | Declared destination-contract attestation-policy evidence only; it does not establish trust, issuer authentication, signature verification, destination truth, or execution readiness. |
 | G2.4.21 — Construction Work-Order Evidence | `v2.4.21-g2.4.21` (original) and `v2.4.21-provenance.1` (remediation) | Complete / published | Immutable local construction work-order evidence binding exact upstream evidence, custody/composition declarations, intent digests, capabilities, limits, identity, and expiry; its follow-up remediation adds typed exact request/assessment provenance. |
 | G2.4.22 — Bounded Workspace File Construction | `v2.4.22-g2.4.22` | Complete / published | Bounded create-only descriptor-relative text-file construction, consuming one published G2.4.10 live custody handoff and exact G2.4.21 typed work-order provenance. |
+| G2.4.23 — Fixed-Profile Terminal Presentation | `v2.4.23-g2.4.23` | Complete / published | Thin Typer presentation that relays the exact finite profile token and renders immutable receipt-backed facts. |
+| G2.4.24 — Loopback Visual Presentation | `v2.4.24-g2.4.24` | Complete / published | Loopback-only standard-library WSGI visual presentation with strict JSON request enforcement. |
+| G2.4.25 — Submission-Manifest Import | `v2.4.25-g2.4.25` | Complete / published | Representation-only browser-local import with exact literal profile relay at explicit Create. |
+| G2.4.26 — Pasted Manifest Loading | `v2.4.26-g2.4.26` | Complete / published | Browser-local pasted-manifest loading into review state. |
+| G2.4.27 — Discard Prepared Inputs | `v2.4.27-g2.4.27` | Complete / published | Browser-local discard with no governed request or upstream effect. |
+| G2.4.28 — Terminal Result Dismissal | `v2.4.28-g2.4.28` | Complete / published | Browser-local dismissal of rendered terminal facts and receipt rows. |
+| G2.4.29 — Selected-Manifest Clearance | `v2.4.29-g2.4.29` | Complete / published | Browser-local selected-file clearance. |
+| G2.4.30 — Pasted-Manifest Clearance | `v2.4.30-g2.4.30` | Complete / published | Browser-local pasted-manifest clearance. |
+| G2.4.31 — Import-Status Dismissal | `v2.4.31-g2.4.31` | Complete / published | Browser-local import-status dismissal. |
+| G2.4.32 — Cohesive Static Workflow Hierarchy | `v2.4.32-g2.4.32` | Complete / published | Four-stage first-party static hierarchy; EBS-048 proves refusal-like facts with zero receipts remain renderable and dismissible. |
 
 The current governed progression is:
 
@@ -75,13 +85,33 @@ Declared Attestation-Policy Evidence
 Construction Work-Order Evidence
         ↓
 Bounded Workspace File Construction
+        ↓
+Fixed-Profile Terminal Presentation
+        ↓
+Loopback Visual Presentation
+        ↓
+Submission-Manifest Import
+        ↓
+Pasted Manifest Loading
+        ↓
+Discard Prepared Inputs
+        ↓
+Terminal Result Dismissal
+        ↓
+Selected-Manifest Clearance
+        ↓
+Pasted-Manifest Clearance
+        ↓
+Import-Status Dismissal
+        ↓
+Cohesive Static Workflow Hierarchy
 ```
 
-G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 remains destination-contract evidence only, G2.4.19 remains outcome-semantics policy evidence only, and G2.4.20 remains declared attestation-policy evidence only; none establishes trust, issuer authentication, signature verification, destination truth, or execution readiness. The typed provenance remediation across G2.4.18–G2.4.21 closes request/assessment substitution gaps without inferring provenance from generic evidence references. The original G2.4.21 milestone remains `v2.4.21-g2.4.21` at `e8931c5dc196d25a4741447d5b4580a7f84ead4d`; the accepted G2.4.21 remediation was published at `55c9d02e698558bbf7f68773207c3c80b9995b3d` under immutable tag `v2.4.21-provenance.1`, with the original tag unchanged. G2.4.22 was published at `14f42717be5e819f41ee0369e93417303b5753b3` under immutable tag `v2.4.22-g2.4.22`.
+G2.4.17 remains the sole durable pre-execution transition-control ledger for its existing external-artifact-transition profile. G2.4.18 remains destination-contract evidence only, G2.4.19 remains outcome-semantics policy evidence only, and G2.4.20 remains declared attestation-policy evidence only; none establishes trust, issuer authentication, signature verification, destination truth, or execution readiness. The typed provenance remediation across G2.4.18–G2.4.21 closes request/assessment substitution gaps without inferring provenance from generic evidence references. The original G2.4.21 milestone remains `v2.4.21-g2.4.21` at `e8931c5dc196d25a4741447d5b4580a7f84ead4d`; the accepted G2.4.21 remediation was published at `55c9d02e698558bbf7f68773207c3c80b9995b3d` under immutable tag `v2.4.21-provenance.1`, with the original tag unchanged. G2.4.22 was published at `14f42717be5e819f41ee0369e93417303b5753b3` under immutable tag `v2.4.22-g2.4.22`. G2.4.23 through G2.4.32 were subsequently published under their corresponding immutable tags, with G2.4.32 at commit `cc23dee6fcb09e3544fdffce56a7b2c19cc028bf` under `v2.4.32-g2.4.32`.
 
 G2.4.10 remains the sole owner of custody acquisition, live descriptor continuity, issued-handle provenance, and handle lifecycle. G2.4.21 remains the sole owner of typed construction-work-order request/assessment provenance. G2.4.22 neither reopens a workspace pathname nor reconstructs a descriptor or handle provenance; after immutable authorization and capability checks, it consumes the one matching G2.4.10 handoff and performs only declared descriptor-relative, `O_NOFOLLOW` and `O_EXCL` create-only file effects. It creates no workspace root and has no overwrite, delete, move, copy, permission-change, command, build, dependency, browser, network, credential, session, permit, ledger, release, or deployment authority.
 
-G2.4.22 issues immutable receipts only for the successfully completed ordered action prefix. A definitive pre-create failure is a `CONSTRUCTION_REFUSED` result with no action receipt; an effect-started or uncertain post-create failure is `PARTIAL_CONSTRUCTION_STOPPED` with no receipt for the unsuccessful action. The first failure is terminal: there is no retry, rollback, cleanup, recovery, or reconciliation. EBS-037 final acceptance directly proves descriptor continuity after pathname replacement, pre-create refusal, effect-started failure, truthful receipts, capability refusal, and forged/closed/consumed handle refusal. The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; unavailable operational categories are `CAPABILITY_ABSENT`; and immutable evidence, receipts, and test-owned filesystem state are `DIRECT_STATE_PROOF`. `G2.4.23=NOT_STARTED`.
+G2.4.22 issues immutable receipts only for the successfully completed ordered action prefix. A definitive pre-create failure is a `CONSTRUCTION_REFUSED` result with no action receipt; an effect-started or uncertain post-create failure is `PARTIAL_CONSTRUCTION_STOPPED` with no receipt for the unsuccessful action. The first failure is terminal: there is no retry, rollback, cleanup, recovery, or reconciliation. EBS-037 final acceptance directly proves descriptor continuity after pathname replacement, pre-create refusal, effect-started failure, truthful receipts, capability refusal, and forged/closed/consumed handle refusal. The evidence classifications remain truthful: `OBSERVED_ZERO_EFFECT_CATEGORIES=NONE`; unavailable operational categories are `CAPABILITY_ABSENT`; and immutable evidence, receipts, and test-owned filesystem state are `DIRECT_STATE_PROOF`. G2.4.23 through G2.4.32 are complete and published. G2.4.32 is the current presentation boundary: it changes only semantic HTML/CSS, leaves `app.js` behavior unchanged from G2.4.31, preserves every G2.4.25–G2.4.31 browser-local listener, and keeps Create as the sole governed submission transition. The four stages are Prepare locally, Review prepared inputs, Explicitly submit governed construction, and Review terminal result. EBS-048 directly proves both receipt-backed success and upstream refusal with nonempty terminal facts and zero receipts through the real Create, response-rendering, and dismissal path. No new authority, network, persistence, runtime, build, test, deployment, or generalized application-generation capability was added. G2.4.33 is not started.
 
 ### Implemented Capabilities
 
